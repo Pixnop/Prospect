@@ -23,7 +23,8 @@ public class HomeAndWizardHeadlessTests
     [AvaloniaFact]
     public async Task Home_NoInstances_ShowsEmptyStateThenCardAfterWizardCreatesOne()
     {
-        using var provider = TestServiceProviderFactory.Create(out _);
+        using var provider = TestServiceProviderFactory.Create(out var fileSystem);
+        provider.SeedInstalledVersion(fileSystem, "1.20.4");
         var window = provider.GetRequiredService<MainWindow>();
         var shellViewModel = provider.GetRequiredService<ShellViewModel>();
         var home = provider.GetRequiredService<HomeViewModel>();
@@ -41,9 +42,10 @@ public class HomeAndWizardHeadlessTests
         var wizard = shellViewModel.Overlay.Active.ShouldBeOfType<WizardViewModel>();
         window.GetVisualDescendants().OfType<WizardView>().ShouldNotBeEmpty();
 
+        await wizard.LoadVersionsCommand.ExecuteAsync(null);
         wizard.Name = "Vintage Survival";
         wizard.NextCommand.Execute(null);
-        wizard.VersionText = "1.20.4";
+        wizard.VersionChoices.First(choice => choice.VersionText == "1.20.4").SelectCommand.Execute(null);
         wizard.NextCommand.Execute(null);
         wizard.NextCommand.Execute(null);
         wizard.IsSummaryStep.ShouldBeTrue();
@@ -92,7 +94,8 @@ public class HomeAndWizardHeadlessTests
     [AvaloniaFact]
     public async Task DeleteInstance_DoubleConfirmation_RemovesCardFromHome()
     {
-        using var provider = TestServiceProviderFactory.Create(out _);
+        using var provider = TestServiceProviderFactory.Create(out var fileSystem);
+        provider.SeedInstalledVersion(fileSystem, "1.20.4");
         var window = provider.GetRequiredService<MainWindow>();
         var shellViewModel = provider.GetRequiredService<ShellViewModel>();
         var home = provider.GetRequiredService<HomeViewModel>();
@@ -101,9 +104,10 @@ public class HomeAndWizardHeadlessTests
         home.NewInstanceCommand.Execute(null);
         window.Settle();
         var wizard = shellViewModel.Overlay.Active.ShouldBeOfType<WizardViewModel>();
+        await wizard.LoadVersionsCommand.ExecuteAsync(null);
         wizard.Name = "Temporaire";
         wizard.NextCommand.Execute(null);
-        wizard.VersionText = "1.20.4";
+        wizard.VersionChoices.First(choice => choice.VersionText == "1.20.4").SelectCommand.Execute(null);
         wizard.NextCommand.Execute(null);
         wizard.NextCommand.Execute(null);
         await wizard.CreateCommand.ExecuteAsync(null);

@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Prospect.Desktop.ViewModels.Shell"
+             xmlns:dl="using:Prospect.Desktop.ViewModels.Downloads"
              xmlns:shell="using:Prospect.Desktop.Views.Shell"
              xmlns:conv="using:Prospect.Desktop.Converters"
              mc:Ignorable="d" d:DesignWidth="1160" d:DesignHeight="780"
@@ -30,10 +31,13 @@
             <StackPanel DockPanel.Dock="Bottom" Margin="10,10,10,12" Spacing="2">
               <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}" Margin="4,0,4,8" />
               <Button Classes="ghost navitem" Classes.active="{Binding IsDownloadsPopoverOpen}" Command="{Binding ToggleDownloadsPopoverCommand}">
-                <Grid ColumnDefinitions="Auto,*">
+                <Grid ColumnDefinitions="Auto,*,Auto">
                   <Path Grid.Column="0" Width="16" Height="16" Margin="0,0,10,0" Stretch="Uniform" Data="{StaticResource Icon.download}"
                         Stroke="{DynamicResource Text2}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
                   <TextBlock Grid.Column="1" Text="{StaticResource Nav_Telechargements}" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2" Text="{Binding Downloads.Count}" VerticalAlignment="Center"
+                             FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}"
+                             IsVisible="{Binding Downloads.HasDownloads}" />
                 </Grid>
               </Button>
               <Button Classes="ghost navitem" Classes.active="{Binding SettingsNavItem.IsActive}" Command="{Binding SettingsNavItem.SelectCommand}">
@@ -76,8 +80,10 @@
       </Grid>
     </Grid>
 
-    <!-- Popover Téléchargements : présent visuellement mais vide, le DownloadManager arrive plus tard. -->
-    <Border IsVisible="{Binding IsDownloadsPopoverOpen}" Width="360"
+    <!-- Popover Téléchargements : vue directe sur la file du DownloadManager
+         (design/components/launcher/DownloadItem.jsx). L'état vide reste affiché tant que rien
+         ne tourne. -->
+    <Border IsVisible="{Binding IsDownloadsPopoverOpen}" Width="400"
             HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,44,20,0"
             CornerRadius="{StaticResource RadiusMd}" ClipToBounds="True"
             Background="{DynamicResource BgSurfaceRaised}" BorderBrush="{DynamicResource BorderDefault}"
@@ -92,7 +98,52 @@
                   Stroke="{DynamicResource Text2}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
           </Button>
         </Grid>
-        <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}">
+
+        <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}"
+                IsVisible="{Binding Downloads.HasDownloads}">
+          <StackPanel>
+            <ItemsControl ItemsSource="{Binding Downloads.Items}" MaxHeight="320">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="dl:DownloadItemViewModel">
+                  <StackPanel Spacing="8" Margin="16,12">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                      <Path Grid.Column="0" Width="15" Height="15" Margin="0,0,10,0" Stretch="Uniform" VerticalAlignment="Center"
+                            Data="{Binding IconKey, Converter={x:Static conv:IconKeyToGeometryConverter.Instance}}"
+                            Stroke="{DynamicResource Text3}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                      <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                 FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text1}" />
+                      <TextBlock Grid.Column="2" Text="{Binding StatText}" VerticalAlignment="Center" Margin="8,0,0,0"
+                                 FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+                      <Button Grid.Column="3" Classes="icon sm" Margin="4,0,0,0" Command="{Binding CancelCommand}"
+                              ToolTip.Tip="{StaticResource Downloads_Cancel}">
+                        <Path Width="12" Height="12" Stretch="Uniform" Data="{StaticResource Icon.x}"
+                              Stroke="{DynamicResource Text3}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                      </Button>
+                    </Grid>
+                    <StackPanel Spacing="4" IsVisible="{Binding !IsQueued}">
+                      <ProgressBar Value="{Binding ProgressPercent}" Minimum="0" Maximum="100"
+                                   IsIndeterminate="{Binding IsIndeterminate}"
+                                   Classes.danger="{Binding IsFailed}" />
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="{Binding SpeedText}" TextTrimming="CharacterEllipsis"
+                                   FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+                        <TextBlock Grid.Column="1" Text="{Binding PercentText}" Margin="8,0,0,0"
+                                   FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+                      </Grid>
+                    </StackPanel>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}" Padding="16,10">
+              <TextBlock Text="{Binding Downloads.SummaryText}"
+                         FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+            </Border>
+          </StackPanel>
+        </Border>
+
+        <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}"
+                IsVisible="{Binding !Downloads.HasDownloads}">
           <StackPanel HorizontalAlignment="Center" Spacing="10" Margin="24,32">
             <Path Width="32" Height="32" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.download}"
                   Stroke="{DynamicResource Text4}" StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round" />

@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Prospect.Desktop.ViewModels.Dialogs"
+             mc:Ignorable="d" d:DesignWidth="420"
+             x:Class="Prospect.Desktop.Views.Dialogs.UninstallVersionDialogView"
+             x:DataType="vm:UninstallVersionDialogViewModel">
+
+  <!-- Confirmation de désinstallation d'une version. Quand des instances la référencent, elles
+       sont nommées dans un encadré d'avertissement plutôt que résumées en « des instances
+       l'utilisent » : l'utilisateur doit pouvoir décider sur ce qu'il lit. -->
+
+  <Border Width="440" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
+          Background="{DynamicResource BgSurface}" BorderBrush="{DynamicResource BorderDefault}"
+          BorderThickness="1" BoxShadow="{DynamicResource Elev3}">
+    <StackPanel>
+      <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="22,18">
+        <TextBlock Text="{Binding Title}" TextWrapping="Wrap"
+                   FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                   FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+      </Border>
+
+      <StackPanel Margin="22" Spacing="14">
+        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" LineHeight="20"
+                   FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text2}" />
+
+        <Border CornerRadius="{StaticResource RadiusSm}" BorderThickness="1" Padding="14,10"
+                Background="Transparent" BorderBrush="{DynamicResource BorderDefault}"
+                IsVisible="{Binding HasDependents}">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Path Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Top" Margin="0,2,0,0"
+                  Data="{StaticResource Icon.alert}" Stroke="{DynamicResource WarningText}"
+                  StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+            <TextBlock Text="{Binding DependentsMessage}" TextWrapping="Wrap" MaxWidth="330" LineHeight="20"
+                       FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}" Background="{DynamicResource BgSurfaceRaised}">
+        <Grid ColumnDefinitions="*,Auto" Margin="22,16">
+          <Button Grid.Column="0" Classes="ghost" Command="{Binding CancelCommand}" HorizontalAlignment="Left"
+                  Content="{StaticResource Dialog_Cancel}" />
+          <Button Grid.Column="1" Classes="danger" Command="{Binding ConfirmCommand}"
+                  Content="{StaticResource Dialog_Uninstall_Confirm}" />
+        </Grid>
+      </Border>
+    </StackPanel>
+  </Border>
+</UserControl>

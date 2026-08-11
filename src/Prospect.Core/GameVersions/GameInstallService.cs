@@ -82,13 +82,26 @@ public sealed class GameInstallService
     /// <summary>Supprime une version installée. Sans effet si elle ne l'est pas.</summary>
     public void Uninstall(GameVersion version) => _repository.Remove(version);
 
+    /// <summary>
+    /// Le fichier que cette machine installerait pour cette entrée du catalogue, ou
+    /// <see langword="null"/> si aucun n'est publié pour sa plateforme. Les ViewModels s'en
+    /// servent pour ne proposer que ce qui est réellement installable, sans avoir à savoir sur
+    /// quel système ils tournent ni comment le catalogue nomme ses plateformes.
+    /// </summary>
+    public GameVersionAsset? FindInstallableAsset(GameVersionCatalogEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        return entry.FindAsset(_strategy.PlatformKeys);
+    }
+
     private async Task<GameVersionAsset> ResolveAssetAsync(GameVersion version, CancellationToken cancellationToken)
     {
         var catalog = await _catalog.GetAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
         var entry = catalog.Versions.FirstOrDefault(candidate => candidate.Version == version)
             ?? throw GameVersionNotAvailableException.ForUnknownVersion(version);
 
-        return entry.FindAsset(_strategy.PlatformKeys)
+        return FindInstallableAsset(entry)
             ?? throw GameVersionNotAvailableException.ForUnsupportedPlatform(version, _strategy.PlatformKeys);
     }
 

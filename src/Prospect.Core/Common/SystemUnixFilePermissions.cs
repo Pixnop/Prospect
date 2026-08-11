@@ -1,5 +1,3 @@
-using System.Runtime.Versioning;
-
 namespace Prospect.Core.Common;
 
 /// <summary>
@@ -8,9 +6,20 @@ namespace Prospect.Core.Common;
 /// donc exclu de la mesure de couverture : l'appel qu'il enveloppe n'existe pas sur Windows,
 /// aucun test de la matrice ne peut le couvrir partout.
 /// </summary>
-[UnsupportedOSPlatform("windows")]
 public sealed class SystemUnixFilePermissions : IUnixFilePermissions
 {
-    /// <inheritdoc />
-    public void SetMode(string path, UnixFileMode mode) => File.SetUnixFileMode(path, mode);
+    /// <summary>
+    /// Applique le mode, sauf sur Windows où la notion n'existe pas. Un no-op plutôt qu'une
+    /// exception : cet adaptateur n'est de toute façon jamais sélectionné sur Windows (l'installeur
+    /// Inno s'y charge des permissions), et le conteneur d'injection l'instancie sur les trois OS.
+    /// </summary>
+    public void SetMode(string path, UnixFileMode mode)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        File.SetUnixFileMode(path, mode);
+    }
 }
