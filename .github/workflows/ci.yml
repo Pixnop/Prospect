@@ -1,0 +1,174 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+  push:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v7
+
+      - name: Installation du SDK .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restauration des paquets
+        run: dotnet restore
+
+      - name: Build (Release)
+        run: dotnet build --no-restore -c Release
+
+      - name: Tests (Release)
+        run: dotnet test --no-build -c Release
+
+      - name: Publication des rapports de couverture
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-reports
+          path: |
+            **/coverage.opencover.xml
+            **/coverage.cobertura.xml
+          if-no-files-found: warn
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v7
+
+      - name: Installation du SDK .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restauration des paquets
+        run: dotnet restore
+
+      - name: Vérification du formatage
+        run: dotnet format --verify-no-changes
+
+  sonarcloud:
+    runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - name: Détection du secret SONAR_TOKEN
+        id: sonar-token
+        run: |
+          if [ -n "$SONAR_TOKEN" ]; then
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Récupération du code
+        if: steps.sonar-token.outputs.has_token == 'true'
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Installation du SDK .NET
+        if: steps.sonar-token.outputs.has_token == 'true'
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Installation du JDK
+        if: steps.sonar-token.outputs.has_token == 'true'
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Cache NuGet
+        if: steps.sonar-token.outputs.has_token == 'true'
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Installation de dotnet-sonarscanner
+        if: steps.sonar-token.outputs.has_token == 'true'
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Restauration des paquets
+        if: steps.sonar-token.outputs.has_token == 'true'
+        run: dotnet restore
+
+      - name: Démarrage de l'analyse SonarCloud
+        if: steps.sonar-token.outputs.has_token == 'true'
+        run: >
+          dotnet-sonarscanner begin
+          /k:"Pixnop_Prospect"
+          /o:"leon-fievet-pixnop"
+          /d:sonar.token="$SONAR_TOKEN"
+          /d:sonar.host.url="https://sonarcloud.io"
+          /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+          /d:sonar.qualitygate.wait=true
+
+      - name: Build (Release)
+        if: steps.sonar-token.outputs.has_token == 'true'
+        run: dotnet build --no-restore -c Release
+
+      - name: Tests avec couverture (Release)
+        if: steps.sonar-token.outputs.has_token == 'true'
+        run: dotnet test --no-build -c Release
+
+      - name: Fin de l'analyse SonarCloud
+        if: steps.sonar-token.outputs.has_token == 'true'
+        run: dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+
+      - name: SonarCloud non configuré
+        if: steps.sonar-token.outputs.has_token != 'true'
+        run: echo "SonarCloud non configuré (secret SONAR_TOKEN absent), analyse ignorée."
+
+  semantic-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vérification du titre de la PR
+        uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            chore
+            docs
+            refactor
+            test
+            ci
+            build
+            perf
+          requireScope: false
