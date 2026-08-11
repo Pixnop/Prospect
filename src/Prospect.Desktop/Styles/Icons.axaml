@@ -1,0 +1,61 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Port des ~34 tracés de design/components/core/Icon.jsx (jeu Lucide, licence MIT,
+    utilisé en substitution faute de set d'icônes fourni par le brief — voir le readme
+    du design, section ICONOGRAPHY). Chaque tracé est copié verbatim depuis le champ
+    PATHS[nom] du fichier source, dans une boîte 24x24, et exposé en StreamGeometry sous
+    la clé Icon.<nom-kebab> (nom Lucide fidèle à la source, casse kebab).
+
+    Ce sont des icônes de TRAIT, jamais de remplissage : à consommer avec un Path dont on
+    fixe Stroke (jamais Fill), à la largeur de trait 1.75 et aux caps/joins arrondis du
+    design. La couleur est toujours celle du parent (aucune couleur figée dans le tracé),
+    donc une icône dans un bouton ghost hérite gratuitement de sa couleur de survol.
+    Trois tailles seulement : 14 (inline avec les légendes), 16 (boutons, lignes), 20
+    (navigation, états vides — 40 avec un trait à 1.25 pour le glyphe d'état vide).
+
+    Exemple de consommation :
+
+      <Path Data="{StaticResource Icon.play}"
+            Width="16" Height="16" Stretch="Uniform"
+            Stroke="{DynamicResource Text2}" StrokeThickness="1.75"
+            StrokeLineCap="Round" StrokeJoin="Round" />
+  -->
+
+  <StreamGeometry x:Key="Icon.play">M6 3l14 9-14 9z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.plus">M5 12h14M12 5v14</StreamGeometry>
+  <StreamGeometry x:Key="Icon.search">M11 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM21 21l-4.35-4.35</StreamGeometry>
+  <StreamGeometry x:Key="Icon.settings">M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.2.51.7.9 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.folder">M4 20a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.package">M16.5 9.4 7.5 4.21M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96 12 12.01l8.73-5.05M12 22.08V12</StreamGeometry>
+  <StreamGeometry x:Key="Icon.layers">m12.83 2.18 8.34 4.17a1 1 0 0 1 0 1.79l-8.34 4.17a2 2 0 0 1-1.66 0L2.83 8.14a1 1 0 0 1 0-1.79l8.34-4.17a2 2 0 0 1 1.66 0zM2.83 15.86l8.34 4.17a2 2 0 0 0 1.66 0l8.34-4.17M2.83 11.86l8.34 4.17a2 2 0 0 0 1.66 0l8.34-4.17</StreamGeometry>
+  <StreamGeometry x:Key="Icon.download">M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3</StreamGeometry>
+  <StreamGeometry x:Key="Icon.refresh">M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5</StreamGeometry>
+  <StreamGeometry x:Key="Icon.trash">M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6</StreamGeometry>
+  <StreamGeometry x:Key="Icon.copy">M9 9a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2zM5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1</StreamGeometry>
+  <StreamGeometry x:Key="Icon.upload">M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12</StreamGeometry>
+  <StreamGeometry x:Key="Icon.more">M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM19 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM5 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.chevron-down">m6 9 6 6 6-6</StreamGeometry>
+  <StreamGeometry x:Key="Icon.chevron-right">m9 18 6-6-6-6</StreamGeometry>
+  <StreamGeometry x:Key="Icon.chevron-left">m15 18-6-6 6-6</StreamGeometry>
+  <StreamGeometry x:Key="Icon.check">M20 6 9 17l-5-5</StreamGeometry>
+  <StreamGeometry x:Key="Icon.x">M18 6 6 18M6 6l12 12</StreamGeometry>
+  <StreamGeometry x:Key="Icon.minus">M5 12h14</StreamGeometry>
+  <StreamGeometry x:Key="Icon.square">M4 4h16v16H4z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.alert">M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.info">M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16v-4M12 8h.01</StreamGeometry>
+  <StreamGeometry x:Key="Icon.check-circle">M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9 12l2 2 4-4</StreamGeometry>
+  <StreamGeometry x:Key="Icon.wifi-off">M2 2l20 20M8.5 16.5a5 5 0 0 1 7 0M5 12.86a10 10 0 0 1 5.17-2.7M10.71 5.05A16 16 0 0 1 22.58 9M1.42 9a15.9 15.9 0 0 1 4.7-2.88M12 20h.01</StreamGeometry>
+  <StreamGeometry x:Key="Icon.filter">M22 3H2l8 9.46V19l4 2v-8.54z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.clock">M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2</StreamGeometry>
+  <StreamGeometry x:Key="Icon.hard-drive">M22 12H2M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11zM6 16h.01M10 16h.01</StreamGeometry>
+  <StreamGeometry x:Key="Icon.star">m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.user">M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.external-link">M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6</StreamGeometry>
+  <StreamGeometry x:Key="Icon.pause">M6 4h4v16H6zM14 4h4v16h-4z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.image">M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21</StreamGeometry>
+  <StreamGeometry x:Key="Icon.grid">M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.list">M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01</StreamGeometry>
+
+</ResourceDictionary>

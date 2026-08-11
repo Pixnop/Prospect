@@ -1,0 +1,123 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Port de .pr-input (components/components.css). Le glow de focus (0 0 0 3px
+       accent-quiet) n'est pas un des quatre niveaux d'élévation : il est propre au champ,
+       donc défini ici plutôt que dans Elevation.axaml, avec sa propre variante par thème
+       puisqu'il embarque la couleur accent-quiet résolue. -->
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Dark">
+      <BoxShadows x:Key="InputFocusGlow">0 0 0 3 #24D5A275</BoxShadows>
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Light">
+      <BoxShadows x:Key="InputFocusGlow">0 0 0 3 #1FA56C3E</BoxShadows>
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+
+  <ControlTheme x:Key="{x:Type TextBox}" TargetType="TextBox">
+    <Setter Property="Background" Value="{DynamicResource BgInput}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Text1}" />
+    <Setter Property="CaretBrush" Value="{DynamicResource Text1}" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource AccentQuiet}" />
+    <Setter Property="SelectionForegroundBrush" Value="{DynamicResource Text1}" />
+    <Setter Property="FontFamily" Value="{DynamicResource FontSans}" />
+    <Setter Property="FontSize" Value="{StaticResource FsBodySm}" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="Height" Value="{StaticResource ControlHMd}" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Hidden" />
+    <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Hidden" />
+    <Setter Property="Template">
+      <ControlTemplate TargetType="TextBox">
+        <Border Name="PART_Border"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{TemplateBinding CornerRadius}">
+          <Border.Transitions>
+            <Transitions>
+              <BrushTransition Property="Background" Duration="{StaticResource DurInstant}" Easing="{StaticResource EaseStandard}" />
+              <BrushTransition Property="BorderBrush" Duration="{StaticResource DurInstant}" Easing="{StaticResource EaseStandard}" />
+            </Transitions>
+          </Border.Transitions>
+          <Grid ColumnDefinitions="Auto,*,Auto" Margin="{TemplateBinding Padding}">
+            <ContentPresenter Grid.Column="0"
+                               Content="{TemplateBinding InnerLeftContent}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0" />
+            <Panel Grid.Column="1">
+              <TextBlock Name="PART_Watermark"
+                         Text="{TemplateBinding Watermark}"
+                         Foreground="{DynamicResource Text4}"
+                         FontFamily="{TemplateBinding FontFamily}"
+                         FontSize="{TemplateBinding FontSize}"
+                         VerticalAlignment="Center">
+                <TextBlock.IsVisible>
+                  <MultiBinding Converter="{x:Static BoolConverters.And}">
+                    <Binding Path="Text" RelativeSource="{RelativeSource TemplatedParent}" Converter="{x:Static StringConverters.IsNullOrEmpty}" />
+                    <Binding Path="Watermark" RelativeSource="{RelativeSource TemplatedParent}" Converter="{x:Static StringConverters.IsNotNullOrEmpty}" />
+                  </MultiBinding>
+                </TextBlock.IsVisible>
+              </TextBlock>
+              <ScrollViewer Name="PART_ScrollViewer"
+                            HorizontalScrollBarVisibility="{TemplateBinding (ScrollViewer.HorizontalScrollBarVisibility)}"
+                            VerticalScrollBarVisibility="{TemplateBinding (ScrollViewer.VerticalScrollBarVisibility)}"
+                            IsScrollChainingEnabled="{TemplateBinding (ScrollViewer.IsScrollChainingEnabled)}">
+                <TextPresenter Name="PART_TextPresenter"
+                               Text="{TemplateBinding Text, Mode=TwoWay}"
+                               CaretBlinkInterval="{TemplateBinding CaretBlinkInterval}"
+                               CaretBrush="{TemplateBinding CaretBrush}"
+                               CaretIndex="{TemplateBinding CaretIndex}"
+                               SelectionBrush="{TemplateBinding SelectionBrush}"
+                               SelectionForegroundBrush="{TemplateBinding SelectionForegroundBrush}"
+                               SelectionStart="{TemplateBinding SelectionStart}"
+                               SelectionEnd="{TemplateBinding SelectionEnd}"
+                               TextAlignment="{TemplateBinding TextAlignment}"
+                               TextWrapping="{TemplateBinding TextWrapping}"
+                               PasswordChar="{TemplateBinding PasswordChar}"
+                               RevealPassword="{TemplateBinding RevealPassword}"
+                               VerticalAlignment="Center" />
+              </ScrollViewer>
+            </Panel>
+            <ContentPresenter Grid.Column="2"
+                               Content="{TemplateBinding InnerRightContent}"
+                               VerticalAlignment="Center"
+                               Margin="8,0,0,0" />
+          </Grid>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+
+    <Style Selector="^ /template/ TextPresenter#PART_TextPresenter">
+      <Setter Property="Cursor" Value="IBeam" />
+    </Style>
+    <Style Selector="^:pointerover /template/ Border#PART_Border">
+      <Setter Property="Background" Value="{DynamicResource BgInputHover}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+    </Style>
+    <Style Selector="^:focus-within /template/ Border#PART_Border">
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderFocus}" />
+      <Setter Property="BoxShadow" Value="{DynamicResource InputFocusGlow}" />
+    </Style>
+    <Style Selector="^.lg">
+      <Setter Property="Height" Value="{StaticResource ControlHLg}" />
+    </Style>
+    <Style Selector="^.mono">
+      <Setter Property="FontFamily" Value="{DynamicResource FontMono}" />
+    </Style>
+    <Style Selector="^.error /template/ Border#PART_Border">
+      <Setter Property="BorderBrush" Value="{DynamicResource Danger}" />
+    </Style>
+    <Style Selector="^:disabled /template/ Border#PART_Border">
+      <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    </Style>
+    <Style Selector="^:disabled">
+      <Setter Property="Foreground" Value="{DynamicResource Text4}" />
+    </Style>
+  </ControlTheme>
+
+</ResourceDictionary>

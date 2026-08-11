@@ -1,10 +1,42 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Prospect.Desktop.App"
-             RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+             RequestedThemeVariant="Dark">
+             <!-- Le sombre est le thème par défaut du design ; le clair reste une variante
+                  secondaire accessible via les ThemeDictionaries des tokens. -->
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Tokens d'abord : les ControlThemes qui suivent les consomment en
+                     DynamicResource. -->
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Tokens/Colors.axaml" />
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Tokens/Spacing.axaml" />
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Tokens/Radii.axaml" />
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Tokens/Elevation.axaml" />
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Tokens/Motion.axaml" />
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Tokens/Typography.axaml" />
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Icons.axaml" />
+
+                <!-- Contrôles ensuite : leurs ControlThemes consomment les tokens ci-dessus. -->
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Controls/Button.axaml" />
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Controls/TextBox.axaml" />
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Controls/CheckBox.axaml" />
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Controls/RadioButton.axaml" />
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Controls/ToggleSwitch.axaml" />
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Controls/ProgressBar.axaml" />
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Controls/ComboBox.axaml" />
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Controls/ScrollBar.axaml" />
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Controls/ToolTip.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
 
     <Application.Styles>
         <FluentTheme />
+        <!-- Badge/Tag stylent un ContentControl nu via classes plutôt qu'un type dédié :
+             ce sont des Style par sélecteur de classe, pas des ressources nommées, donc
+             ils vivent dans Application.Styles et non dans Application.Resources. -->
+        <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/Badge.axaml" />
     </Application.Styles>
 </Application>

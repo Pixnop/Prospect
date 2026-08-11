@@ -1,0 +1,64 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Port de la variante radio de .pr-check__box et de .pr-check__dot : la même case que
+       la CheckBox, mais en cercle (radius pill) et un point plein plutôt qu'une coche. -->
+
+  <ControlTheme x:Key="{x:Type RadioButton}" TargetType="RadioButton">
+    <Setter Property="Foreground" Value="{DynamicResource Text1}" />
+    <Setter Property="FontFamily" Value="{DynamicResource FontSans}" />
+    <Setter Property="FontSize" Value="{StaticResource FsBodySm}" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate TargetType="RadioButton">
+        <Grid ColumnDefinitions="Auto,*">
+          <Border Name="PART_Box"
+                  Grid.Column="0"
+                  Width="16" Height="16"
+                  VerticalAlignment="Center"
+                  Background="{DynamicResource BgInput}"
+                  BorderBrush="{DynamicResource BorderStrong}"
+                  BorderThickness="1"
+                  CornerRadius="{StaticResource RadiusPill}">
+            <Border.Transitions>
+              <Transitions>
+                <BrushTransition Property="Background" Duration="{StaticResource DurInstant}" Easing="{StaticResource EaseStandard}" />
+                <BrushTransition Property="BorderBrush" Duration="{StaticResource DurInstant}" Easing="{StaticResource EaseStandard}" />
+              </Transitions>
+            </Border.Transitions>
+            <Ellipse Name="PART_Dot"
+                     Width="6" Height="6"
+                     Fill="{DynamicResource TextOnAccent}"
+                     IsVisible="False" />
+          </Border>
+          <ContentPresenter Name="PART_ContentPresenter"
+                             Grid.Column="1"
+                             Margin="8,0,0,0"
+                             VerticalAlignment="Center"
+                             Content="{TemplateBinding Content}"
+                             ContentTemplate="{TemplateBinding ContentTemplate}"
+                             IsVisible="{TemplateBinding Content, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+
+    <Style Selector="^:pointerover /template/ Border#PART_Box">
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+    </Style>
+    <Style Selector="^:checked /template/ Border#PART_Box">
+      <Setter Property="Background" Value="{DynamicResource Accent}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+    </Style>
+    <Style Selector="^:checked /template/ Ellipse#PART_Dot">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="^:disabled">
+      <Setter Property="Foreground" Value="{DynamicResource Text4}" />
+    </Style>
+    <Style Selector="^:disabled /template/ Border#PART_Box">
+      <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    </Style>
+  </ControlTheme>
+
+</ResourceDictionary>

@@ -1,0 +1,83 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Port de .pr-switch / .pr-switch__knob. Contrôle nu, sans libellé intégré (le design ne
+    montre jamais Content/OnContent/OffContent sur le switch, l'étiquette voisine vit à
+    côté dans l'écran) : le template ne rend donc que la piste et le pouce.
+
+    #332E29 est stone-700, la piste au repos ; c'est la seule rampe utilisée telle quelle
+    par ce composant (pas d'alias sémantique dédié dans colors.css), donc écrite en
+    littéral plutôt que via une ressource Color qui ne convertit pas implicitement en
+    Brush.
+
+    La classe ToggleSwitch d'Avalonia déplace elle-même le pouce en C# via Canvas.Left
+    (et gère le glisser-déposer à la souris) : PART_SwitchKnob (un Canvas) et
+    PART_MovingKnobs (un Panel dedans) sont des noms de parties exigés tels quels par le
+    contrôle, pas de simples choix de nommage. La largeur du Canvas fixe la distance de
+    déplacement (16px, comme le translateX du CSS) ; l'animation de la position passe par
+    la propriété KnobTransitions plutôt que par un Setter dans un Style — c'est la classe
+    elle-même qui applique cette collection de transitions au panneau mobile.
+  -->
+
+  <ControlTheme x:Key="{x:Type ToggleSwitch}" TargetType="ToggleSwitch">
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="KnobTransitions">
+      <Transitions>
+        <DoubleTransition Property="Canvas.Left" Duration="{StaticResource DurFast}" Easing="{StaticResource EaseStandard}" />
+      </Transitions>
+    </Setter>
+    <Setter Property="Template">
+      <ControlTemplate TargetType="ToggleSwitch">
+        <Grid Width="34" Height="18">
+          <Border Name="PART_Track"
+                  Background="#332E29"
+                  BorderBrush="{DynamicResource BorderStrong}"
+                  BorderThickness="1"
+                  CornerRadius="{StaticResource RadiusPill}">
+            <Border.Transitions>
+              <Transitions>
+                <BrushTransition Property="Background" Duration="{StaticResource DurFast}" Easing="{StaticResource EaseStandard}" />
+                <BrushTransition Property="BorderBrush" Duration="{StaticResource DurFast}" Easing="{StaticResource EaseStandard}" />
+              </Transitions>
+            </Border.Transitions>
+          </Border>
+          <Canvas Name="PART_SwitchKnob"
+                  Width="16" Height="12"
+                  Margin="2,0,0,0"
+                  HorizontalAlignment="Left"
+                  VerticalAlignment="Center">
+            <Panel Name="PART_MovingKnobs" Width="12" Height="12">
+              <Ellipse Name="PART_Knob"
+                       Width="12" Height="12"
+                       Fill="{DynamicResource Text3}">
+                <Ellipse.Transitions>
+                  <Transitions>
+                    <BrushTransition Property="Fill" Duration="{StaticResource DurFast}" Easing="{StaticResource EaseStandard}" />
+                  </Transitions>
+                </Ellipse.Transitions>
+              </Ellipse>
+            </Panel>
+          </Canvas>
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+
+    <Style Selector="^:checked /template/ Border#PART_Track">
+      <Setter Property="Background" Value="{DynamicResource Accent}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+    </Style>
+    <Style Selector="^:checked /template/ Ellipse#PART_Knob">
+      <Setter Property="Fill" Value="{DynamicResource TextOnAccent}" />
+    </Style>
+    <Style Selector="^:disabled /template/ Border#PART_Track">
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    </Style>
+    <Style Selector="^:disabled /template/ Ellipse#PART_Knob">
+      <Setter Property="Fill" Value="{DynamicResource Text4}" />
+    </Style>
+  </ControlTheme>
+
+</ResourceDictionary>

@@ -1,0 +1,23 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Port 1:1 de design/tokens/motion.css. Durées courtes, quasi linéaires ; les
+    Transitions Avalonia prennent une Duration (TimeSpan) et une Easing. Les deux
+    courbes réellement utilisées par le système (ease-standard, ease-out) sont portées
+    en SplineEasing avec les mêmes quatre points de contrôle que le cubic-bezier CSS ;
+    ease-in est porté pour rester fidèle au fichier source mais n'est employé par aucun
+    ControlTheme (le design n'anime que des sorties et des changements en place, jamais
+    d'entrée accélérée). Rien ne doit utiliser une animation à rebond ou à ressort.
+  -->
+
+  <x:TimeSpan x:Key="DurInstant">0:0:0.08</x:TimeSpan>  <!-- survol / pression -->
+  <x:TimeSpan x:Key="DurFast">0:0:0.14</x:TimeSpan>     <!-- menus, infobulles, sélection -->
+  <x:TimeSpan x:Key="DurNormal">0:0:0.22</x:TimeSpan>   <!-- panneaux, dialogues, toasts -->
+  <x:TimeSpan x:Key="DurSlow">0:0:0.32</x:TimeSpan>     <!-- transition de vue, étape d'assistant -->
+
+  <SplineEasing x:Key="EaseStandard" X1="0.4" Y1="0" X2="0.2" Y2="1" />
+  <SplineEasing x:Key="EaseOut" X1="0" Y1="0" X2="0.2" Y2="1" />
+  <SplineEasing x:Key="EaseIn" X1="0.4" Y1="0" X2="1" Y2="1" />
+
+</ResourceDictionary>

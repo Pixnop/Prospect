@@ -1,0 +1,13 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Port 1:1 de design/tokens/radii.css. Rayons de coin, invariants par thème. -->
+
+  <CornerRadius x:Key="RadiusXs">3</CornerRadius>       <!-- badges, tags, pistes de progression -->
+  <CornerRadius x:Key="RadiusSm">6</CornerRadius>       <!-- boutons, champs, menus déroulants -->
+  <CornerRadius x:Key="RadiusMd">10</CornerRadius>      <!-- cartes, panneaux, toasts -->
+  <CornerRadius x:Key="RadiusLg">14</CornerRadius>      <!-- dialogues, cadre de l'assistant -->
+  <CornerRadius x:Key="RadiusWindow">10</CornerRadius>  <!-- coin de la fenêtre applicative -->
+  <CornerRadius x:Key="RadiusPill">999</CornerRadius>   <!-- tags et pouce de scrollbar -->
+
+</ResourceDictionary>

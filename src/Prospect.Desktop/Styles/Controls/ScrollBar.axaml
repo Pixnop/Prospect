@@ -1,0 +1,65 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Port de .pr-scroll (tokens/base.css) : fine (10px), pouce seul, pas de flèches,
+       pilule, stone-700 au repos et stone-600 au survol (ScrollbarThumb / ScrollbarThumbHover,
+       déjà des alias sémantiques de Colors.axaml). -->
+
+  <ControlTheme x:Key="{x:Type ScrollBar}" TargetType="ScrollBar">
+    <Setter Property="Cursor" Value="Arrow" />
+
+    <Style Selector="^:horizontal">
+      <Setter Property="Height" Value="10" />
+      <Setter Property="MinHeight" Value="10" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Track Orientation="Horizontal"
+                 Minimum="{TemplateBinding Minimum}"
+                 Maximum="{TemplateBinding Maximum}"
+                 Value="{TemplateBinding Value, Mode=TwoWay}"
+                 ViewportSize="{TemplateBinding ViewportSize}">
+            <Thumb Name="thumb" />
+          </Track>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+
+    <Style Selector="^:vertical">
+      <Setter Property="Width" Value="10" />
+      <Setter Property="MinWidth" Value="10" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Track Orientation="Vertical"
+                 IsDirectionReversed="True"
+                 Minimum="{TemplateBinding Minimum}"
+                 Maximum="{TemplateBinding Maximum}"
+                 Value="{TemplateBinding Value, Mode=TwoWay}"
+                 ViewportSize="{TemplateBinding ViewportSize}">
+            <Thumb Name="thumb" />
+          </Track>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+
+    <Style Selector="^ /template/ Thumb#thumb">
+      <Setter Property="Background" Value="{DynamicResource ScrollbarThumb}" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="{TemplateBinding Background}"
+                  CornerRadius="{StaticResource RadiusPill}"
+                  Margin="2">
+            <Border.Transitions>
+              <Transitions>
+                <BrushTransition Property="Background" Duration="{StaticResource DurInstant}" Easing="{StaticResource EaseStandard}" />
+              </Transitions>
+            </Border.Transitions>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="^ /template/ Thumb#thumb:pointerover">
+      <Setter Property="Background" Value="{DynamicResource ScrollbarThumbHover}" />
+    </Style>
+  </ControlTheme>
+
+</ResourceDictionary>

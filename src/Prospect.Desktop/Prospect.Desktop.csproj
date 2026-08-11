@@ -13,6 +13,12 @@
     <PackageReference Include="Avalonia.Fonts.Inter" />
   </ItemGroup>
 
+  <!-- Polices embarquées et autres assets (logo, géométries) : non couverts par les
+       globs implicites de la cible Avalonia, contrairement aux .axaml. -->
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
   <!-- Panneau de diagnostics (F12) : présent uniquement dans les builds Debug. -->
   <ItemGroup Condition="'$(Configuration)' == 'Debug'">
     <PackageReference Include="Avalonia.Diagnostics" />

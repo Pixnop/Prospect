@@ -1,0 +1,51 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Port 1:1 de design/tokens/spacing.css. Grille de 4px, douze pas (0 à 64), plus les
+    métriques de composants fixes (hauteurs de contrôle, sidebar, titlebar, ligne de
+    liste, padding de carte, gouttière de grille). Toutes ces valeurs sont exposées en
+    x:Double : elles alimentent aussi bien des Width/Height que des Margin/Padding
+    composés à la main dans les ControlThemes (Avalonia ne permet pas de composer un seul
+    axe d'un Thickness à partir d'une ressource, contrairement à un calc() CSS ; les
+    ControlThemes qui ont besoin d'un Thickness partiel écrivent la valeur littérale en
+    commentant le token d'origine).
+  -->
+
+  <!-- ── Grille 4px, douze pas ──────────────────────────────────────────────────── -->
+  <x:Double x:Key="Space0">0</x:Double>
+  <x:Double x:Key="Space1">2</x:Double>
+  <x:Double x:Key="Space2">4</x:Double>
+  <x:Double x:Key="Space3">6</x:Double>
+  <x:Double x:Key="Space4">8</x:Double>
+  <x:Double x:Key="Space5">12</x:Double>
+  <x:Double x:Key="Space6">16</x:Double>
+  <x:Double x:Key="Space7">20</x:Double>
+  <x:Double x:Key="Space8">24</x:Double>
+  <x:Double x:Key="Space9">32</x:Double>
+  <x:Double x:Key="Space10">40</x:Double>
+  <x:Double x:Key="Space11">48</x:Double>
+  <x:Double x:Key="Space12">64</x:Double>
+
+  <!-- ── Métriques de composants ────────────────────────────────────────────────── -->
+  <x:Double x:Key="ControlHSm">26</x:Double>
+  <x:Double x:Key="ControlHMd">32</x:Double>
+  <x:Double x:Key="ControlHLg">38</x:Double>
+
+  <x:Double x:Key="ControlPxSm">10</x:Double>
+  <x:Double x:Key="ControlPxMd">14</x:Double>
+  <x:Double x:Key="ControlPxLg">18</x:Double>
+
+  <x:Double x:Key="IconSm">14</x:Double>
+  <x:Double x:Key="IconMd">16</x:Double>
+  <x:Double x:Key="IconLg">20</x:Double>
+
+  <x:Double x:Key="SidebarW">216</x:Double>
+  <x:Double x:Key="SidebarWCollapsed">56</x:Double>
+  <x:Double x:Key="TitlebarH">38</x:Double>
+
+  <x:Double x:Key="RowH">44</x:Double>
+  <x:Double x:Key="CardPad">16</x:Double>
+  <x:Double x:Key="Gutter">20</x:Double>
+
+</ResourceDictionary>
