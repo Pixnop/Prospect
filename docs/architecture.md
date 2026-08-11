@@ -62,6 +62,48 @@ Point ouvert n° 3.
 `AvaloniaUseCompiledBindingsByDefault`). Navigation maison légère : un `ShellViewModel`
 qui expose la page courante, pas de framework de navigation tiers.
 
+## Patterns de conception
+
+Les patterns attendus, par famille, pour que chaque PR les applique et que la review
+les vérifie. La règle générale : de petits objets cohérents, composés par injection de
+constructeur, jamais d'état statique muable, jamais de service locator.
+
+**Value objects immuables** pour tout ce qui est une valeur : `GameVersion`,
+`ModVersion`, `VersionRequirement`, plus tard les identifiants. Égalité structurelle,
+comparateurs explicites, sérialisation par converter dédié.
+
+**Ports et adaptateurs, version pragmatique** : chaque effet de bord passe par une
+interface injectée (`IFileSystem`, `IClock`, `IAppEnvironment`, `HttpMessageHandler`
+factice en test, `ISecretStore` plus tard). La logique ne touche jamais le monde
+directement, c'est ce qui rend le TDD réel.
+
+**Repository** pour la persistance scannée : `IInstanceRepository`,
+`IGameVersionRepository`. Le système de fichiers est la base de données, le repository
+est le seul à connaître sa topologie.
+
+**Services applicatifs par domaine** (`InstanceService`, `GameInstallService`,
+`GameLauncher`, `ModInstallService`...) : la façade que consomment les ViewModels. Un
+ViewModel ne compose jamais de logique métier à partir de briques plus basses.
+
+**Strategy par OS** pour tout ce qui diverge entre plateformes : installation du jeu
+(installeur Inno silencieux contre tar.gz + chmod), commande de lancement, chemins.
+Une interface, une implémentation par plateforme, sélection à la composition, jamais
+de `if (OperatingSystem.IsWindows())` disséminés dans les services.
+
+**Progression et état observables** : `IProgress<T>` et évènements pour les
+téléchargements et le cycle de vie du processus de jeu ; `CancellationToken` sur toute
+opération longue, sans exception.
+
+**Pipeline de migrations** ordonné pour les schémas versionnés (instance.json,
+prospect.json) : une migration = une classe testée, appliquées en chaîne au chargement.
+
+**MVVM strict** côté Desktop : CommunityToolkit.Mvvm, bindings compilés, zéro logique
+en code-behind, ViewModels constructibles sans UI.
+
+Les erreurs attendues du domaine sont des exceptions typées du projet (jamais
+d'`Exception` nue), et les cas « absence normale » (fichier pas encore créé) sont des
+retours nullables, pas des exceptions.
+
 ## Solution et arborescence
 
 ```
