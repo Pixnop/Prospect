@@ -151,13 +151,21 @@ public sealed partial class HomeViewModel : ObservableObject
         _overlay.Show(wizard);
     }
 
-    private async void OnInstanceCreated(object? sender, InstanceRecord record)
+    // Gestionnaire volontairement synchrone (pas async void, dangereux : une exception y
+    // échapperait à tout appelant) : le travail asynchrone réel vit dans HandleInstanceCreatedAsync,
+    // appelée ici en tâche de fond.
+    private void OnInstanceCreated(object? sender, InstanceRecord record)
     {
         if (sender is WizardViewModel wizard)
         {
             wizard.Created -= OnInstanceCreated;
         }
 
+        _ = HandleInstanceCreatedAsync(record);
+    }
+
+    private async Task HandleInstanceCreatedAsync(InstanceRecord record)
+    {
         await RefreshAsync().ConfigureAwait(true);
         _toasts.Show(
             ToastTone.Success,

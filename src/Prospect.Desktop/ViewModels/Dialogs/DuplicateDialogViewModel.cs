@@ -104,7 +104,9 @@ public sealed partial class DuplicateDialogViewModel : ObservableObject, IDispos
         }
         catch (OperationCanceledException)
         {
-            // Annulation demandée par l'utilisateur (voir Cancel()) : silencieuse, retour au formulaire.
+            // Annulation demandée par l'utilisateur (voir Cancel()) : retour au formulaire, sans
+            // message d'échec (ce n'est pas une erreur).
+            FailureMessage = null;
         }
         catch (Exception ex) when (ex is InstanceNotFoundException or InstanceNameInvalidException)
         {
