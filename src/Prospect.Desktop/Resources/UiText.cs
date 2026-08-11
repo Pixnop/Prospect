@@ -55,6 +55,7 @@ internal static class UiText
         internal const string InstanceDeletedTitle = "Instance supprimée";
         internal const string VersionInstalledTitle = "Version installée";
         internal const string VersionUninstalledTitle = "Version désinstallée";
+        internal const string LaunchSettingsSavedTitle = "Réglages de lancement enregistrés";
 
         internal static string WithVersion(string name, string version) => $"{name} · {version}";
     }
@@ -140,5 +141,22 @@ internal static class UiText
             InstanceBrokenReason.UnsupportedSchemaVersion => "version de schéma non prise en charge",
             _ => "raison inconnue",
         };
+    }
+
+    /// <summary>Textes de la page de détail d'instance (design/ui_kits/launcher/screen-instance.jsx).</summary>
+    internal static class Instance
+    {
+        internal const string VersionNotInstalledTitle = "Version non installée";
+        internal const string RuntimeMissingTitle = "Runtime .NET manquant";
+        internal const string MacNotSupportedTitle = "macOS non pris en charge";
+        internal const string AlreadyRunningTitle = "Session déjà en cours";
+        internal const string GenericLaunchErrorTitle = "Lancement impossible";
+
+        internal static string StopConfirmTitle(string instanceName) => $"Arrêter « {instanceName} » ?";
+
+        internal static string StopConfirmMessage(string instanceName)
+            => $"Le jeu de « {instanceName} » va s'arrêter immédiatement. Toute progression non sauvegardée sera perdue.";
+
+        internal const string EnvVarsInvalidLine = "Chaque ligne doit être au format CLE=valeur.";
     }
 }

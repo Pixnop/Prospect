@@ -53,5 +53,7 @@
         <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/Card.axaml" />
         <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/NavItem.axaml" />
         <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/MenuFlyout.axaml" />
+        <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/Tabs.axaml" />
+        <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/Alert.axaml" />
     </Application.Styles>
 </Application>

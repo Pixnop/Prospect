@@ -1,0 +1,16 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Port de .pr-tabs (components/components.css) : le conteneur des onglets de la page de détail
+    d'instance. Cible Border directement, comme Card.axaml : une simple ligne de séparation basse,
+    rien à recouvrir avec un ControlTheme. Les boutons d'onglet eux-mêmes vivent dans Button.axaml
+    (Classes="tab"), pour partager son gabarit.
+  -->
+
+  <Style Selector="Border.tabsBar">
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+  </Style>
+
+</Styles>

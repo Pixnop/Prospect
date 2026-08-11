@@ -52,7 +52,9 @@
 
   <!-- ── Carte d'instance ────────────────────────────────────────────────────────── -->
   <x:String x:Key="Card_Play">Jouer</x:String>
-  <x:String x:Key="Card_PlayTooltip">Le lancement arrive dans une prochaine version.</x:String>
+  <x:String x:Key="Card_Stop">Arrêter</x:String>
+  <x:String x:Key="Card_Launching">Lancement…</x:String>
+  <x:String x:Key="Card_Playing">En cours</x:String>
   <x:String x:Key="Card_Actions">Actions</x:String>
   <x:String x:Key="Card_Rename">Renommer</x:String>
   <x:String x:Key="Card_Duplicate">Dupliquer</x:String>
@@ -128,5 +130,46 @@
   <x:String x:Key="Placeholder_Mods_Description">Bientôt disponible : recherche et installation de mods depuis le ModDB officiel.</x:String>
   <x:String x:Key="Placeholder_Settings_Title">Réglages</x:String>
   <x:String x:Key="Placeholder_Settings_Description">Bientôt disponible : préférences générales, jeu, réseau et comptes.</x:String>
+
+  <!-- ── Page de détail d'instance ───────────────────────────────────────────────── -->
+  <x:String x:Key="Instance_Back">Instances</x:String>
+  <x:String x:Key="Instance_Play">Jouer</x:String>
+  <x:String x:Key="Instance_Stop">Arrêter</x:String>
+  <x:String x:Key="Instance_Launching">Lancement…</x:String>
+  <x:String x:Key="Instance_Playing">En cours</x:String>
+  <x:String x:Key="Instance_MoreActions">Plus d'actions</x:String>
+  <x:String x:Key="Instance_Rename">Renommer</x:String>
+  <x:String x:Key="Instance_Duplicate">Dupliquer</x:String>
+  <x:String x:Key="Instance_Delete">Supprimer</x:String>
+  <x:String x:Key="Instance_InstallAction">Installer</x:String>
+
+  <x:String x:Key="Tab_Mods">Mods</x:String>
+  <x:String x:Key="Tab_Worlds">Mondes</x:String>
+  <x:String x:Key="Tab_Journal">Journal</x:String>
+  <x:String x:Key="Tab_Options">Options</x:String>
+
+  <x:String x:Key="Instance_Mods_Title">Mods</x:String>
+  <x:String x:Key="Instance_Mods_Description">Bientôt disponible : installation et gestion des mods de cette instance depuis le ModDB officiel.</x:String>
+
+  <x:String x:Key="Instance_Worlds_EmptyTitle">Aucun monde</x:String>
+  <x:String x:Key="Instance_Worlds_EmptyDescription">Les mondes créés dans cette instance apparaîtront ici après le premier lancement.</x:String>
+
+  <x:String x:Key="Instance_Journal_Refresh">Rafraîchir</x:String>
+  <x:String x:Key="Instance_Journal_EmptyTitle">Aucun journal</x:String>
+  <x:String x:Key="Instance_Journal_EmptyDescription">Cette instance n'a jamais été lancée. Le journal du dernier lancement apparaîtra ici.</x:String>
+  <x:String x:Key="Instance_Journal_RunningNotice">Le jeu tourne : rafraîchis pour voir les dernières lignes écrites.</x:String>
+
+  <x:String x:Key="Instance_Options_Title">Options de l'instance</x:String>
+  <x:String x:Key="Instance_Options_Description">Arguments de lancement et variables d'environnement propres à cette instance.</x:String>
+  <x:String x:Key="Instance_Options_ExtraArgsLabel">Arguments de lancement</x:String>
+  <x:String x:Key="Instance_Options_ExtraArgsHint">Un argument par ligne, ajouté après --dataPath.</x:String>
+  <x:String x:Key="Instance_Options_EnvLabel">Variables d'environnement</x:String>
+  <x:String x:Key="Instance_Options_EnvHint">Une variable par ligne, au format CLE=valeur.</x:String>
+  <x:String x:Key="Instance_Options_MesaGlThread">Activer MESA_GLTHREAD (confort pilotes Mesa, Linux)</x:String>
+  <x:String x:Key="Instance_Options_Save">Enregistrer</x:String>
+  <x:String x:Key="Instance_Options_ApplyNote">Les changements s'appliquent au prochain lancement.</x:String>
+
+  <!-- ── Dialogue d'arrêt ────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Dialog_Stop_Confirm">Arrêter le jeu</x:String>
 
 </ResourceDictionary>

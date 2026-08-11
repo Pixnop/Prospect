@@ -6,6 +6,7 @@ using Prospect.Desktop.Services;
 using Prospect.Desktop.ViewModels.Common;
 using Prospect.Desktop.ViewModels.Downloads;
 using Prospect.Desktop.ViewModels.Home;
+using Prospect.Desktop.ViewModels.Instance;
 using Prospect.Desktop.ViewModels.Versions;
 
 namespace Prospect.Desktop.ViewModels.Shell;
@@ -19,11 +20,13 @@ namespace Prospect.Desktop.ViewModels.Shell;
 public sealed partial class ShellViewModel : ObservableObject
 {
     private readonly List<NavItemViewModel> _allNavItems = [];
+    private readonly Func<string, InstanceDetailViewModel> _instanceDetailFactory;
 
     public ShellViewModel(
         HomeViewModel home,
         VersionsViewModel versions,
         DownloadsViewModel downloads,
+        Func<string, InstanceDetailViewModel> instanceDetailFactory,
         IOverlayService overlay,
         IToastService toasts,
         IAppEnvironment appEnvironment)
@@ -31,6 +34,7 @@ public sealed partial class ShellViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(home);
         ArgumentNullException.ThrowIfNull(versions);
         ArgumentNullException.ThrowIfNull(downloads);
+        ArgumentNullException.ThrowIfNull(instanceDetailFactory);
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(toasts);
         ArgumentNullException.ThrowIfNull(appEnvironment);
@@ -38,9 +42,11 @@ public sealed partial class ShellViewModel : ObservableObject
         Home = home;
         Versions = versions;
         Downloads = downloads;
+        _instanceDetailFactory = instanceDetailFactory;
         Overlay = overlay;
         Toasts = toasts;
         UseCustomTitlebar = ResolveUseCustomTitlebar(appEnvironment.CurrentOperatingSystem);
+        Home.InstanceOpenRequested += (_, slug) => ShowInstanceDetail(slug);
 
         var modsPage = new PlaceholderPageViewModel(
             "package",
@@ -103,8 +109,36 @@ public sealed partial class ShellViewModel : ObservableObject
     [RelayCommand]
     private void CloseDownloadsPopover() => IsDownloadsPopoverOpen = false;
 
+    /// <summary>Retour à l'Accueil : cible du bouton retour de la page de détail.</summary>
+    public void ShowHome() => Navigate(Home);
+
+    /// <summary>
+    /// Ouvre la page de détail de l'instance <paramref name="slug"/> (clic sur une carte
+    /// d'Accueil, hors bouton Jouer/Arrêter et menu — voir <see cref="HomeViewModel.InstanceOpenRequested"/>).
+    /// La page est transient (une nouvelle instance de ViewModel à chaque ouverture, voir
+    /// <see cref="Prospect.Desktop.CompositionRoot"/>) : <see cref="Navigate"/> se charge de
+    /// disposer celle qu'elle remplace.
+    /// </summary>
+    public void ShowInstanceDetail(string slug)
+    {
+        var detail = _instanceDetailFactory(slug);
+        detail.BackRequested += (_, _) => ShowHome();
+        detail.NavigateToVersionsRequested += (_, _) => Navigate(Versions);
+
+        Navigate(detail);
+        _ = detail.InitializeCommand.ExecuteAsync(null);
+    }
+
+    // Dispose la page sortante si elle en a besoin (InstanceDetailViewModel se désabonne de
+    // RunningInstanceTracker) : sans ça, chaque instance ouverte puis quittée resterait suivie
+    // indéfiniment par le tracker, qui est un singleton pour toute la durée de l'application.
     private void Navigate(object page)
     {
+        if (!ReferenceEquals(CurrentPage, page) && CurrentPage is IDisposable outgoing)
+        {
+            outgoing.Dispose();
+        }
+
         CurrentPage = page;
         IsDownloadsPopoverOpen = false;
         foreach (var item in _allNavItems)

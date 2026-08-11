@@ -1,0 +1,40 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Port de .pr-alert et de ses variantes .pr-alert par ton (components/feedback/Alert.jsx +
+    components.css). Cible
+    Border directement (comme Card.axaml/Tabs.axaml) : Alert n'est qu'un cadre teinté, la
+    composition icône + titre + description + action se fait dans la vue consommatrice.
+
+    Fonds à 4 tons : réutilisent tels quels les DynamicResource *Quiet déjà posés pour les badges
+    de canal (InfoQuiet/SuccessQuiet/WarningQuiet/DangerQuiet), qui sont exactement les mêmes
+    couleurs de base à 16% d'opacité que celles de la maquette Alert. Les bordures, à l'inverse,
+    n'ont pas de token dédié : mêmes littéraux hex que Badge.axaml (~30% d'opacité de la même
+    teinte), réutilisés à l'identique pour ne pas dupliquer une valeur qui devrait rester unique.
+  -->
+
+  <Style Selector="Border.alert">
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+    <Setter Property="Padding" Value="16,12" />
+  </Style>
+
+  <Style Selector="Border.alert.info">
+    <Setter Property="Background" Value="{DynamicResource InfoQuiet}" />
+    <Setter Property="BorderBrush" Value="#4C7C93AE" />
+  </Style>
+  <Style Selector="Border.alert.success">
+    <Setter Property="Background" Value="{DynamicResource SuccessQuiet}" />
+    <Setter Property="BorderBrush" Value="#4C5E9C86" />
+  </Style>
+  <Style Selector="Border.alert.warning">
+    <Setter Property="Background" Value="{DynamicResource WarningQuiet}" />
+    <Setter Property="BorderBrush" Value="#4CD9A441" />
+  </Style>
+  <Style Selector="Border.alert.danger">
+    <Setter Property="Background" Value="{DynamicResource DangerQuiet}" />
+    <Setter Property="BorderBrush" Value="#4CC1503B" />
+  </Style>
+
+</Styles>

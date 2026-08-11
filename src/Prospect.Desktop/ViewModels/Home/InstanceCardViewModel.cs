@@ -1,42 +1,61 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Prospect.Core.Common;
 using Prospect.Core.Instances;
+using Prospect.Core.Launching;
 using Prospect.Desktop.Formatting;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.ViewModels.Dialogs;
+using Prospect.Desktop.ViewModels.Instance;
+using Prospect.Desktop.ViewModels.Toasts;
 
 namespace Prospect.Desktop.ViewModels.Home;
 
 /// <summary>
 /// Une carte de la grille d'Accueil (design/components/launcher/InstanceCard.jsx). Le bouton
-/// « Jouer » reste désactivé pour cette PR (le lancement est une PR ultérieure, voir son tooltip
-/// dans la vue) ; les actions du menu ouvrent chacune un dialogue via <see cref="IOverlayService"/>
-/// et redemandent un rafraîchissement de l'Accueil après un succès.
+/// « Jouer » bascule Jouer → (lancement) → En cours avec « Arrêter » (confirmation avant kill).
+/// Une carte n'a pas de place pour un bandeau d'erreur : les échecs de pré-lancement s'affichent
+/// en toast (voir <see cref="LaunchErrorPresenter"/>, partagé avec la page de détail qui, elle,
+/// a la place pour un bandeau). Les actions du menu ouvrent chacune un dialogue via
+/// <see cref="IOverlayService"/> et redemandent un rafraîchissement de l'Accueil après un succès.
 /// </summary>
-public sealed partial class InstanceCardViewModel : ObservableObject
+public sealed partial class InstanceCardViewModel : ObservableObject, IDisposable
 {
-    private const string BuiltinPrefix = "builtin:";
-    private const string FallbackIconKey = "layers";
-
     private readonly InstanceService _instanceService;
+    private readonly GameLauncher _launcher;
+    private readonly RunningInstanceTracker _tracker;
     private readonly IOverlayService _overlay;
+    private readonly IToastService _toasts;
+    private readonly IUiDispatcher _dispatcher;
     private readonly Func<Task> _requestRefresh;
 
     public InstanceCardViewModel(
         InstanceRecord record,
         string lastPlayedText,
         InstanceService instanceService,
+        GameLauncher launcher,
+        RunningInstanceTracker tracker,
         IOverlayService overlay,
+        IToastService toasts,
+        IUiDispatcher dispatcher,
         Func<Task> requestRefresh)
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(instanceService);
+        ArgumentNullException.ThrowIfNull(launcher);
+        ArgumentNullException.ThrowIfNull(tracker);
         ArgumentNullException.ThrowIfNull(overlay);
+        ArgumentNullException.ThrowIfNull(toasts);
+        ArgumentNullException.ThrowIfNull(dispatcher);
         ArgumentNullException.ThrowIfNull(requestRefresh);
 
         _instanceService = instanceService;
+        _launcher = launcher;
+        _tracker = tracker;
         _overlay = overlay;
+        _toasts = toasts;
+        _dispatcher = dispatcher;
         _requestRefresh = requestRefresh;
 
         Slug = record.Slug;
@@ -45,8 +64,14 @@ public sealed partial class InstanceCardViewModel : ObservableObject
         ChannelBadgeTone = ChannelBadgePresentation.ToBadgeTone(record.Metadata.GameVersion.Channel);
         LastLaunchedUtc = record.Metadata.LastLaunchedUtc;
         LastPlayedText = lastPlayedText;
-        IconKey = ParseIconKey(record.Metadata.Icon);
+        IconKey = InstanceIconKeyResolver.Resolve(record.Metadata.Icon);
+        _isRunning = tracker.IsRunning(Slug);
+
+        _tracker.StatusChanged += OnTrackerStatusChanged;
     }
+
+    /// <summary>Levé quand la carte (hors bouton Jouer/Arrêter et menu) est cliquée : ouvre la page de détail.</summary>
+    public event EventHandler<string>? OpenRequested;
 
     public string Slug { get; }
 
@@ -66,6 +91,45 @@ public sealed partial class InstanceCardViewModel : ObservableObject
     /// <summary>Clé résolue par <see cref="Prospect.Desktop.Converters.IconKeyToGeometryConverter"/>.</summary>
     public string IconKey { get; }
 
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RequestStopCommand))]
+    private bool _isRunning;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
+    private bool _isLaunching;
+
+    [RelayCommand]
+    private void Open() => OpenRequested?.Invoke(this, Slug);
+
+    [RelayCommand(CanExecute = nameof(CanPlay))]
+    private async Task PlayAsync()
+    {
+        IsLaunching = true;
+        try
+        {
+            await _launcher.LaunchAsync(Slug, CancellationToken.None).ConfigureAwait(true);
+        }
+        catch (Exception ex) when (ex is InstanceNotFoundException or InstanceAlreadyRunningException
+                                        or GameVersionNotInstalledException or Core.Runtime.RuntimeNotAvailableException
+                                        or MacLaunchNotSupportedException)
+        {
+            var presentation = LaunchErrorPresenter.Describe(ex);
+            _toasts.Show(ToastTone.Error, presentation.Title, presentation.Message);
+        }
+        finally
+        {
+            IsLaunching = false;
+        }
+    }
+
+    private bool CanPlay() => !IsRunning && !IsLaunching;
+
+    [RelayCommand(CanExecute = nameof(IsRunning))]
+    private void RequestStop()
+        => _overlay.Show(new StopInstanceDialogViewModel(Name, () => _tracker.RequestStop(Slug), _overlay));
+
     [RelayCommand]
     private void Rename() => _overlay.Show(new RenameDialogViewModel(Slug, Name, _instanceService, _overlay, () => _requestRefresh()));
 
@@ -75,14 +139,22 @@ public sealed partial class InstanceCardViewModel : ObservableObject
     [RelayCommand]
     private void Delete() => _overlay.Show(new DeleteInstanceDialogViewModel(Slug, Name, _instanceService, _overlay, () => _requestRefresh()));
 
-    private static string ParseIconKey(string icon)
+    private void OnTrackerStatusChanged(object? sender, RunningInstanceStatus status)
     {
-        if (!icon.StartsWith(BuiltinPrefix, StringComparison.Ordinal))
+        if (!string.Equals(status.Slug, Slug, StringComparison.Ordinal))
         {
-            return FallbackIconKey;
+            return;
         }
 
-        var key = icon[BuiltinPrefix.Length..];
-        return key is "" or "default" ? FallbackIconKey : key;
+        _dispatcher.Post(() => IsRunning = status.State == RunningInstanceState.Started);
     }
+
+    /// <summary>
+    /// Se désabonne de <see cref="RunningInstanceTracker"/> : sans ça, chaque rafraîchissement de
+    /// l'Accueil (<c>HomeViewModel.RefreshAsync</c>, qui reconstruit toutes les cartes) laisserait
+    /// le tracker — un singleton qui vit toute la durée de l'application — retenir indéfiniment
+    /// des cartes remplacées, plus l'abonnement lui-même. <see cref="HomeViewModel"/> appelle
+    /// cette méthode avant d'abandonner une carte.
+    /// </summary>
+    public void Dispose() => _tracker.StatusChanged -= OnTrackerStatusChanged;
 }

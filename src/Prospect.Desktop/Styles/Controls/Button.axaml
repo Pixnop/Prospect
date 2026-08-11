@@ -179,6 +179,58 @@
     <Style Selector="^.icon.danger:pointerover">
       <Setter Property="Foreground" Value="{DynamicResource DangerText}" />
     </Style>
+
+    <!-- ── Tab (onglets — port de .pr-tab, page de détail d'instance) ─────────────── -->
+    <!-- Même raisonnement que .icon ci-dessus : une variante de Button vit ici pour profiter du
+         gabarit PART_Border commun. Le soulignement actif n'est pas un élément de gabarit séparé :
+         c'est la bordure basse de PART_Border elle-même (2px, transparente au repos, Accent une
+         fois .on), ce qui évite de dupliquer le ControlTemplate rien que pour Tabs. -->
+    <Style Selector="^.tab">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0,0,0,2" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Foreground" Value="{DynamicResource Text3}" />
+      <Setter Property="FontSize" Value="{StaticResource FsBodySm}" />
+      <Setter Property="FontWeight" Value="{StaticResource FwRegular}" />
+      <Setter Property="Padding" Value="0,8,0,8" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+    </Style>
+    <Style Selector="^.tab:pointerover /template/ Border#PART_Border">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="^.tab:pointerover">
+      <Setter Property="Foreground" Value="{DynamicResource Text1}" />
+    </Style>
+    <Style Selector="^.tab:pressed /template/ Border#PART_Border">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="^.tab.on">
+      <Setter Property="Foreground" Value="{DynamicResource Text1}" />
+      <Setter Property="FontWeight" Value="{StaticResource FwMedium}" />
+    </Style>
+    <Style Selector="^.tab.on /template/ Border#PART_Border">
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+    </Style>
+
+    <!-- ── CardHit (surface cliquable sans chrome — carte d'Accueil) ──────────────── -->
+    <!-- Aucune couleur/état propre : ce bouton n'existe que pour porter un clic sur la vignette
+         et le nom d'une InstanceCard (voir le commentaire d'en-tête d'InstanceCardView.axaml),
+         il ne doit jamais avoir l'air d'un bouton. -->
+    <Style Selector="^.cardHit">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="^.cardHit:pointerover /template/ Border#PART_Border">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="^.cardHit:pressed /template/ Border#PART_Border">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
   </ControlTheme>
 
 </ResourceDictionary>

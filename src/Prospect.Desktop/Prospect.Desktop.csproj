@@ -17,6 +17,13 @@
     <NoWarn>$(NoWarn);AVLN3001</NoWarn>
   </PropertyGroup>
 
+  <!-- Même précédent que Prospect.Core.csproj : quelques classes internes (LaunchErrorPresenter,
+       qui traduit une exception de lancement en message présentable) méritent un test direct
+       plutôt qu'une couverture seulement indirecte via les ViewModels qui les consomment. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Prospect.Desktop.Tests" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Desktop" />
