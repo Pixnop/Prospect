@@ -265,6 +265,12 @@ bas). Tout le reste attendra d'exister.
 }
 ```
 
+Chaque entrée de `mods` porte aussi un champ optionnel `enabled` (omis quand vrai,
+ajouté au schéma à la PR 22) : les mods désactivés d'une instance voyagent avec leur
+état. Les `sha256` sont calculés par Prospect à l'export depuis les zips locaux, le
+ModDB n'exposant aucune somme de contrôle, et vérifiés à l'import quand ils sont
+présents ; un écart isole l'échec au mod concerné sans faire tomber l'import.
+
 L'export produit ce fichier (seul ou zippé avec, en option, le dossier `ModConfig/` de
 l'instance). L'import crée une instance, installe la version du jeu si absente, résout
 chaque mod via le ModDB (par `modId` + `version`, `fileId` en raccourci quand il est
