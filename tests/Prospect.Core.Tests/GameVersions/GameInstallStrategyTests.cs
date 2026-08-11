@@ -64,10 +64,13 @@ public sealed class GameInstallStrategyTests
 
         await strategy.InstallAsync(ArchivePath, TargetDirectory, CancellationToken.None);
 
+        // Les chemins posés sont ceux de la cible normalisée : sur Windows, « /data/... » devient
+        // « C:\data\... », d'où la comparaison à partir de GetFullPath plutôt que du chemin brut.
+        var root = fileSystem.Path.GetFullPath(TargetDirectory);
         permissions.Modes.Values.ShouldAllBe(mode => mode == Mode755);
-        permissions.Modes.Keys.ShouldContain(fileSystem.Path.Combine(TargetDirectory, "Vintagestory"));
-        permissions.Modes.Keys.ShouldContain(fileSystem.Path.Combine(TargetDirectory, "assets"));
-        permissions.Modes.Keys.ShouldContain(fileSystem.Path.GetFullPath(TargetDirectory));
+        permissions.Modes.Keys.ShouldContain(root);
+        permissions.Modes.Keys.ShouldContain(fileSystem.Path.Combine(root, "Vintagestory"));
+        permissions.Modes.Keys.ShouldContain(fileSystem.Path.Combine(root, "assets"));
     }
 
     [Fact]
