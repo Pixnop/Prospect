@@ -28,6 +28,7 @@ public sealed partial class HomeViewModel : ObservableObject
     private readonly IClock _clock;
     private readonly IOverlayService _overlay;
     private readonly IToastService _toasts;
+    private readonly Func<WizardViewModel> _wizardFactory;
     private readonly List<InstanceCardViewModel> _allInstances = [];
     private readonly NewInstanceTileViewModel _newInstanceTile;
 
@@ -36,19 +37,22 @@ public sealed partial class HomeViewModel : ObservableObject
         IInstanceRepository repository,
         IClock clock,
         IOverlayService overlay,
-        IToastService toasts)
+        IToastService toasts,
+        Func<WizardViewModel> wizardFactory)
     {
         ArgumentNullException.ThrowIfNull(instanceService);
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(toasts);
+        ArgumentNullException.ThrowIfNull(wizardFactory);
 
         _instanceService = instanceService;
         _repository = repository;
         _clock = clock;
         _overlay = overlay;
         _toasts = toasts;
+        _wizardFactory = wizardFactory;
         _newInstanceTile = new NewInstanceTileViewModel(NewInstance);
     }
 
@@ -143,12 +147,16 @@ public sealed partial class HomeViewModel : ObservableObject
     [RelayCommand]
     private void ClearSearch() => SearchText = string.Empty;
 
+    // Le wizard vient d'une fabrique du conteneur plutôt que d'un « new » : depuis qu'il consomme
+    // le catalogue de versions, il a plus de dépendances que l'Accueil n'en a lui-même, et les lui
+    // faire traverser n'apprendrait rien à personne.
     [RelayCommand]
     private void NewInstance()
     {
-        var wizard = new WizardViewModel(_instanceService, _overlay);
+        var wizard = _wizardFactory();
         wizard.Created += OnInstanceCreated;
         _overlay.Show(wizard);
+        _ = wizard.LoadVersionsCommand.ExecuteAsync(null);
     }
 
     // Gestionnaire volontairement synchrone (pas async void, dangereux : une exception y

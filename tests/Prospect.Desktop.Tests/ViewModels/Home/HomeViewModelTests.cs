@@ -1,11 +1,14 @@
 using System.IO.Abstractions.TestingHelpers;
 
 using Prospect.Core.Common;
+using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
 using Prospect.Core.Instances.Migrations;
 using Prospect.Core.Storage;
+using Prospect.Desktop.Services;
 using Prospect.Desktop.Tests.TestDoubles;
 using Prospect.Desktop.ViewModels.Home;
+using Prospect.Desktop.ViewModels.Wizard;
 
 using Shouldly;
 
@@ -27,8 +30,20 @@ public class HomeViewModelTests
         var repository = new FileSystemInstanceRepository(fileSystem, Paths, new JsonFileStore(fileSystem), new InstanceMetadataMigrationPipeline([]));
         var clock = new FakeClock(Now);
         var service = new InstanceService(repository, fileSystem, clock);
-        var viewModel = new HomeViewModel(service, repository, clock, new RecordingOverlayService(), new RecordingToastService());
+        var overlay = new RecordingOverlayService();
+        var viewModel = new HomeViewModel(service, repository, clock, overlay, new RecordingToastService(), WizardFactory(service, overlay, fileSystem));
         return (viewModel, service, repository);
+    }
+
+    // Le wizard a ses propres dépendances (catalogue, installations) depuis qu'il porte le
+    // sélecteur de versions ; l'Accueil ne les connaît pas, il reçoit une fabrique.
+    private static Func<WizardViewModel> WizardFactory(InstanceService service, IOverlayService overlay, MockFileSystem fileSystem)
+    {
+        var versions = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
+        var catalog = new FakeGameVersionCatalog { Catalog = FakeGameVersionCatalog.Build("1.21.3") };
+        var installService = new GameInstallService(catalog, new FakeDownloadManager(), versions, new FakeGameInstallStrategy());
+
+        return () => new WizardViewModel(service, overlay, catalog, versions, installService, new ImmediateUiDispatcher());
     }
 
     [Fact]
@@ -157,8 +172,14 @@ public class HomeViewModelTests
             new InstanceMetadataMigrationPipeline([]));
         fileSystem.AddDirectory(brokenRepository.GetInstanceDirectory("ghost-folder"));
         var brokenService = new InstanceService(brokenRepository, fileSystem, new FakeClock(Now));
+        var brokenOverlay = new RecordingOverlayService();
         var brokenViewModel = new HomeViewModel(
-            brokenService, brokenRepository, new FakeClock(Now), new RecordingOverlayService(), new RecordingToastService());
+            brokenService,
+            brokenRepository,
+            new FakeClock(Now),
+            brokenOverlay,
+            new RecordingToastService(),
+            WizardFactory(brokenService, brokenOverlay, fileSystem));
 
         await brokenViewModel.RefreshCommand.ExecuteAsync(null);
 

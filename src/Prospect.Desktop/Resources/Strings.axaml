@@ -36,6 +36,7 @@
   <x:String x:Key="Downloads_EmptyTitle">Aucun téléchargement</x:String>
   <x:String x:Key="Downloads_EmptyDescription">Les téléchargements de versions du jeu et de mods apparaîtront ici.</x:String>
   <x:String x:Key="Downloads_Close">Fermer</x:String>
+  <x:String x:Key="Downloads_Cancel">Annuler</x:String>
 
   <!-- ── Accueil ─────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Home_Title">Instances</x:String>
@@ -70,8 +71,13 @@
   <x:String x:Key="Wizard_Step1_SlugPrefix">Le dossier sera créé sous instances/</x:String>
 
   <x:String x:Key="Wizard_Step2_VersionLabel">Version du jeu</x:String>
-  <x:String x:Key="Wizard_Step2_VersionPlaceholder">1.21.3</x:String>
-  <x:String x:Key="Wizard_Step2_VersionHint">Format Major.Minor.Patch, par exemple 1.21.3. Le sélecteur de versions installées arrive avec la PR du catalogue de jeu.</x:String>
+  <x:String x:Key="Wizard_Step2_Loading">Lecture du catalogue…</x:String>
+  <x:String x:Key="Wizard_Step2_Empty">Aucune version disponible. Vérifie ta connexion, ou installe une version depuis l'écran Versions.</x:String>
+  <x:String x:Key="Wizard_Step2_ChannelAll">Tous les canaux</x:String>
+  <x:String x:Key="Wizard_Step2_ChannelStable">Canal stable</x:String>
+  <x:String x:Key="Wizard_Step2_ChannelUnstable">Canal unstable</x:String>
+  <x:String x:Key="Wizard_Step2_ChannelPre">Canal pre</x:String>
+  <x:String x:Key="Wizard_CancelInstall">Annuler l'installation</x:String>
 
   <x:String x:Key="Wizard_Step3_Title">Icône de l'instance</x:String>
   <x:String x:Key="Wizard_Step3_Description">Choisis une icône parmi celles intégrées, ou garde l'icône par défaut. Une icône personnalisée sera possible plus tard.</x:String>
@@ -96,11 +102,30 @@
 
   <x:String x:Key="Dialog_Delete_Confirm">Supprimer l'instance</x:String>
 
+  <!-- ── Écran Versions ──────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Versions_Title">Versions du jeu</x:String>
+  <x:String x:Key="Versions_CheckForUpdates">Vérifier les nouveautés</x:String>
+  <x:String x:Key="Versions_SearchPlaceholder">Filtrer par version…</x:String>
+  <x:String x:Key="Versions_FilterAll">Toutes</x:String>
+  <x:String x:Key="Versions_FilterInstalled">Installées</x:String>
+  <x:String x:Key="Versions_FilterAvailable">Disponibles</x:String>
+  <x:String x:Key="Versions_ShowUnstable">Afficher unstable et pre</x:String>
+  <x:String x:Key="Versions_InstalledSection">Installées</x:String>
+  <x:String x:Key="Versions_AvailableSection">Disponibles</x:String>
+  <x:String x:Key="Versions_BrokenSection">Installations non exploitables</x:String>
+  <x:String x:Key="Versions_Install">Installer</x:String>
+  <x:String x:Key="Versions_Uninstall">Désinstaller</x:String>
+  <x:String x:Key="Versions_CancelInstall">Annuler</x:String>
+  <x:String x:Key="Versions_InstalledBadge">installée</x:String>
+  <x:String x:Key="Versions_EmptyTitle">Aucune version</x:String>
+  <x:String x:Key="Versions_EmptyDescription">Aucune version ne correspond au filtre courant. Élargis le filtre, ou vérifie les nouveautés du catalogue.</x:String>
+
+  <!-- ── Dialogue de désinstallation ─────────────────────────────────────────────── -->
+  <x:String x:Key="Dialog_Uninstall_Confirm">Désinstaller</x:String>
+
   <!-- ── Pages placeholder ───────────────────────────────────────────────────────── -->
   <x:String x:Key="Placeholder_Mods_Title">Navigateur de mods</x:String>
   <x:String x:Key="Placeholder_Mods_Description">Bientôt disponible : recherche et installation de mods depuis le ModDB officiel.</x:String>
-  <x:String x:Key="Placeholder_Versions_Title">Versions du jeu</x:String>
-  <x:String x:Key="Placeholder_Versions_Description">Bientôt disponible : téléchargement et gestion des versions du jeu installées.</x:String>
   <x:String x:Key="Placeholder_Settings_Title">Réglages</x:String>
   <x:String x:Key="Placeholder_Settings_Description">Bientôt disponible : préférences générales, jeu, réseau et comptes.</x:String>
 

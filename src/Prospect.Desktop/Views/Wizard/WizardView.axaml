@@ -9,12 +9,11 @@
              x:DataType="vm:WizardViewModel">
 
   <!--
-    Port de design/ui_kits/launcher/screen-wizard.jsx. La version du jeu (étape 2) est pour
-    l'instant un champ texte validé par GameVersion.TryParse plutôt que le sélecteur de la
-    maquette (liste de versions du catalogue) : décision documentée dans le corps de la PR, le
-    vrai sélecteur arrive avec la PR du catalogue de versions du jeu. Pas de ligne de connexion
-    entre les pastilles d'étape (contrairement à la maquette) : une UniformGrid les espace
-    également, simplification volontaire qui garde la lecture de la progression intacte.
+    Port de design/ui_kits/launcher/screen-wizard.jsx. L'étape 2 est le sélecteur de versions de
+    la maquette : filtre par canal, liste des versions installées puis téléchargeables, avec la
+    taille annoncée par le catalogue. Pas de ligne de connexion entre les pastilles d'étape
+    (contrairement à la maquette) : une UniformGrid les espace également, simplification volontaire
+    qui garde la lecture de la progression intacte.
   -->
 
   <UserControl.Styles>
@@ -51,6 +50,9 @@
     <Style Selector="Border.icon-choice.selected">
       <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
       <Setter Property="Background" Value="{DynamicResource AccentQuiet}" />
+    </Style>
+    <Style Selector="Button.version-choice.selected /template/ Border#PART_Border">
+      <Setter Property="Background" Value="{DynamicResource BgSelected}" />
     </Style>
   </UserControl.Styles>
 
@@ -137,18 +139,54 @@
           </StackPanel>
         </StackPanel>
 
-        <StackPanel IsVisible="{Binding IsVersionStep}" Spacing="18">
-          <StackPanel Spacing="6">
-            <TextBlock Text="{StaticResource Wizard_Step2_VersionLabel}" FontSize="{StaticResource FsCaption}"
-                       FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
-            <TextBox Classes="mono" Text="{Binding VersionText, Mode=TwoWay}" Watermark="{StaticResource Wizard_Step2_VersionPlaceholder}" />
-            <TextBlock Text="{StaticResource Wizard_Step2_VersionHint}" FontSize="{StaticResource FsCaption}"
-                       Foreground="{DynamicResource Text3}" TextWrapping="Wrap"
-                       IsVisible="{Binding VersionError, Converter={x:Static ObjectConverters.IsNull}}" />
-            <TextBlock Text="{Binding VersionError}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource DangerText}"
-                       TextWrapping="Wrap"
-                       IsVisible="{Binding VersionError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-          </StackPanel>
+        <StackPanel IsVisible="{Binding IsVersionStep}" Spacing="12">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="{StaticResource Wizard_Step2_VersionLabel}" VerticalAlignment="Center"
+                       FontSize="{StaticResource FsCaption}" FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+            <ComboBox Grid.Column="1" Width="170" SelectedIndex="{Binding ChannelFilterIndex, Mode=TwoWay}">
+              <ComboBoxItem Content="{StaticResource Wizard_Step2_ChannelAll}" />
+              <ComboBoxItem Content="{StaticResource Wizard_Step2_ChannelStable}" />
+              <ComboBoxItem Content="{StaticResource Wizard_Step2_ChannelUnstable}" />
+              <ComboBoxItem Content="{StaticResource Wizard_Step2_ChannelPre}" />
+            </ComboBox>
+          </Grid>
+
+          <TextBlock Text="{StaticResource Wizard_Step2_Loading}" FontSize="{StaticResource FsCaption}"
+                     Foreground="{DynamicResource Text3}" IsVisible="{Binding IsLoadingVersions}" />
+
+          <TextBlock Text="{Binding VersionsWarning}" FontSize="{StaticResource FsCaption}" TextWrapping="Wrap"
+                     Foreground="{DynamicResource WarningText}"
+                     IsVisible="{Binding VersionsWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+          <Border Classes="card" MaxHeight="240" IsVisible="{Binding !!VersionChoices.Count}">
+            <ScrollViewer>
+              <ItemsControl ItemsSource="{Binding VersionChoices}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:GameVersionChoiceViewModel">
+                    <Button Classes="ghost version-choice" Classes.selected="{Binding IsSelected}" Command="{Binding SelectCommand}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" CornerRadius="0" Padding="14,10">
+                      <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                        <RadioButton Grid.Column="0" IsChecked="{Binding IsSelected, Mode=OneWay}" IsHitTestVisible="False" Margin="0,0,10,0" />
+                        <TextBlock Grid.Column="1" Text="{Binding VersionText}" VerticalAlignment="Center"
+                                   FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
+                        <ContentControl Grid.Column="2" Classes="badge" Content="{Binding ChannelBadgeTone}"
+                                        HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0"
+                                        Classes.stable="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=stable}"
+                                        Classes.unstable="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=unstable}"
+                                        Classes.pre="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=pre}" />
+                        <TextBlock Grid.Column="3" Text="{Binding StateText}" VerticalAlignment="Center"
+                                   FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+                      </Grid>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Border>
+
+          <TextBlock Text="{StaticResource Wizard_Step2_Empty}" FontSize="{StaticResource FsCaption}" TextWrapping="Wrap"
+                     Foreground="{DynamicResource Text3}"
+                     IsVisible="{Binding !VersionChoices.Count}" />
         </StackPanel>
 
         <StackPanel IsVisible="{Binding IsIconStep}" Spacing="14">
@@ -182,7 +220,7 @@
             <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Name}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" Margin="0,0,0,10" />
 
             <TextBlock Grid.Row="1" Grid.Column="0" Text="{StaticResource Wizard_Step4_Version}" Foreground="{DynamicResource Text3}" FontSize="{StaticResource FsBodySm}" Margin="0,0,0,10" />
-            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VersionText}" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" Margin="0,0,0,10" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedVersionText}" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" Margin="0,0,0,10" />
 
             <TextBlock Grid.Row="2" Grid.Column="0" Text="{StaticResource Wizard_Step4_Icon}" Foreground="{DynamicResource Text3}" FontSize="{StaticResource FsBodySm}" Margin="0,0,0,10" />
             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedIconKey}" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" Margin="0,0,0,10" />
@@ -193,8 +231,23 @@
               <TextBlock Text="{Binding SlugPreview}" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
             </StackPanel>
           </Grid>
+          <TextBlock Text="{Binding SummaryNote}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" TextWrapping="Wrap" />
           <TextBlock Text="{StaticResource Wizard_Step4_Note}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" TextWrapping="Wrap" />
+
+          <!-- Installation de la version choisie, avant la création de l'instance. -->
+          <StackPanel Spacing="8" IsVisible="{Binding IsInstallingVersion}">
+            <ProgressBar Value="{Binding InstallProgressPercent}" Minimum="0" Maximum="100"
+                         IsIndeterminate="{Binding IsInstallIndeterminate}" />
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <TextBlock Grid.Column="0" Text="{Binding InstallPhaseText}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text2}" />
+              <TextBlock Grid.Column="1" Text="{Binding InstallDetailText}" Margin="8,0,0,0"
+                         FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+              <Button Grid.Column="2" Classes="ghost sm" Content="{StaticResource Wizard_CancelInstall}" Command="{Binding CancelInstallCommand}" />
+            </Grid>
+          </StackPanel>
+
           <TextBlock Text="{Binding CreateError}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource DangerText}"
+                     TextWrapping="Wrap"
                      IsVisible="{Binding CreateError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
         </StackPanel>
 

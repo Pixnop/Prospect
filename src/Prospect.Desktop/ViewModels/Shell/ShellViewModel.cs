@@ -4,28 +4,40 @@ using CommunityToolkit.Mvvm.Input;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.ViewModels.Common;
+using Prospect.Desktop.ViewModels.Downloads;
 using Prospect.Desktop.ViewModels.Home;
+using Prospect.Desktop.ViewModels.Versions;
 
 namespace Prospect.Desktop.ViewModels.Shell;
 
 /// <summary>
 /// ViewModel racine du shell applicatif (design/ui_kits/launcher/app-shell.jsx) : expose la page
 /// courante et la navigation (aucun framework tiers, voir docs/architecture.md), le popover
-/// Téléchargements (vide pour cette PR, le DownloadManager arrive plus tard) et les services
-/// partagés (panneau modal, toasts) que les pages consomment par injection de constructeur.
+/// Téléchargements branché sur la file du DownloadManager, et les services partagés (panneau
+/// modal, toasts) que les pages consomment par injection de constructeur.
 /// </summary>
 public sealed partial class ShellViewModel : ObservableObject
 {
     private readonly List<NavItemViewModel> _allNavItems = [];
 
-    public ShellViewModel(HomeViewModel home, IOverlayService overlay, IToastService toasts, IAppEnvironment appEnvironment)
+    public ShellViewModel(
+        HomeViewModel home,
+        VersionsViewModel versions,
+        DownloadsViewModel downloads,
+        IOverlayService overlay,
+        IToastService toasts,
+        IAppEnvironment appEnvironment)
     {
         ArgumentNullException.ThrowIfNull(home);
+        ArgumentNullException.ThrowIfNull(versions);
+        ArgumentNullException.ThrowIfNull(downloads);
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(toasts);
         ArgumentNullException.ThrowIfNull(appEnvironment);
 
         Home = home;
+        Versions = versions;
+        Downloads = downloads;
         Overlay = overlay;
         Toasts = toasts;
         UseCustomTitlebar = ResolveUseCustomTitlebar(appEnvironment.CurrentOperatingSystem);
@@ -34,10 +46,6 @@ public sealed partial class ShellViewModel : ObservableObject
             "package",
             "Navigateur de mods",
             "Bientôt disponible : recherche et installation de mods depuis le ModDB officiel.");
-        var versionsPage = new PlaceholderPageViewModel(
-            "hard-drive",
-            "Versions du jeu",
-            "Bientôt disponible : téléchargement et gestion des versions du jeu installées.");
         var settingsPage = new PlaceholderPageViewModel(
             "settings",
             "Réglages",
@@ -45,7 +53,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
         var homeNavItem = new NavItemViewModel("layers", "Accueil", home, Navigate);
         var modsNavItem = new NavItemViewModel("package", "Mods", modsPage, Navigate);
-        var versionsNavItem = new NavItemViewModel("hard-drive", "Versions", versionsPage, Navigate);
+        var versionsNavItem = new NavItemViewModel("hard-drive", "Versions", versions, Navigate);
         SettingsNavItem = new NavItemViewModel("settings", "Réglages", settingsPage, Navigate);
 
         LibraryNavItems = [homeNavItem, modsNavItem, versionsNavItem];
@@ -57,6 +65,12 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 
     public HomeViewModel Home { get; }
+
+    /// <summary>Page « Versions du jeu ».</summary>
+    public VersionsViewModel Versions { get; }
+
+    /// <summary>Contenu du popover Téléchargements : une vue sur la file du DownloadManager.</summary>
+    public DownloadsViewModel Downloads { get; }
 
     /// <summary>Panneau modal partagé (wizard, dialogues de carte) : la vue résout son contenu via le <see cref="Prospect.Desktop.ViewLocator"/>.</summary>
     public IOverlayService Overlay { get; }

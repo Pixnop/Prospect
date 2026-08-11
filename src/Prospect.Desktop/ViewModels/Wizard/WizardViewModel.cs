@@ -1,8 +1,13 @@
+using System.Collections.ObjectModel;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Prospect.Core.Common;
+using Prospect.Core.GameVersions;
+using Prospect.Core.Http;
 using Prospect.Core.Instances;
+using Prospect.Desktop.Formatting;
 using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
 
@@ -10,12 +15,17 @@ namespace Prospect.Desktop.ViewModels.Wizard;
 
 /// <summary>
 /// Wizard de création d'instance en 4 étapes (design/ui_kits/launcher/screen-wizard.jsx) : nom
-/// (avec aperçu du slug), version du jeu, icône, récapitulatif + création. Décision documentée
-/// dans le corps de la PR : la version est pour l'instant un champ texte validé par
-/// <see cref="GameVersion.TryParse"/>, le vrai sélecteur branché sur le catalogue arrivant avec la
-/// PR des versions du jeu.
+/// (avec aperçu du slug), version du jeu, icône, récapitulatif + création.
 /// </summary>
-public sealed partial class WizardViewModel : ObservableObject
+/// <remarks>
+/// L'étape 2 est le vrai sélecteur du catalogue : versions installées d'abord, puis versions
+/// téléchargeables, triées de la plus récente à la plus ancienne et filtrables par canal. Choisir
+/// une version absente du disque déclenche son installation, avec progression, avant la création
+/// de l'instance. C'est volontairement séquentiel plutôt que parallèle : une instance qui
+/// existerait avant sa version serait immédiatement injouable, et le wizard n'aurait plus d'endroit
+/// où montrer l'échec si le téléchargement se passe mal.
+/// </remarks>
+public sealed partial class WizardViewModel : ObservableObject, IProgress<GameInstallProgress>
 {
     /// <summary>
     /// Icônes proposées à l'étape 3 : aucune icône d'instance n'est fournie par le handoff design
@@ -33,14 +43,36 @@ public sealed partial class WizardViewModel : ObservableObject
 
     private readonly InstanceService _instanceService;
     private readonly IOverlayService _overlay;
+    private readonly IGameVersionCatalog _catalog;
+    private readonly IInstalledGameVersionRepository _versions;
+    private readonly GameInstallService _installService;
+    private readonly IUiDispatcher _dispatcher;
 
-    public WizardViewModel(InstanceService instanceService, IOverlayService overlay)
+    private readonly List<GameVersionChoiceViewModel> _allChoices = [];
+
+    private CancellationTokenSource? _createCancellation;
+
+    public WizardViewModel(
+        InstanceService instanceService,
+        IOverlayService overlay,
+        IGameVersionCatalog catalog,
+        IInstalledGameVersionRepository versions,
+        GameInstallService installService,
+        IUiDispatcher dispatcher)
     {
         ArgumentNullException.ThrowIfNull(instanceService);
         ArgumentNullException.ThrowIfNull(overlay);
+        ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(versions);
+        ArgumentNullException.ThrowIfNull(installService);
+        ArgumentNullException.ThrowIfNull(dispatcher);
 
         _instanceService = instanceService;
         _overlay = overlay;
+        _catalog = catalog;
+        _versions = versions;
+        _installService = installService;
+        _dispatcher = dispatcher;
         _selectedIconKey = IconCatalog[0].Key;
 
         RecomputeSteps();
@@ -75,24 +107,57 @@ public sealed partial class WizardViewModel : ObservableObject
     private string _name = string.Empty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(VersionError))]
-    [NotifyPropertyChangedFor(nameof(IsVersionStepValid))]
-    [NotifyPropertyChangedFor(nameof(CanGoNext))]
-    [NotifyCanExecuteChangedFor(nameof(NextCommand))]
-    [NotifyCanExecuteChangedFor(nameof(CreateCommand))]
-    private string _versionText = string.Empty;
-
-    [ObservableProperty]
     private string _selectedIconKey;
 
     partial void OnSelectedIconKeyChanged(string value) => RecomputeIconChoices();
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CreateCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CancelInstallCommand))]
     private bool _isCreating;
 
     [ObservableProperty]
+    private bool _isInstallingVersion;
+
+    [ObservableProperty]
+    private string _installPhaseText = string.Empty;
+
+    [ObservableProperty]
+    private string _installDetailText = string.Empty;
+
+    [ObservableProperty]
+    private double _installProgressPercent;
+
+    [ObservableProperty]
+    private bool _isInstallIndeterminate;
+
+    [ObservableProperty]
     private string? _createError;
+
+    [ObservableProperty]
+    private bool _isLoadingVersions;
+
+    /// <summary>Message affiché quand le catalogue distant n'a pas pu être consulté.</summary>
+    [ObservableProperty]
+    private string? _versionsWarning;
+
+    /// <summary>0 = tous les canaux, 1 = stable, 2 = unstable, 3 = pre.</summary>
+    [ObservableProperty]
+    private int _channelFilterIndex;
+
+    partial void OnChannelFilterIndexChanged(int value) => ApplyChannelFilter();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsVersionStepValid))]
+    [NotifyPropertyChangedFor(nameof(CanGoNext))]
+    [NotifyPropertyChangedFor(nameof(SelectedVersionText))]
+    [NotifyPropertyChangedFor(nameof(SummaryNote))]
+    [NotifyCanExecuteChangedFor(nameof(NextCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CreateCommand))]
+    private GameVersionChoiceViewModel? _selectedVersion;
+
+    /// <summary>Versions proposées après filtrage par canal : installées d'abord, puis à télécharger.</summary>
+    public ObservableCollection<GameVersionChoiceViewModel> VersionChoices { get; } = [];
 
     public IReadOnlyList<string> StepLabels { get; } = UiText.Wizard.StepLabels;
 
@@ -117,20 +182,17 @@ public sealed partial class WizardViewModel : ObservableObject
 
     public bool IsNameStepValid => NameError is null;
 
-    public string? VersionError
+    public bool IsVersionStepValid => SelectedVersion is not null;
+
+    public string SelectedVersionText => SelectedVersion?.VersionText ?? string.Empty;
+
+    /// <summary>Phrase de récapitulatif : rien à télécharger, ou téléchargement à prévoir.</summary>
+    public string SummaryNote => SelectedVersion switch
     {
-        get
-        {
-            if (string.IsNullOrWhiteSpace(VersionText))
-            {
-                return UiText.Wizard.VersionRequired;
-            }
-
-            return GameVersion.TryParse(VersionText, out _) ? null : UiText.Wizard.VersionInvalidFormat;
-        }
-    }
-
-    public bool IsVersionStepValid => VersionError is null;
+        null => UiText.Wizard.SummaryNoVersion,
+        { IsInstalled: true } choice => UiText.Wizard.SummaryAlreadyInstalled(choice.VersionText),
+        var choice => UiText.Wizard.SummaryWillDownload(choice.VersionText),
+    };
 
     private bool IsCurrentStepValid => CurrentStepIndex switch
     {
@@ -145,6 +207,53 @@ public sealed partial class WizardViewModel : ObservableObject
 
     public bool IsLastStep => CurrentStepIndex == StepLabels.Count - 1;
 
+    /// <inheritdoc />
+    public void Report(GameInstallProgress value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+
+        _dispatcher.Post(() =>
+        {
+            InstallPhaseText = UiText.Versions.PhaseLabel(value.Phase);
+            IsInstallIndeterminate = value.Ratio is null;
+            InstallProgressPercent = (value.Ratio ?? 0d) * 100d;
+            InstallDetailText = value.Phase == GameInstallPhase.Downloading
+                ? UiText.Versions.DownloadDetail(
+                    ByteSizeFormatter.FormatProgress(value.ReceivedBytes, value.TotalBytes),
+                    ByteSizeFormatter.FormatSpeed(value.BytesPerSecond))
+                : string.Empty;
+        });
+    }
+
+    /// <summary>
+    /// Charge les versions proposées à l'étape 2 : le disque d'abord (toujours disponible), puis
+    /// le catalogue distant si on peut le joindre.
+    /// </summary>
+    [RelayCommand]
+    public async Task LoadVersionsAsync(CancellationToken cancellationToken = default)
+    {
+        IsLoadingVersions = true;
+        try
+        {
+            var scan = await _versions.ScanAsync(cancellationToken).ConfigureAwait(true);
+            var installed = scan.Installed.Select(entry => entry.Version).ToHashSet();
+
+            _allChoices.Clear();
+            _allChoices.AddRange(scan.Installed.Select(entry => new GameVersionChoiceViewModel(
+                entry.Version,
+                isInstalled: true,
+                UiText.Wizard.VersionInstalled,
+                Select)));
+
+            _allChoices.AddRange(await LoadCatalogChoicesAsync(installed, cancellationToken).ConfigureAwait(true));
+        }
+        finally
+        {
+            IsLoadingVersions = false;
+            ApplyChannelFilter();
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanGoNext))]
     private void Next() => CurrentStepIndex++;
 
@@ -152,37 +261,135 @@ public sealed partial class WizardViewModel : ObservableObject
     private void Back() => CurrentStepIndex--;
 
     [RelayCommand]
-    private void Cancel() => _overlay.Close();
+    private void Cancel()
+    {
+        _createCancellation?.Cancel();
+        _overlay.Close();
+    }
+
+    [RelayCommand(CanExecute = nameof(IsCreating))]
+    private void CancelInstall() => _createCancellation?.Cancel();
 
     [RelayCommand(CanExecute = nameof(CanCreate))]
     private async Task CreateAsync()
     {
-        if (!GameVersion.TryParse(VersionText, out var version))
+        if (SelectedVersion is not { } choice)
         {
             return;
         }
 
+        var cancellation = new CancellationTokenSource();
+        _createCancellation = cancellation;
         IsCreating = true;
         CreateError = null;
+
         try
         {
-            var created = await _instanceService.CreateAsync(Name.Trim(), version, CancellationToken.None).ConfigureAwait(true);
-
-            if (SelectedIconKey != IconCatalog[0].Key)
+            if (!choice.IsInstalled)
             {
-                created = await _instanceService.SetIconAsync(created.Slug, $"builtin:{SelectedIconKey}", CancellationToken.None).ConfigureAwait(true);
+                IsInstallingVersion = true;
+                await _installService.InstallAsync(choice.Version, this, cancellation.Token).ConfigureAwait(true);
+                IsInstallingVersion = false;
             }
 
-            Created?.Invoke(this, created);
-            _overlay.Close();
+            await CreateInstanceAsync(choice.Version, cancellation.Token).ConfigureAwait(true);
         }
-        catch (InstanceNameInvalidException ex)
+        catch (OperationCanceledException)
         {
-            CreateError = ex.Message;
+            CreateError = UiText.Wizard.InstallCanceled;
+        }
+        catch (InstanceNameInvalidException exception)
+        {
+            CreateError = exception.Message;
+        }
+        catch (Exception exception) when (exception is GameVersionNotAvailableException or GameInstallFailedException or DownloadFailedException)
+        {
+            CreateError = exception.Message;
         }
         finally
         {
             IsCreating = false;
+            IsInstallingVersion = false;
+            _createCancellation = null;
+            cancellation.Dispose();
+        }
+    }
+
+    private async Task CreateInstanceAsync(GameVersion version, CancellationToken cancellationToken)
+    {
+        var created = await _instanceService.CreateAsync(Name.Trim(), version, cancellationToken).ConfigureAwait(true);
+
+        if (SelectedIconKey != IconCatalog[0].Key)
+        {
+            created = await _instanceService.SetIconAsync(created.Slug, $"builtin:{SelectedIconKey}", cancellationToken).ConfigureAwait(true);
+        }
+
+        Created?.Invoke(this, created);
+        _overlay.Close();
+    }
+
+    private async Task<IEnumerable<GameVersionChoiceViewModel>> LoadCatalogChoicesAsync(
+        HashSet<GameVersion> installed,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var catalog = await _catalog.GetAsync(cancellationToken: cancellationToken).ConfigureAwait(true);
+            VersionsWarning = catalog.Freshness == GameCatalogFreshness.Stale ? UiText.Versions.StaleCatalog : null;
+
+            return catalog.Versions
+                .Where(entry => !installed.Contains(entry.Version))
+                .Select(entry => (Entry: entry, Asset: _installService.FindInstallableAsset(entry)))
+                .Where(pair => pair.Asset is not null)
+                .Select(pair => new GameVersionChoiceViewModel(
+                    pair.Entry.Version,
+                    isInstalled: false,
+                    UiText.Wizard.VersionToDownload(pair.Asset!.DisplaySize),
+                    Select))
+                .ToArray();
+        }
+        catch (GameCatalogUnavailableException)
+        {
+            // Hors ligne : le wizard reste utilisable avec ce qui est déjà installé.
+            VersionsWarning = UiText.Versions.UnavailableCatalog;
+
+            return [];
+        }
+    }
+
+    // Les installées d'abord (recommandées, rien à télécharger), puis les téléchargeables, chaque
+    // groupe de la plus récente à la plus ancienne.
+    private void ApplyChannelFilter()
+    {
+        var previous = SelectedVersion?.Version;
+
+        VersionChoices.Clear();
+        foreach (var choice in _allChoices
+                     .Where(MatchesChannelFilter)
+                     .OrderByDescending(choice => choice.IsInstalled)
+                     .ThenByDescending(choice => choice.Version))
+        {
+            VersionChoices.Add(choice);
+        }
+
+        var restored = previous is null ? null : VersionChoices.FirstOrDefault(choice => choice.Version == previous);
+        Select(restored ?? VersionChoices.FirstOrDefault());
+    }
+
+    private bool MatchesChannelFilter(GameVersionChoiceViewModel choice) => ChannelFilterIndex switch
+    {
+        1 => choice.Version.Channel == GameVersionChannel.Stable,
+        2 => choice.Version.Channel is GameVersionChannel.Rc or GameVersionChannel.Dev,
+        3 => choice.Version.Channel == GameVersionChannel.Pre,
+        _ => true,
+    };
+
+    private void Select(GameVersionChoiceViewModel? choice)
+    {
+        SelectedVersion = choice;
+        foreach (var candidate in _allChoices)
+        {
+            candidate.IsSelected = ReferenceEquals(candidate, choice);
         }
     }
 

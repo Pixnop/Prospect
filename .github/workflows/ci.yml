@@ -125,6 +125,12 @@ jobs:
         if: steps.sonar-token.outputs.has_token == 'true'
         run: dotnet restore
 
+      # sonar.coverage.exclusions couvre deux familles de fichiers. Prospect.Desktop, dont les
+      # vues AXAML ne se mesurent pas utilement. Et les adaptateurs système du Core : des classes
+      # sans logique propre, dont l'unique rôle est d'exposer un effet de bord derrière son port
+      # (Environment, Process, chmod). Les tester reviendrait à tester la BCL, et certaines
+      # n'existent même pas sur les trois OS de la matrice, donc aucune combinaison de tests ne
+      # pourrait les couvrir partout.
       - name: Démarrage de l'analyse SonarCloud
         if: steps.sonar-token.outputs.has_token == 'true'
         run: >
@@ -134,7 +140,7 @@ jobs:
           /d:sonar.token="$SONAR_TOKEN"
           /d:sonar.host.url="https://sonarcloud.io"
           /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
-          /d:sonar.coverage.exclusions="src/Prospect.Desktop/**/*,src/Prospect.Core/Storage/SystemAppEnvironment.cs"
+          /d:sonar.coverage.exclusions="src/Prospect.Desktop/**/*,src/Prospect.Core/Storage/SystemAppEnvironment.cs,src/Prospect.Core/Common/SystemProcessRunner.cs,src/Prospect.Core/Common/SystemUnixFilePermissions.cs"
           /d:sonar.exclusions="src/Prospect.Desktop/Assets/**"
           /d:sonar.sourceEncoding="UTF-8"
           /d:sonar.qualitygate.wait=true

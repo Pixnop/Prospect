@@ -1,0 +1,217 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Prospect.Desktop.ViewModels.Versions"
+             xmlns:conv="using:Prospect.Desktop.Converters"
+             mc:Ignorable="d" d:DesignWidth="944" d:DesignHeight="700"
+             x:Class="Prospect.Desktop.Views.Versions.VersionsView"
+             x:DataType="vm:VersionsViewModel">
+
+  <!--
+    Port de design/ui_kits/launcher/screen-versions.jsx : PageHeader (titre, sous-titre chiffré,
+    « Vérifier les nouveautés »), barre de filtres (recherche, état, case unstable/pre), puis les
+    lignes de version. Deux écarts assumés par rapport à la maquette. Les versions sont réparties
+    en deux sections titrées « Installées » et « Disponibles » plutôt qu'en une liste unique : les
+    actions y sont différentes, et l'ordre naturel place ce qu'on possède avant ce qu'on peut
+    prendre. Et le bouton « Dossier » de la maquette est absent : ouvrir un dossier dans
+    l'explorateur système demande un service de lancement que le produit n'a pas encore, donc le
+    chemin partagé est simplement affiché en monospace sous la liste, comme dans la maquette.
+  -->
+
+  <UserControl.Styles>
+    <Style Selector="Border.version-row">
+      <Setter Property="Padding" Value="16,12" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    </Style>
+  </UserControl.Styles>
+
+  <UserControl.Resources>
+    <DataTemplate x:Key="VersionRowTemplate" x:DataType="vm:GameVersionRowViewModel">
+      <Border Classes="version-row">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <Path Grid.Column="0" Width="15" Height="15" Margin="0,3,12,0" Stretch="Uniform" VerticalAlignment="Top"
+                Data="{StaticResource Icon.hard-drive}" Stroke="{DynamicResource Text3}"
+                StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+
+          <StackPanel Grid.Column="1" Spacing="3">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="{Binding VersionText}" VerticalAlignment="Center"
+                         FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}"
+                         Foreground="{DynamicResource Text1}" />
+              <ContentControl Classes="badge" Content="{Binding ChannelBadgeTone}" VerticalAlignment="Center"
+                              Classes.stable="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=stable}"
+                              Classes.unstable="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=unstable}"
+                              Classes.pre="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=pre}" />
+              <ContentControl Classes="badge stable" Content="{StaticResource Versions_InstalledBadge}" VerticalAlignment="Center"
+                              IsVisible="{Binding IsInstalled}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="{Binding MetaText}" FontFamily="{DynamicResource FontMono}"
+                         FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+              <TextBlock Text="·" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+              <TextBlock Text="{Binding SizeText}" FontFamily="{DynamicResource FontMono}"
+                         FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+            </StackPanel>
+
+            <StackPanel Spacing="6" MaxWidth="420" HorizontalAlignment="Left" Margin="0,5,0,0"
+                        IsVisible="{Binding IsWorking}">
+              <ProgressBar Value="{Binding ProgressPercent}" Minimum="0" Maximum="100"
+                           IsIndeterminate="{Binding IsIndeterminate}" />
+              <Grid ColumnDefinitions="Auto,*">
+                <TextBlock Grid.Column="0" Text="{Binding PhaseText}" FontSize="{StaticResource FsMicro}"
+                           Foreground="{DynamicResource Text2}" />
+                <TextBlock Grid.Column="1" Text="{Binding PhaseDetailText}" Margin="8,0,0,0" TextAlignment="Right"
+                           FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}"
+                           Foreground="{DynamicResource Text3}" />
+              </Grid>
+            </StackPanel>
+
+            <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Margin="0,4,0,0"
+                       FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource DangerText}"
+                       IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+            <Button Classes="sm secondary" Command="{Binding InstallCommand}"
+                    IsVisible="{Binding CanInstall}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.download}"
+                      Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                <TextBlock Text="{StaticResource Versions_Install}" />
+              </StackPanel>
+            </Button>
+
+            <Button Classes="icon sm danger" Command="{Binding UninstallCommand}"
+                    ToolTip.Tip="{StaticResource Versions_Uninstall}"
+                    IsVisible="{Binding IsInstalled}">
+              <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.trash}"
+                    Stroke="{DynamicResource DangerText}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+            </Button>
+
+            <Button Classes="icon sm" Command="{Binding CancelCommand}"
+                    ToolTip.Tip="{StaticResource Versions_CancelInstall}"
+                    IsVisible="{Binding IsWorking}">
+              <Path Width="12" Height="12" Stretch="Uniform" Data="{StaticResource Icon.x}"
+                    Stroke="{DynamicResource Text2}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Top" Margin="28,24,28,0">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Grid.Column="0" Spacing="4">
+          <TextBlock Text="{StaticResource Versions_Title}"
+                     FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsTitle}"
+                     FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+          <TextBlock Text="{Binding SubtitleText}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text3}" />
+        </StackPanel>
+        <Button Grid.Column="1" Classes="secondary" Command="{Binding CheckForUpdatesCommand}" VerticalAlignment="Top">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Path Width="16" Height="16" Stretch="Uniform" Data="{StaticResource Icon.refresh}"
+                  Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+            <TextBlock Text="{StaticResource Versions_CheckForUpdates}" />
+          </StackPanel>
+        </Button>
+      </Grid>
+
+      <StackPanel Orientation="Horizontal" Margin="0,20,0,0" Spacing="12">
+        <TextBox Width="220" Watermark="{StaticResource Versions_SearchPlaceholder}" Text="{Binding SearchText, Mode=TwoWay}">
+          <TextBox.InnerLeftContent>
+            <Path Width="16" Height="16" Stretch="Uniform" Data="{StaticResource Icon.search}"
+                  Stroke="{DynamicResource Text3}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+          </TextBox.InnerLeftContent>
+          <TextBox.InnerRightContent>
+            <Button Classes="icon sm" Command="{Binding ClearSearchCommand}"
+                    IsVisible="{Binding SearchText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <Path Width="12" Height="12" Stretch="Uniform" Data="{StaticResource Icon.x}"
+                    Stroke="{DynamicResource Text3}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+            </Button>
+          </TextBox.InnerRightContent>
+        </TextBox>
+
+        <ComboBox Width="170" SelectedIndex="{Binding FilterIndex, Mode=TwoWay}">
+          <ComboBoxItem Content="{StaticResource Versions_FilterAll}" />
+          <ComboBoxItem Content="{StaticResource Versions_FilterInstalled}" />
+          <ComboBoxItem Content="{StaticResource Versions_FilterAvailable}" />
+        </ComboBox>
+
+        <CheckBox IsChecked="{Binding ShowUnstable, Mode=TwoWay}" Content="{StaticResource Versions_ShowUnstable}" />
+      </StackPanel>
+    </StackPanel>
+
+    <ScrollViewer Padding="28,20,28,28">
+      <StackPanel Spacing="20">
+
+        <Border CornerRadius="{StaticResource RadiusSm}" BorderThickness="1" Padding="14,10"
+                Background="Transparent" BorderBrush="{DynamicResource BorderDefault}"
+                IsVisible="{Binding CatalogWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Path Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center" Data="{StaticResource Icon.wifi-off}"
+                  Stroke="{DynamicResource WarningText}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+            <TextBlock Text="{Binding CatalogWarning}" TextWrapping="Wrap" VerticalAlignment="Center"
+                       FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+          </StackPanel>
+        </Border>
+
+        <StackPanel Spacing="8" IsVisible="{Binding ShowInstalledSection}">
+          <TextBlock Text="{StaticResource Versions_InstalledSection}"
+                     FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsOverline}"
+                     FontWeight="{StaticResource FwMedium}" LetterSpacing="1.1" Foreground="{DynamicResource Text3}" />
+          <Border Classes="card" ClipToBounds="True">
+            <ItemsControl ItemsSource="{Binding Installed}" ItemTemplate="{StaticResource VersionRowTemplate}" />
+          </Border>
+        </StackPanel>
+
+        <StackPanel Spacing="8" IsVisible="{Binding ShowAvailableSection}">
+          <TextBlock Text="{StaticResource Versions_AvailableSection}"
+                     FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsOverline}"
+                     FontWeight="{StaticResource FwMedium}" LetterSpacing="1.1" Foreground="{DynamicResource Text3}" />
+          <Border Classes="card" ClipToBounds="True">
+            <ItemsControl ItemsSource="{Binding Available}" ItemTemplate="{StaticResource VersionRowTemplate}" />
+          </Border>
+        </StackPanel>
+
+        <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="Transparent"
+                BorderBrush="{DynamicResource BorderDefault}" IsVisible="{Binding ShowEmptyState}">
+          <StackPanel HorizontalAlignment="Center" Spacing="12" Margin="32,48" MaxWidth="400">
+            <Path Width="40" Height="40" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.hard-drive}"
+                  Stroke="{DynamicResource Text4}" StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round" />
+            <TextBlock Text="{StaticResource Versions_EmptyTitle}" HorizontalAlignment="Center"
+                       FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                       FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+            <TextBlock Text="{StaticResource Versions_EmptyDescription}" HorizontalAlignment="Center" TextAlignment="Center"
+                       TextWrapping="Wrap" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text3}" LineHeight="20" />
+          </StackPanel>
+        </Border>
+
+        <StackPanel IsVisible="{Binding HasBrokenInstalls}" Spacing="8">
+          <TextBlock Text="{StaticResource Versions_BrokenSection}"
+                     FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsOverline}"
+                     FontWeight="{StaticResource FwMedium}" LetterSpacing="1.1" Foreground="{DynamicResource Text3}" />
+          <ItemsControl ItemsSource="{Binding BrokenInstalls}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:BrokenGameInstallRowViewModel">
+                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2">
+                  <TextBlock Text="{Binding FolderName}" FontFamily="{DynamicResource FontMono}"
+                             FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+                  <TextBlock Text="—" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text4}" />
+                  <TextBlock Text="{Binding Reason}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <TextBlock Text="{Binding VersionsDirectoryText}" FontFamily="{DynamicResource FontMono}"
+                   FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>
