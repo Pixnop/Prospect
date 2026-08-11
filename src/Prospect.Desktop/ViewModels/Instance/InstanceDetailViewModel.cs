@@ -7,12 +7,13 @@ using CommunityToolkit.Mvvm.Input;
 using Prospect.Core.Common;
 using Prospect.Core.Instances;
 using Prospect.Core.Launching;
+using Prospect.Core.ModDb;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Formatting;
 using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
-using Prospect.Desktop.ViewModels.Common;
 using Prospect.Desktop.ViewModels.Dialogs;
+using Prospect.Desktop.ViewModels.Mods;
 using Prospect.Desktop.ViewModels.Toasts;
 
 namespace Prospect.Desktop.ViewModels.Instance;
@@ -20,8 +21,8 @@ namespace Prospect.Desktop.ViewModels.Instance;
 /// <summary>
 /// ViewModel de la page de détail d'une instance (design/ui_kits/launcher/screen-instance.jsx) :
 /// en-tête (icône, nom, version badgée, Jouer/Arrêter, menu renommer/dupliquer/supprimer) et
-/// quatre onglets (Mods en attente de la PR suivante, Mondes, Journal, Options). Transient (une
-/// instance par instance ouverte, voir <c>Func&lt;string, InstanceDetailViewModel&gt;</c> dans
+/// quatre onglets (Mods, Mondes, Journal, Options). Transient (une instance par instance ouverte,
+/// voir <c>Func&lt;string, InstanceDetailViewModel&gt;</c> dans
 /// <see cref="Prospect.Desktop.CompositionRoot"/>), à la différence des pages de la sidebar qui
 /// sont des singletons.
 /// </summary>
@@ -45,6 +46,8 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         IInstanceRepository repository,
         GameLauncher launcher,
         RunningInstanceTracker tracker,
+        IInstalledModRepository mods,
+        ModInstallService modInstallService,
         IAppEnvironment appEnvironment,
         IFileSystem fileSystem,
         IOverlayService overlay,
@@ -57,6 +60,8 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(launcher);
         ArgumentNullException.ThrowIfNull(tracker);
+        ArgumentNullException.ThrowIfNull(mods);
+        ArgumentNullException.ThrowIfNull(modInstallService);
         ArgumentNullException.ThrowIfNull(appEnvironment);
         ArgumentNullException.ThrowIfNull(fileSystem);
         ArgumentNullException.ThrowIfNull(overlay);
@@ -92,10 +97,8 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         _optionsTab = new InstanceOptionsTabViewModel(slug, InstanceLaunchSettings.Empty, instanceService, appEnvironment, toasts);
         _isRunning = tracker.IsRunning(slug);
 
-        ModsPlaceholder = new PlaceholderPageViewModel(
-            "package",
-            "Mods",
-            "Bientôt disponible : installation et gestion des mods de cette instance depuis le ModDB officiel.");
+        ModsTab = new InstanceModsTabViewModel(slug, mods, modInstallService, overlay, toasts);
+        ModsTab.BrowseRequested += (_, instanceSlug) => BrowseModsRequested?.Invoke(this, instanceSlug);
 
         _tracker.StatusChanged += OnTrackerStatusChanged;
     }
@@ -106,12 +109,16 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     /// <summary>Demande la navigation vers l'écran Versions (action « Installer » du bandeau d'erreur).</summary>
     public event EventHandler? NavigateToVersionsRequested;
 
+    /// <summary>Demande l'ouverture du navigateur de mods, préfiltré sur cette instance.</summary>
+    public event EventHandler<string>? BrowseModsRequested;
+
     public string Slug { get; }
 
     /// <summary>Chemin absolu de <c>data/</c>, affiché en monospace dans la ligne meta de l'en-tête.</summary>
     public string PathText { get; }
 
-    public PlaceholderPageViewModel ModsPlaceholder { get; }
+    /// <summary>Onglet Mods : liste installée, activation, désinstallation.</summary>
+    public InstanceModsTabViewModel ModsTab { get; }
 
     public ObservableCollection<InstanceWorldRowViewModel> Worlds { get; } = [];
 
@@ -196,6 +203,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
             HasWorlds = Worlds.Count > 0;
 
+            await ModsTab.RefreshAsync(cancellationToken).ConfigureAwait(true);
             RefreshJournal();
         }
         finally

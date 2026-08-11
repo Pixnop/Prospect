@@ -5,6 +5,7 @@ using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
 using Prospect.Core.Instances.Migrations;
 using Prospect.Core.Launching;
+using Prospect.Core.ModDb;
 using Prospect.Core.Runtime;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Tests.TestDoubles;
@@ -35,6 +36,8 @@ public sealed class InstanceDetailViewModelTests
         RunningInstanceTracker Tracker,
         FakeProcessRunner ProcessRunner,
         FakeDotnetLocator DotnetLocator,
+        IInstalledModRepository Mods,
+        ModInstallService ModInstallService,
         MockFileSystem FileSystem,
         RecordingOverlayService Overlay,
         RecordingToastService Toasts,
@@ -63,11 +66,13 @@ public sealed class InstanceDetailViewModelTests
         var environment = new FakeAppEnvironment { CurrentOperatingSystem = linux ? AppOperatingSystem.Linux : AppOperatingSystem.Windows };
         var overlay = new RecordingOverlayService();
         var toasts = new RecordingToastService();
+        var mods = ModDbDoubles.CreateRepository(fileSystem, repository, Paths);
+        var modInstallService = ModDbDoubles.CreateInstallService(fileSystem, repository, mods, Paths, clock);
 
         var detail = new InstanceDetailViewModel(
-            record.Slug, service, repository, launcher, tracker, environment, fileSystem, overlay, toasts, new ImmediateUiDispatcher(), clock);
+            record.Slug, service, repository, launcher, tracker, mods, modInstallService, environment, fileSystem, overlay, toasts, new ImmediateUiDispatcher(), clock);
 
-        return new Fixture(detail, service, repository, versions, tracker, processRunner, dotnetLocator, fileSystem, overlay, toasts, record.Slug);
+        return new Fixture(detail, service, repository, versions, tracker, processRunner, dotnetLocator, mods, modInstallService, fileSystem, overlay, toasts, record.Slug);
     }
 
     [Fact]
@@ -185,6 +190,8 @@ public sealed class InstanceDetailViewModelTests
             fixture.Repository,
             new GameLauncher(fixture.Repository, fixture.Versions, fixture.DotnetLocator, fixture.Tracker, new MacGameLaunchStrategy(), fixture.ProcessRunner, fixture.FileSystem, Paths, new FakeClock(Now)),
             fixture.Tracker,
+            fixture.Mods,
+            fixture.ModInstallService,
             new FakeAppEnvironment { CurrentOperatingSystem = AppOperatingSystem.MacOs },
             fixture.FileSystem,
             fixture.Overlay,
@@ -308,27 +315,31 @@ public sealed class InstanceDetailViewModelTests
         var clock = new FakeClock(Now);
 
         Should.Throw<ArgumentException>(() => new InstanceDetailViewModel(
-            string.Empty, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock));
+            string.Empty, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Mods, fixture.ModInstallService, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, null!, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock));
+            fixture.Slug, null!, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Mods, fixture.ModInstallService, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, null!, MakeLauncher(fixture), fixture.Tracker, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock));
+            fixture.Slug, fixture.Service, null!, MakeLauncher(fixture), fixture.Tracker, fixture.Mods, fixture.ModInstallService, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, null!, fixture.Tracker, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock));
+            fixture.Slug, fixture.Service, fixture.Repository, null!, fixture.Tracker, fixture.Mods, fixture.ModInstallService, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), null!, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), null!, fixture.Mods, fixture.ModInstallService, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, null!, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, null!, fixture.ModInstallService, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, environment, null!, fixture.Overlay, fixture.Toasts, dispatcher, clock));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Mods, null!, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, environment, fixture.FileSystem, null!, fixture.Toasts, dispatcher, clock));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Mods, fixture.ModInstallService, null!, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, environment, fixture.FileSystem, fixture.Overlay, null!, dispatcher, clock));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Mods, fixture.ModInstallService, environment, null!, fixture.Overlay, fixture.Toasts, dispatcher, clock));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, null!, clock));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Mods, fixture.ModInstallService, environment, fixture.FileSystem, null!, fixture.Toasts, dispatcher, clock));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, null!));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Mods, fixture.ModInstallService, environment, fixture.FileSystem, fixture.Overlay, null!, dispatcher, clock));
+        Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Mods, fixture.ModInstallService, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, null!, clock));
+        Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Mods, fixture.ModInstallService, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, null!));
     }
 
     private static GameLauncher MakeLauncher(Fixture fixture) => new(

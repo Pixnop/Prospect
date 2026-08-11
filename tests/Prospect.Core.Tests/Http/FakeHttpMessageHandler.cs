@@ -30,7 +30,8 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
         Requests.Add(new RecordedRequest(
             request.Method,
             request.RequestUri!,
-            request.Headers.Range?.ToString()));
+            request.Headers.Range?.ToString(),
+            request.Headers.UserAgent.Count == 0 ? null : request.Headers.UserAgent.ToString()));
 
         return Task.FromResult(_responder(request));
     }
@@ -47,4 +48,5 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
 /// <param name="Method">Verbe HTTP.</param>
 /// <param name="Url">URL demandée.</param>
 /// <param name="RangeHeader">En-tête <c>Range</c> tel qu'envoyé, ou <see langword="null"/>.</param>
-internal sealed record RecordedRequest(HttpMethod Method, Uri Url, string? RangeHeader);
+/// <param name="UserAgent">En-tête <c>User-Agent</c>, ou <see langword="null"/> si aucun n'a été posé.</param>
+internal sealed record RecordedRequest(HttpMethod Method, Uri Url, string? RangeHeader, string? UserAgent = null);

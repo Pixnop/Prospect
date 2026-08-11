@@ -8,12 +8,14 @@ using Prospect.Core.Http;
 using Prospect.Core.Instances;
 using Prospect.Core.Instances.Migrations;
 using Prospect.Core.Launching;
+using Prospect.Core.ModDb;
 using Prospect.Core.Runtime;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.ViewModels.Downloads;
 using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Instance;
+using Prospect.Desktop.ViewModels.Mods;
 using Prospect.Desktop.ViewModels.Shell;
 using Prospect.Desktop.ViewModels.Versions;
 using Prospect.Desktop.ViewModels.Wizard;
@@ -53,6 +55,7 @@ public static class CompositionRoot
         services.AddSingleton<IAppEnvironment, SystemAppEnvironment>();
         services.AddSingleton<IProcessRunner, SystemProcessRunner>();
         services.AddSingleton<IUnixFilePermissions, SystemUnixFilePermissions>();
+        services.AddSingleton<IExternalUrlOpener, ExternalUrlOpener>();
         services.AddSingleton<AppPaths>();
         services.AddSingleton<JsonFileStore>();
 
@@ -65,6 +68,7 @@ public static class CompositionRoot
 
         AddGameVersions(services, httpMessageHandler);
         AddLaunching(services);
+        AddModDb(services, httpMessageHandler);
 
         // Services Desktop transverses.
         services.AddSingleton<IOverlayService, OverlayService>();
@@ -75,6 +79,7 @@ public static class CompositionRoot
         // placeholder). Singleton : une seule instance de chaque pour la durée de vie de l'app.
         services.AddSingleton<HomeViewModel>();
         services.AddSingleton<VersionsViewModel>();
+        services.AddSingleton<ModBrowserViewModel>();
         services.AddSingleton<DownloadsViewModel>();
         services.AddSingleton<ShellViewModel>();
 
@@ -93,6 +98,8 @@ public static class CompositionRoot
             provider.GetRequiredService<IInstanceRepository>(),
             provider.GetRequiredService<GameLauncher>(),
             provider.GetRequiredService<RunningInstanceTracker>(),
+            provider.GetRequiredService<IInstalledModRepository>(),
+            provider.GetRequiredService<ModInstallService>(),
             provider.GetRequiredService<IAppEnvironment>(),
             provider.GetRequiredService<IFileSystem>(),
             provider.GetRequiredService<IOverlayService>(),
@@ -137,6 +144,24 @@ public static class CompositionRoot
             .Resolve(provider.GetRequiredService<IAppEnvironment>().CurrentOperatingSystem));
 
         services.AddSingleton<GameInstallService>();
+    }
+
+    // Le client ModDB partage la file de téléchargements du domaine GameVersions plutôt que d'avoir
+    // la sienne : c'est le contrat du DownloadManager transverse (docs/architecture.md), et le
+    // popover Téléchargements montre donc mods et versions du jeu dans la même liste. Son propre
+    // HttpClient, en revanche, est celui des appels courts, avec un délai de requête normal.
+    private static void AddModDb(IServiceCollection services, HttpMessageHandler? httpMessageHandler)
+    {
+        services.AddSingleton<IModDbClient>(provider => new ModDbClient(
+            CreateHttpClient(httpMessageHandler, TimeSpan.FromSeconds(30)),
+            provider.GetRequiredService<JsonFileStore>(),
+            provider.GetRequiredService<AppPaths>(),
+            provider.GetRequiredService<IClock>()));
+
+        services.AddSingleton<ModArchiveReader>();
+        services.AddSingleton<IModStateConvention, DisabledSuffixModStateConvention>();
+        services.AddSingleton<IInstalledModRepository, FileSystemInstalledModRepository>();
+        services.AddSingleton<ModInstallService>();
     }
 
     // Miroir d'AddGameVersions pour le lancement (docs/architecture.md, section « 3. Lancement ») :

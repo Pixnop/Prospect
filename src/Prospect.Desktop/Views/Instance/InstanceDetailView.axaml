@@ -11,9 +11,8 @@
   <!--
     Port de design/ui_kits/launcher/screen-instance.jsx : bouton retour, en-tête (vignette, nom,
     version badgée, ligne meta, actions Jouer/Arrêter + menu), bandeau d'erreur de pré-lancement,
-    onglets. Écarts assumés par rapport à la maquette : pas de bouton Dossier/Exporter dans
-    l'en-tête (hors du périmètre de cette PR, voir le corps de la PR), et l'onglet Mods est un
-    simple placeholder « bientôt » — la gestion réelle des mods arrive dans une PR suivante.
+    onglets. Écart assumé par rapport à la maquette : pas de bouton Dossier/Exporter dans
+    l'en-tête, l'export de modpack ayant sa propre PR.
   -->
 
   <DockPanel>
@@ -127,11 +126,9 @@
     <ScrollViewer Padding="28,20,28,28">
       <Grid>
 
-        <!-- ── Mods (placeholder, PR suivante) ──────────────────────────────────── -->
-        <Border Classes="card" MinHeight="280"
-                IsVisible="{Binding SelectedTab, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Mods}">
-          <ContentControl Content="{Binding ModsPlaceholder}" />
-        </Border>
+        <!-- ── Mods ──────────────────────────────────────────────────────────────── -->
+        <ContentControl Content="{Binding ModsTab}"
+                        IsVisible="{Binding SelectedTab, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Mods}" />
 
         <!-- ── Mondes ────────────────────────────────────────────────────────────── -->
         <StackPanel Spacing="16"
