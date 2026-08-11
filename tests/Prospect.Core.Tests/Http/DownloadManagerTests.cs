@@ -90,7 +90,8 @@ public sealed class DownloadManagerTests
         reports[^1].ReceivedBytes.ShouldBe(1000);
         reports[^1].TotalBytes.ShouldBe(1000);
         reports[^1].Ratio.ShouldBe(1d);
-        reports.ShouldAllBe(report => report.TotalBytes == 1000);
+        reports.Where(report => report.ReceivedBytes > 0).ShouldAllBe(report => report.TotalBytes == 1000);
+        reports.Select(report => report.State).ShouldContain(DownloadState.Verifying);
     }
 
     [Fact]

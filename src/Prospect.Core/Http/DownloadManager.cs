@@ -163,15 +163,15 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         var targetPath = GetTargetPath(request.FileName);
         var partialPath = GetPartialPath(request.FileName);
 
-        if (await TryReuseAsync(request, operation, targetPath, cancellationToken).ConfigureAwait(false))
+        if (await TryReuseAsync(request, operation, progress, targetPath, cancellationToken).ConfigureAwait(false))
         {
             return targetPath;
         }
 
         var totalBytes = await ProbeTotalSizeAsync(request, cancellationToken).ConfigureAwait(false);
-        operation.SetState(DownloadState.Running);
+        SetPhase(operation, progress, DownloadState.Running);
         await ReceiveAsync(request, operation, progress, partialPath, totalBytes, cancellationToken).ConfigureAwait(false);
-        await VerifyAsync(request, operation, partialPath, cancellationToken).ConfigureAwait(false);
+        await VerifyAsync(request, operation, progress, partialPath, cancellationToken).ConfigureAwait(false);
 
         _fileSystem.File.Move(partialPath, targetPath, overwrite: true);
 
@@ -181,7 +181,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
     // Un fichier déjà présent et conforme n'est pas retéléchargé : réinstaller une version qu'on
     // vient de supprimer ne doit pas coûter 600 Mo de réseau. S'il est présent mais faux, il est
     // jeté sans hésiter.
-    private async Task<bool> TryReuseAsync(DownloadRequest request, DownloadOperation operation, string targetPath, CancellationToken cancellationToken)
+    private async Task<bool> TryReuseAsync(DownloadRequest request, DownloadOperation operation, IProgress<DownloadProgress>? progress, string targetPath, CancellationToken cancellationToken)
     {
         if (!_fileSystem.File.Exists(targetPath))
         {
@@ -193,7 +193,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
             return true;
         }
 
-        operation.SetState(DownloadState.Verifying);
+        SetPhase(operation, progress, DownloadState.Verifying);
         var actual = await Md5Checksum.ComputeAsync(_fileSystem, targetPath, _options.BufferSize, cancellationToken).ConfigureAwait(false);
         if (Md5Checksum.Matches(request.ExpectedMd5, actual))
         {
@@ -364,14 +364,14 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         }
     }
 
-    private async Task VerifyAsync(DownloadRequest request, DownloadOperation operation, string partialPath, CancellationToken cancellationToken)
+    private async Task VerifyAsync(DownloadRequest request, DownloadOperation operation, IProgress<DownloadProgress>? progress, string partialPath, CancellationToken cancellationToken)
     {
         if (request.ExpectedMd5 is null)
         {
             return;
         }
 
-        operation.SetState(DownloadState.Verifying);
+        SetPhase(operation, progress, DownloadState.Verifying);
         var actual = await Md5Checksum.ComputeAsync(_fileSystem, partialPath, _options.BufferSize, cancellationToken).ConfigureAwait(false);
         if (Md5Checksum.Matches(request.ExpectedMd5, actual))
         {
@@ -391,7 +391,17 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
 
     private static void Report(DownloadOperation operation, IProgress<DownloadProgress>? progress, long received, long? total, double bytesPerSecond)
     {
-        var snapshot = new DownloadProgress(received, total, bytesPerSecond);
+        var snapshot = new DownloadProgress(received, total, bytesPerSecond, operation.State);
+        operation.SetProgress(snapshot);
+        progress?.Report(snapshot);
+    }
+
+    // Un changement de phase est en soi une information d'avancement : il est publié comme telle,
+    // sinon l'appelant ne saurait jamais qu'on est passé de « je télécharge » à « je vérifie ».
+    private static void SetPhase(DownloadOperation operation, IProgress<DownloadProgress>? progress, DownloadState state)
+    {
+        operation.SetState(state);
+        var snapshot = operation.Progress with { State = state };
         operation.SetProgress(snapshot);
         progress?.Report(snapshot);
     }

@@ -10,10 +10,15 @@ namespace Prospect.Core.Http;
 /// approximative et destinée à l'affichage.
 /// </param>
 /// <param name="BytesPerSecond">Vitesse instantanée lissée.</param>
-public sealed record DownloadProgress(long ReceivedBytes, long? TotalBytes, double BytesPerSecond)
+/// <param name="State">
+/// État de l'opération au moment de la mesure. Il voyage avec l'avancement pour que l'appelant
+/// distingue « je reçois des octets » de « je vérifie l'empreinte » sans avoir à surveiller la
+/// file en parallèle : c'est ce qui permet à l'installation d'annoncer ses phases.
+/// </param>
+public sealed record DownloadProgress(long ReceivedBytes, long? TotalBytes, double BytesPerSecond, DownloadState State = DownloadState.Running)
 {
     /// <summary>État de départ, avant le premier octet.</summary>
-    public static DownloadProgress None { get; } = new(0, null, 0d);
+    public static DownloadProgress None { get; } = new(0, null, 0d, DownloadState.Queued);
 
     /// <summary>
     /// Avancement entre 0 et 1, ou <see langword="null"/> quand le total est inconnu : la barre de
