@@ -131,6 +131,12 @@ internal readonly partial record struct SemanticVersionCore(int Major, int Minor
         return TagNumber.CompareTo(other.TagNumber);
     }
 
+    // Opérateurs exigés de pair avec IComparable<T> (règle S1210) ; l'égalité vient du record struct.
+    public static bool operator <(SemanticVersionCore left, SemanticVersionCore right) => left.CompareTo(right) < 0;
+    public static bool operator <=(SemanticVersionCore left, SemanticVersionCore right) => left.CompareTo(right) <= 0;
+    public static bool operator >(SemanticVersionCore left, SemanticVersionCore right) => left.CompareTo(right) > 0;
+    public static bool operator >=(SemanticVersionCore left, SemanticVersionCore right) => left.CompareTo(right) >= 0;
+
     public override string ToString()
         => Tag == PreReleaseTag.None
             ? $"{Major}.{Minor}.{Patch}"

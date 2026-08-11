@@ -87,7 +87,7 @@ public sealed class JsonFileStore
             {
                 using var writer = new Utf8JsonWriter(stream, IndentedWriterOptions);
                 JsonSerializer.Serialize(writer, value, typeInfo);
-                writer.Flush();
+                await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
                 await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
         }
