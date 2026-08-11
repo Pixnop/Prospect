@@ -311,6 +311,40 @@ public class InstanceServiceTests
     }
 
     [Fact]
+    public async Task SetIconAsync_ExistingInstance_UpdatesIconAndKeepsRest()
+    {
+        var (service, _, _, _) = CreateService();
+        var created = await service.CreateAsync("Homestead", SampleVersion, CancellationToken.None);
+
+        var updated = await service.SetIconAsync(created.Slug, "builtin:layers", CancellationToken.None);
+
+        updated.Slug.ShouldBe(created.Slug);
+        updated.Metadata.Icon.ShouldBe("builtin:layers");
+        updated.Metadata.Id.ShouldBe(created.Metadata.Id);
+        updated.Metadata.Name.ShouldBe(created.Metadata.Name);
+    }
+
+    [Fact]
+    public async Task SetIconAsync_ExistingInstance_PersistsIcon()
+    {
+        var (service, repository, _, _) = CreateService();
+        var created = await service.CreateAsync("Homestead", SampleVersion, CancellationToken.None);
+
+        await service.SetIconAsync(created.Slug, "builtin:layers", CancellationToken.None);
+        var reloaded = await repository.LoadAsync(created.Slug, CancellationToken.None);
+
+        reloaded.Metadata.Icon.ShouldBe("builtin:layers");
+    }
+
+    [Fact]
+    public async Task SetIconAsync_UnknownSlug_ThrowsInstanceNotFoundException()
+    {
+        var (service, _, _, _) = CreateService();
+
+        await Should.ThrowAsync<InstanceNotFoundException>(() => service.SetIconAsync("ghost", "builtin:layers", CancellationToken.None));
+    }
+
+    [Fact]
     public async Task DeleteAsync_ExistingInstance_RemovesInstanceDirectoryEntirely()
     {
         var (service, repository, fileSystem, _) = CreateService();
