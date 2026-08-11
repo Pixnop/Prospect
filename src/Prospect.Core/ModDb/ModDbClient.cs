@@ -207,9 +207,24 @@ public sealed class ModDbClient : IModDbClient, IDisposable
         }
 
         var endpoint = $"updates?mods={Uri.EscapeDataString(string.Join(',', entries))}";
-        var response = await ReadV1Async(endpoint, ModDbJsonContext.Default.ModDbUpdatesResponseDto, cancellationToken).ConfigureAwait(false);
 
-        return ModDbMapper.ToUpdates(response.Updates);
+        try
+        {
+            var response = await ReadV1Async(endpoint, ModDbJsonContext.Default.ModDbUpdatesResponseDto, cancellationToken).ConfigureAwait(false);
+
+            return ModDbMapper.ToUpdates(response.Updates);
+        }
+        catch (Exception exception) when (IsNetworkFailure(exception))
+        {
+            // Contrairement au reste de l'API v1, /api/updates PEUT renvoyer un vrai code HTTP (400
+            // sur une entrée malformée, docs/research/moddb-api.md) : EnsureSuccessStatusCode() le
+            // lève alors comme n'importe quelle panne de transport, sans distinction possible à ce
+            // niveau. Nos propres entrées sont toujours bien formées ; si ce cas se produit quand
+            // même, mieux vaut le signaler comme une indisponibilité franche, conformément au
+            // contrat documenté sur IModDbClient.GetUpdatesAsync, que laisser fuiter une
+            // HttpRequestException que rien en amont n'attend.
+            throw ModDbUnavailableException.FromNetworkFailure(exception);
+        }
     }
 
     /// <inheritdoc />

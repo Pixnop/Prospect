@@ -261,7 +261,7 @@ public sealed class ModInstallService
         var (dependencies, unresolved) = await ResolveDependencyItemsAsync(issues, gameVersion, mode, cancellationToken).ConfigureAwait(false);
         var dependents = ModDependencyResolver.FindDependents(previous, installed);
 
-        return new ModUpdatePlan(previous, updated, dependencies, issues, unresolved, dependents);
+        return new ModUpdatePlan(previous, updated, dependencies, issues, unresolved, dependents, gameVersion);
     }
 
     /// <summary>

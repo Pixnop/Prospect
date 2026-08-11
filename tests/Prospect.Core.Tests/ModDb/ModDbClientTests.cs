@@ -444,12 +444,13 @@ public sealed class ModDbClientTests
         // /api/updates est un des rares endpoints v1 où un vrai code HTTP 400 sort (docs/research/moddb-api.md),
         // sur une entrée sans @ : notre client ne peut jamais en construire lui-même, mais si le
         // serveur rejette quand même la requête, ça ne doit surtout pas se lire comme « aucun mod en
-        // retard ». Même mécanique que GetModAsync : EnsureSuccessStatusCode() sur GetStringAsync
-        // laisse remonter l'échec HTTP tel quel plutôt que de le convertir silencieusement.
+        // retard ». EnsureSuccessStatusCode() sur GetStringAsync lève une HttpRequestException, que
+        // GetUpdatesAsync convertit en ModDbUnavailableException plutôt que de la laisser fuiter :
+        // c'est le contrat documenté sur IModDbClient.GetUpdatesAsync.
         using var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Status(HttpStatusCode.BadRequest));
         using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
 
-        await Should.ThrowAsync<HttpRequestException>(() => client.GetUpdatesAsync(
+        await Should.ThrowAsync<ModDbUnavailableException>(() => client.GetUpdatesAsync(
             new Dictionary<string, ModVersion> { ["configlib"] = ModVersion.Parse("1.0.0") },
             CancellationToken.None));
     }

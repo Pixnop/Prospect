@@ -1,3 +1,5 @@
+using Prospect.Core.Common;
+
 namespace Prospect.Core.ModDb;
 
 /// <summary>
@@ -21,13 +23,15 @@ namespace Prospect.Core.ModDb;
 /// risque d'une montée est fonctionnel (rupture d'API non déclarée), pas de version, d'où une
 /// simple liste plutôt qu'une vérification bloquante.
 /// </param>
+/// <param name="GameVersion">Version de jeu de l'instance visée, pour le texte d'avertissement d'un rapprochement approximatif.</param>
 public sealed record ModUpdatePlan(
     InstalledMod Previous,
     ModInstallItem Updated,
     IReadOnlyList<ModInstallItem> MissingDependencies,
     IReadOnlyList<ModDependencyIssue> Issues,
     IReadOnlyList<string> UnresolvedDependencies,
-    IReadOnlyList<InstalledMod> Dependents)
+    IReadOnlyList<InstalledMod> Dependents,
+    GameVersion GameVersion)
 {
     /// <summary>Vrai s'il y a quoi que ce soit à montrer avant de confirmer (au-delà du simple changement de version).</summary>
     public bool NeedsConfirmation => MissingDependencies.Count > 0 || UnresolvedDependencies.Count > 0 || Dependents.Count > 0;
