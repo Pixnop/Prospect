@@ -50,8 +50,13 @@ services du Core reçoivent tout par injection (constructeurs), conteneur
 schémas (instance.json, manifests, réponses API) sont des records C# annotés, le
 générateur de source évite la réflexion et prépare un éventuel AOT.
 
-**Résilience réseau via `Microsoft.Extensions.Http.Resilience`** (retry avec backoff sur
-les téléchargements et appels API), plutôt qu'un Polly câblé à la main.
+**Résilience réseau adaptée au streaming.** Les téléchargements (fichiers du jeu, mods)
+utilisent une reprise maison : réessais bornés avec backoff, bascule de miroir, reprise
+par en-tête `Range`, et un timeout d'inactivité par lecture plutôt qu'un délai total par
+requête, qu'un transfert de 600 Mo sur une ligne lente violerait mécaniquement. Décision
+entérinée à la PR 16 : les handlers de résilience standard imposent précisément ce délai
+total et n'ont aucune notion de miroir. Les appels API courts (catalogue, ModDB) peuvent
+en revanche porter une politique de retry classique.
 
 **Stack de test : xUnit + NSubstitute + coverlet.** NSubstitute plutôt que Moq
 (l'épisode SponsorLink a suffi). Pour les assertions, FluentAssertions est devenu payant
@@ -548,6 +553,13 @@ pas en clair dans la config comme le faisait VS Launcher.
 corbeille système à la suppression d'instance. À surveiller aussi : Rustory, le
 successeur actif de VS Launcher par le même auteur, comme source d'idées et de
 comparaison.
+
+Le site de présentation, avec documentation utilisateur et tutoriels, vivra dans le
+repo séparé [prospect-web](https://github.com/Pixnop/prospect-web) : générateur
+statique sur GitHub Pages, réutilisation des tokens et polices du design system,
+français d'abord avec i18n prévue, et un tutoriel de migration depuis VS Launcher. Il
+démarrera quand le MVP sera montrable, les captures d'écran du launcher servant de
+matière première.
 
 ## Points ouverts (à valider ensemble)
 
