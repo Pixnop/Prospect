@@ -12,9 +12,15 @@ public sealed class SystemAppEnvironment : IAppEnvironment
 {
     /// <inheritdoc />
     public AppOperatingSystem CurrentOperatingSystem
-        => OperatingSystem.IsWindows() ? AppOperatingSystem.Windows
-            : OperatingSystem.IsMacOS() ? AppOperatingSystem.MacOs
-            : AppOperatingSystem.Linux;
+        => OperatingSystem.IsWindows() switch
+        {
+            true => AppOperatingSystem.Windows,
+            _ => OperatingSystem.IsMacOS() switch
+            {
+                true => AppOperatingSystem.MacOs,
+                _ => AppOperatingSystem.Linux,
+            },
+        };
 
     /// <inheritdoc />
     public string? GetEnvironmentVariable(string name) => Environment.GetEnvironmentVariable(name);
