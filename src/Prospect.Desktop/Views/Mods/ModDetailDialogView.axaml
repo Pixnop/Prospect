@@ -1,0 +1,105 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Prospect.Desktop.ViewModels.Mods"
+             xmlns:conv="using:Prospect.Desktop.Converters"
+             mc:Ignorable="d" d:DesignWidth="720"
+             x:Class="Prospect.Desktop.Views.Mods.ModDetailDialogView"
+             x:DataType="vm:ModDetailDialogViewModel">
+
+  <!--
+    Fiche d'un mod (design/ui_kits/launcher/screen-mods.jsx, ModDetail). Deux écarts assumés par
+    rapport à la maquette : la description est affichée nettoyée de son HTML plutôt que rendue, et
+    les captures d'écran ne sont pas téléchargées en MVP. Le bouton « Ouvrir sur le ModDB » renvoie
+    à la fiche officielle, qui reste la version complète.
+  -->
+
+  <Border Width="720" MaxHeight="640" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
+          Background="{DynamicResource BgSurface}" BorderBrush="{DynamicResource BorderDefault}"
+          BorderThickness="1" BoxShadow="{DynamicResource Elev3}">
+    <DockPanel>
+      <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="22,20">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <Border Grid.Column="0" Width="52" Height="52" CornerRadius="{StaticResource RadiusSm}"
+                  Background="{DynamicResource Stone800}" BorderBrush="{DynamicResource BorderSubtle}" BorderThickness="1">
+            <Path Width="22" Height="22" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+                  Data="{StaticResource Icon.package}" Stroke="{DynamicResource Text4}"
+                  StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+          </Border>
+          <StackPanel Grid.Column="1" Margin="14,0,14,0" VerticalAlignment="Center">
+            <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" FontFamily="{DynamicResource FontDisplay}"
+                       FontSize="{StaticResource FsHeading}" FontWeight="{StaticResource FwSemibold}"
+                       Foreground="{DynamicResource Text1}" />
+            <TextBlock Text="{Binding MetaText}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"
+                       FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+          </StackPanel>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.download}"
+                      Stroke="{DynamicResource TextOnAccent}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                <TextBlock Text="{StaticResource Mods_Install}" />
+              </StackPanel>
+            </Button>
+            <Button Classes="icon bordered" Command="{Binding OpenOnModDbCommand}" ToolTip.Tip="{StaticResource Mods_OpenOnModDb}">
+              <Path Width="15" Height="15" Stretch="Uniform" Data="{StaticResource Icon.external-link}"
+                    Stroke="{DynamicResource Text2}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+            </Button>
+            <Button Classes="icon" Command="{Binding CloseCommand}" ToolTip.Tip="{StaticResource Dialog_Close}">
+              <Path Width="15" Height="15" Stretch="Uniform" Data="{StaticResource Icon.x}"
+                    Stroke="{DynamicResource Text2}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <ScrollViewer Padding="22">
+        <StackPanel Spacing="16">
+          <TextBlock Text="{StaticResource Mods_OpenFailed}" TextWrapping="Wrap" IsVisible="{Binding OpenFailed}"
+                     FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource DangerText}" />
+
+          <SelectableTextBlock Text="{Binding Description}" TextWrapping="Wrap" LineHeight="22" IsVisible="{Binding HasDescription}"
+                               FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text2}" />
+
+          <StackPanel Spacing="4">
+            <TextBlock Text="{StaticResource Mods_Detail_SourceNote}" TextWrapping="Wrap" LineHeight="18"
+                       FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+            <SelectableTextBlock Text="{Binding PageUrlText}" FontFamily="{DynamicResource FontMono}"
+                                 FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+          </StackPanel>
+
+          <StackPanel Spacing="10" IsVisible="{Binding HasReleases}">
+            <TextBlock Text="{StaticResource Mods_Detail_Versions}" FontSize="{StaticResource FsCaption}"
+                       FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+            <Border Classes="card" Padding="0" ClipToBounds="True">
+              <ItemsControl ItemsSource="{Binding Releases}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ModReleaseRowViewModel">
+                    <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="16,10">
+                      <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                        <TextBlock Grid.Column="0" Text="{Binding VersionText}" Width="76" VerticalAlignment="Center"
+                                   FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsCaption}"
+                                   Foreground="{DynamicResource Text1}" />
+                        <ContentControl Grid.Column="1" Classes="badge" Content="{Binding GameVersionsText}" IsVisible="{Binding ShowBadge}"
+                                        VerticalAlignment="Center"
+                                        Classes.stable="{Binding BadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=stable}"
+                                        Classes.incompatible="{Binding BadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=incompatible}" />
+                        <TextBlock Grid.Column="2" Text="{Binding GameVersionsText}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" IsVisible="{Binding !ShowBadge}"
+                                   FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+                        <TextBlock Grid.Column="3" Text="{Binding DateText}" VerticalAlignment="Center"
+                                   FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}"
+                                   Foreground="{DynamicResource Text4}" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Border>
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+    </DockPanel>
+  </Border>
+</UserControl>

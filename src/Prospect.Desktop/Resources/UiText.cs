@@ -2,6 +2,7 @@ using System.Globalization;
 
 using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
+using Prospect.Core.ModDb;
 
 namespace Prospect.Desktop.Resources;
 
@@ -158,5 +159,160 @@ internal static class UiText
             => $"Le jeu de « {instanceName} » va s'arrêter immédiatement. Toute progression non sauvegardée sera perdue.";
 
         internal const string EnvVarsInvalidLine = "Chaque ligne doit être au format CLE=valeur.";
+    }
+
+    /// <summary>
+    /// Textes du navigateur de mods et de l'onglet Mods d'une instance
+    /// (design/ui_kits/launcher/screen-mods.jsx et components/launcher/ModRow.jsx).
+    /// </summary>
+    internal static class Mods
+    {
+        internal const string AllVersions = "Toutes les versions";
+        internal const string UnknownVersion = "version inconnue";
+        internal const string ProvenanceModDb = "ModDB";
+        internal const string ProvenanceManual = "manuel";
+        internal const string EmptyResultsTitle = "Aucun mod ne correspond";
+        internal const string EnabledTitle = "Mod activé";
+        internal const string DisabledTitle = "Mod désactivé";
+        internal const string UninstalledTitle = "Mod retiré";
+        internal const string FileGoneTitle = "Fichier introuvable";
+        internal const string InstallFailedTitle = "Installation impossible";
+        internal const string NoCompatibleReleaseTitle = "Aucune version compatible";
+        internal const string DetailUnavailableTitle = "Fiche indisponible";
+        internal const string PickInstanceTitle = "Choisis une instance";
+        internal const string PickInstanceMessage = "Sélectionne l'instance de destination avant d'installer un mod.";
+        internal const string StaleCatalog = "L'index n'a pas pu être actualisé. Les mods affichés viennent du dernier relevé connu.";
+
+        // Message exact de la maquette pour l'état « ModDB injoignable ».
+        internal const string OfflineTitle = "ModDB injoignable";
+        internal const string OfflineDescription = "La connexion au dépôt officiel a échoué. Les mods déjà installés restent utilisables hors ligne.";
+        internal const string OfflineEmptyTitle = "Aucun résultat hors ligne";
+        internal const string OfflineEmptyDescription = "L'index des mods est mis en cache localement mais il a expiré. Reconnecte-toi pour parcourir ModDB.";
+
+        internal static string Subtitle(int indexedCount) => indexedCount switch
+        {
+            0 => "ModDB officiel",
+            1 => "ModDB officiel · 1 mod indexé",
+            _ => $"ModDB officiel · {indexedCount.ToString("N0", CultureInfo.GetCultureInfo("fr-FR"))} mods indexés",
+        };
+
+        internal static string ByAuthor(string author) => string.IsNullOrWhiteSpace(author) ? "auteur inconnu" : $"par {author}";
+
+        internal static string FormatCount(int value) => value.ToString("N0", CultureInfo.GetCultureInfo("fr-FR"));
+
+        internal static string InstanceLabel(string name, string gameVersion) => $"{name} · {gameVersion}";
+
+        internal static string EmptyResultsDescription(string query)
+            => string.IsNullOrWhiteSpace(query)
+                ? "Aucun mod ne correspond aux filtres actifs."
+                : $"Aucun mod ne correspond à « {query.Trim()} ».";
+
+        internal static string DetailMeta(string author, int downloads)
+            => $"{ByAuthor(author)} · {FormatCount(downloads)} téléchargements";
+
+        internal static string CompatibleVersions(IReadOnlyList<string> tags) => tags.Count switch
+        {
+            0 => "aucune version de jeu déclarée",
+            1 => tags[0],
+            <= 3 => string.Join(", ", tags),
+            _ => $"{string.Join(", ", tags.Take(3))} et {tags.Count - 3} autres",
+        };
+
+        internal static string ReleaseDate(DateTimeOffset? createdUtc)
+            => createdUtc is null
+                ? string.Empty
+                : createdUtc.Value.ToLocalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+        internal static string SideLabel(ModDbSide side) => side switch
+        {
+            ModDbSide.Client => "client",
+            ModDbSide.Server => "serveur",
+            ModDbSide.Both => "client et serveur",
+            _ => string.Empty,
+        };
+
+        internal static string SideLabel(ModSide? side) => side switch
+        {
+            ModSide.Client => "client",
+            ModSide.Server => "serveur",
+            ModSide.Universal => "universel",
+            _ => string.Empty,
+        };
+
+        internal static string RowAuthor(IReadOnlyList<string> authors) => authors.Count switch
+        {
+            0 => "auteur inconnu",
+            1 => $"par {authors[0]}",
+            _ => $"par {authors[0]} et {authors.Count - 1} autre{(authors.Count > 2 ? "s" : string.Empty)}",
+        };
+
+        internal static string UnidentifiedReason(ModInfoProblem problem) => problem switch
+        {
+            ModInfoProblem.MissingModInfo => "aucun modinfo.json dans l'archive",
+            ModInfoProblem.MalformedJson => "modinfo.json illisible",
+            ModInfoProblem.MissingIdentity => "modinfo.json sans identifiant ni nom",
+            ModInfoProblem.UnreadableArchive => "archive illisible",
+            _ => string.Empty,
+        };
+
+        internal static string InstalledSummary(int total, int enabled) => total switch
+        {
+            0 => string.Empty,
+            1 => enabled == 1 ? "1 mod installé" : "1 mod installé, désactivé",
+            _ => enabled == total ? $"{total} mods installés" : $"{total} mods installés · {total - enabled} désactivés",
+        };
+
+        internal static string PlanTitle(string modName) => $"Installer « {modName} » ?";
+
+        internal static string PlanMessage(string version, string instanceName)
+            => $"La version {version} sera ajoutée à « {instanceName} ».";
+
+        internal static string ApproximateWarning(string gameVersion)
+            => $"Aucune version n'est déclarée compatible avec {gameVersion} : celle-ci est proposée parce qu'elle cible la même série. L'auteur ne l'a pas confirmée, elle peut ne pas fonctionner.";
+
+        internal static string DependencyReason(ModDependencyIssue? issue) => issue?.Status switch
+        {
+            ModDependencyStatus.Missing when issue.ReportedByModDb && issue.Requirement.IsAny => "signalée par le ModDB",
+            ModDependencyStatus.Missing => "absente de l'instance",
+            ModDependencyStatus.TooOld => $"version installée trop ancienne, {issue.Requirement} au minimum",
+            _ => string.Empty,
+        };
+
+        internal static string UnresolvedDependencies(IReadOnlyList<string> identifiers)
+            => identifiers.Count == 0
+                ? string.Empty
+                : $"Introuvable{(identifiers.Count > 1 ? "s" : string.Empty)} sur le ModDB : {string.Join(", ", identifiers)}. À installer à la main si le mod en a besoin.";
+
+        internal static string DisabledDependencies(IReadOnlyList<string> identifiers)
+            => identifiers.Count == 0
+                ? string.Empty
+                : $"Présent{(identifiers.Count > 1 ? "s" : string.Empty)} mais désactivé{(identifiers.Count > 1 ? "s" : string.Empty)} : {string.Join(", ", identifiers)}. Réactive-les depuis l'onglet Mods de l'instance.";
+
+        internal static string InstalledTitle(string modName) => $"{modName} installé";
+
+        internal static string InstalledMessage(int count, string instanceName)
+            => count > 1 ? $"{count} mods ajoutés à « {instanceName} »" : $"Ajouté à « {instanceName} »";
+
+        internal static string UninstallTitle(string modName) => $"Retirer « {modName} » ?";
+
+        internal static string UninstallMessage(string fileName)
+            => $"Le fichier {fileName} sera supprimé du dossier Mods de l'instance. Tu pourras le réinstaller depuis le ModDB.";
+
+        internal static string UninstallDependents(IReadOnlyList<string> modNames)
+        {
+            if (modNames.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            var quoted = modNames.Select(name => $"« {name} »").ToArray();
+            var joined = quoted.Length == 1
+                ? quoted[0]
+                : $"{string.Join(", ", quoted[..^1])} et {quoted[^1]}";
+
+            return quoted.Length == 1
+                ? $"Le mod {joined} en dépend et risque de ne plus fonctionner."
+                : $"Les mods {joined} en dépendent et risquent de ne plus fonctionner.";
+        }
     }
 }

@@ -1,0 +1,117 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Prospect.Desktop.ViewModels.Mods"
+             mc:Ignorable="d" d:DesignWidth="888"
+             x:Class="Prospect.Desktop.Views.Mods.InstanceModsTabView"
+             x:DataType="vm:InstanceModsTabViewModel">
+
+  <!--
+    Onglet Mods de la page de détail d'instance : port de design/components/launcher/ModRow.jsx
+    (icône, nom, auteur, version, toggle, retrait) enrichi des deux informations que le launcher est
+    seul à connaître, la provenance du fichier et la raison quand une archive n'a pas pu être
+    identifiée.
+  -->
+
+  <UserControl.Styles>
+    <!-- Équivalent du modificateur « disabled » de pr-modrow, dans le design : une ligne
+         désactivée reste lisible mais s'efface, pour qu'un coup d'œil suffise à voir ce que le
+         jeu chargera. -->
+    <Style Selector="Border.modRow.off">
+      <Setter Property="Opacity" Value="0.5" />
+    </Style>
+  </UserControl.Styles>
+
+  <StackPanel Spacing="14">
+    <Grid ColumnDefinitions="*,Auto,Auto">
+      <TextBlock Grid.Column="0" Text="{Binding SummaryText}" VerticalAlignment="Center"
+                 FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+      <Button Grid.Column="1" Classes="secondary sm" Margin="0,0,8,0" Command="{Binding RefreshCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.refresh}"
+                Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+          <TextBlock Text="{StaticResource Mods_Tab_Rescan}" />
+        </StackPanel>
+      </Button>
+      <Button Grid.Column="2" Classes="sm" Command="{Binding BrowseCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.search}"
+                Stroke="{DynamicResource TextOnAccent}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+          <TextBlock Text="{StaticResource Mods_Tab_Browse}" />
+        </StackPanel>
+      </Button>
+    </Grid>
+
+    <Border Classes="card" Padding="0" ClipToBounds="True" IsVisible="{Binding HasMods}">
+      <ItemsControl ItemsSource="{Binding Mods}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:InstalledModRowViewModel">
+            <Border Classes="modRow" Classes.off="{Binding !IsEnabled}" Padding="16,12"
+                    BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Grid.Column="0" Width="30" Height="30" CornerRadius="{StaticResource RadiusSm}"
+                        Background="{DynamicResource Stone800}" BorderBrush="{DynamicResource BorderSubtle}" BorderThickness="1">
+                  <Path Width="15" Height="15" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Data="{StaticResource Icon.package}" Stroke="{DynamicResource Text3}"
+                        StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                </Border>
+
+                <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                               FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
+                    <ContentControl Classes="badge incompatible" Content="{StaticResource Mods_Row_Unidentified}"
+                                    VerticalAlignment="Center" IsVisible="{Binding IsUnidentified}" />
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
+                    <TextBlock Text="{Binding AuthorText}" TextTrimming="CharacterEllipsis"
+                               FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+                    <TextBlock Text="·" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Stone600}" />
+                    <TextBlock Text="{Binding FileNameText}" TextTrimming="CharacterEllipsis" FontFamily="{DynamicResource FontMono}"
+                               FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+                  </StackPanel>
+                  <TextBlock Text="{Binding UnidentifiedReason}" Margin="0,2,0,0" TextWrapping="Wrap"
+                             IsVisible="{Binding IsUnidentified}"
+                             FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource WarningText}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                  <ContentControl Classes="badge" Content="{Binding SideText}" IsVisible="{Binding HasSide}" VerticalAlignment="Center" />
+                  <ContentControl Classes="badge accent" Content="{Binding ProvenanceText}" IsVisible="{Binding IsFromModDb}" VerticalAlignment="Center" />
+                  <ContentControl Classes="badge" Content="{Binding ProvenanceText}" IsVisible="{Binding !IsFromModDb}" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding VersionText}" VerticalAlignment="Center" FontFamily="{DynamicResource FontMono}"
+                             FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+                  <ToggleSwitch IsChecked="{Binding IsEnabled, Mode=TwoWay}" VerticalAlignment="Center"
+                                ToolTip.Tip="{StaticResource Mods_Row_Toggle}" />
+                  <Button Classes="icon sm danger" Command="{Binding RemoveCommand}" ToolTip.Tip="{StaticResource Mods_Row_Remove}">
+                    <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.trash}"
+                          Stroke="{DynamicResource Text3}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                  </Button>
+                </StackPanel>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Border>
+
+    <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="Transparent"
+            BorderBrush="{DynamicResource BorderDefault}" IsVisible="{Binding !HasMods}">
+      <StackPanel HorizontalAlignment="Center" Spacing="12" Margin="32,48" MaxWidth="420">
+        <Path Width="40" Height="40" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.package}"
+              Stroke="{DynamicResource Text4}" StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round" />
+        <TextBlock Text="{StaticResource Mods_Tab_EmptyTitle}" HorizontalAlignment="Center"
+                   FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                   FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+        <TextBlock Text="{StaticResource Mods_Tab_EmptyDescription}" HorizontalAlignment="Center" TextAlignment="Center"
+                   TextWrapping="Wrap" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text3}" LineHeight="20" />
+        <Button Classes="sm" HorizontalAlignment="Center" Command="{Binding BrowseCommand}"
+                Content="{StaticResource Mods_Tab_Browse}" />
+      </StackPanel>
+    </Border>
+
+    <TextBlock Text="{Binding ModsDirectoryText}" TextTrimming="CharacterEllipsis" FontFamily="{DynamicResource FontMono}"
+               FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+  </StackPanel>
+</UserControl>

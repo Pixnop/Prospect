@@ -1,0 +1,90 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Prospect.Desktop.ViewModels.Mods"
+             mc:Ignorable="d" d:DesignWidth="480"
+             x:Class="Prospect.Desktop.Views.Mods.ModInstallPlanDialogView"
+             x:DataType="vm:ModInstallPlanDialogViewModel">
+
+  <!-- Confirmation d'installation. Les dépendances manquantes sont listées et cochables : c'est le
+       seul chemin par lequel elles peuvent être installées, rien ne part sans ce bouton. -->
+
+  <Border Width="500" MaxHeight="620" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
+          Background="{DynamicResource BgSurface}" BorderBrush="{DynamicResource BorderDefault}"
+          BorderThickness="1" BoxShadow="{DynamicResource Elev3}">
+    <DockPanel>
+      <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="22,18">
+        <TextBlock Text="{Binding Title}" TextWrapping="Wrap"
+                   FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                   FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+      </Border>
+
+      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}"
+              Background="{DynamicResource BgSurfaceRaised}">
+        <Grid ColumnDefinitions="*,Auto" Margin="22,16">
+          <Button Grid.Column="0" Classes="ghost" HorizontalAlignment="Left" Command="{Binding CancelCommand}"
+                  Content="{StaticResource Dialog_Cancel}" />
+          <Button Grid.Column="1" Command="{Binding ConfirmCommand}" IsEnabled="{Binding !IsBusy}"
+                  Content="{StaticResource Mods_Plan_Confirm}" />
+        </Grid>
+      </Border>
+
+      <ScrollViewer Padding="22">
+        <StackPanel Spacing="14">
+          <TextBlock Text="{Binding Message}" TextWrapping="Wrap" LineHeight="20"
+                     FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text2}" />
+
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="{StaticResource Mods_Plan_FileName}" VerticalAlignment="Center"
+                       FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+            <TextBlock Text="{Binding FileNameText}" VerticalAlignment="Center" FontFamily="{DynamicResource FontMono}"
+                       FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+          </StackPanel>
+
+          <Border Classes="alert warning" IsVisible="{Binding ShowApproximateWarning}">
+            <TextBlock Text="{Binding ApproximateWarning}" TextWrapping="Wrap" LineHeight="18"
+                       FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+          </Border>
+
+          <StackPanel Spacing="8" IsVisible="{Binding HasDependencies}">
+            <TextBlock Text="{StaticResource Mods_Plan_Dependencies}" FontSize="{StaticResource FsCaption}"
+                       FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+            <Border Classes="card" Padding="0" ClipToBounds="True">
+              <ItemsControl ItemsSource="{Binding Dependencies}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ModDependencyChoiceViewModel">
+                    <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="14,10">
+                      <Grid ColumnDefinitions="Auto,*,Auto">
+                        <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Margin="6,0,10,0" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"
+                                     FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
+                          <TextBlock Text="{Binding ReasonText}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"
+                                     FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="2" Text="{Binding VersionText}" VerticalAlignment="Center"
+                                   FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsCaption}"
+                                   Foreground="{DynamicResource Text3}" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Border>
+          </StackPanel>
+
+          <Border Classes="alert info" IsVisible="{Binding HasDisabled}">
+            <TextBlock Text="{Binding DisabledMessage}" TextWrapping="Wrap" LineHeight="18"
+                       FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+          </Border>
+
+          <Border Classes="alert warning" IsVisible="{Binding HasUnresolved}">
+            <TextBlock Text="{Binding UnresolvedMessage}" TextWrapping="Wrap" LineHeight="18"
+                       FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+    </DockPanel>
+  </Border>
+</UserControl>

@@ -171,5 +171,41 @@
 
   <!-- ── Dialogue d'arrêt ────────────────────────────────────────────────────────── -->
   <x:String x:Key="Dialog_Stop_Confirm">Arrêter le jeu</x:String>
+  <x:String x:Key="Dialog_Close">Fermer</x:String>
+
+  <!-- ── Navigateur de mods ──────────────────────────────────────────────────────── -->
+  <x:String x:Key="Mods_Title">Navigateur de mods</x:String>
+  <x:String x:Key="Mods_Refresh">Actualiser l'index</x:String>
+  <x:String x:Key="Mods_Retry">Réessayer</x:String>
+  <x:String x:Key="Mods_SearchPlaceholder">Rechercher un mod…</x:String>
+  <x:String x:Key="Mods_ClearSearch">Effacer la recherche</x:String>
+  <x:String x:Key="Mods_Install">Installer</x:String>
+  <x:String x:Key="Mods_OpenOnModDb">Ouvrir sur le ModDB</x:String>
+  <x:String x:Key="Mods_OpenFailed">Le navigateur n'a pas pu être ouvert. Copie l'adresse ci-dessous pour y accéder à la main.</x:String>
+  <x:String x:Key="Mods_Sort_Downloads">Téléchargements</x:String>
+  <x:String x:Key="Mods_Sort_Updated">Mise à jour</x:String>
+  <x:String x:Key="Mods_Sort_Trending">Tendance</x:String>
+  <x:String x:Key="Mods_Sort_Name">Nom</x:String>
+  <x:String x:Key="Mods_Offline_Title">ModDB injoignable</x:String>
+  <x:String x:Key="Mods_Offline_Description">La connexion au dépôt officiel a échoué. Les mods déjà installés restent utilisables hors ligne.</x:String>
+
+  <!-- ── Fiche d'un mod ──────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Mods_Detail_Versions">Versions</x:String>
+  <x:String x:Key="Mods_Detail_SourceNote">La description et les captures proviennent de la fiche ModDB officielle. Prospect en affiche le texte sans son balisage ; ouvre la fiche pour la version complète.</x:String>
+
+  <!-- ── Confirmation d'installation ─────────────────────────────────────────────── -->
+  <x:String x:Key="Mods_Plan_Confirm">Installer</x:String>
+  <x:String x:Key="Mods_Plan_FileName">fichier :</x:String>
+  <x:String x:Key="Mods_Plan_Dependencies">Dépendances manquantes</x:String>
+
+  <!-- ── Onglet Mods d'une instance ──────────────────────────────────────────────── -->
+  <x:String x:Key="Mods_Tab_Browse">Parcourir le ModDB</x:String>
+  <x:String x:Key="Mods_Tab_Rescan">Rescanner</x:String>
+  <x:String x:Key="Mods_Tab_EmptyTitle">Aucun mod installé</x:String>
+  <x:String x:Key="Mods_Tab_EmptyDescription">Installe des mods depuis le ModDB officiel, ou dépose leurs .zip directement dans le dossier Mods de l'instance.</x:String>
+  <x:String x:Key="Mods_Row_Unidentified">non identifié</x:String>
+  <x:String x:Key="Mods_Row_Toggle">Activer ou désactiver</x:String>
+  <x:String x:Key="Mods_Row_Remove">Retirer</x:String>
+  <x:String x:Key="Mods_Uninstall_Confirm">Retirer le mod</x:String>
 
 </ResourceDictionary>

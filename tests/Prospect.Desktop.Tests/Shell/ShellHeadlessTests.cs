@@ -4,9 +4,11 @@ using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
 
 using Prospect.Desktop.ViewModels.Common;
+using Prospect.Desktop.ViewModels.Mods;
 using Prospect.Desktop.ViewModels.Shell;
 using Prospect.Desktop.Views.Common;
 using Prospect.Desktop.Views.Home;
+using Prospect.Desktop.Views.Mods;
 
 using Shouldly;
 
@@ -37,7 +39,7 @@ public class ShellHeadlessTests
     }
 
     [AvaloniaFact]
-    public void SelectingModsNavItem_ChangesCurrentPageToPlaceholderAndUpdatesActiveState()
+    public void SelectingModsNavItem_ShowsTheModBrowserAndUpdatesActiveState()
     {
         using var provider = TestServiceProviderFactory.Create(out _);
         var window = provider.GetRequiredService<MainWindow>();
@@ -49,10 +51,10 @@ public class ShellHeadlessTests
         modsNavItem.SelectCommand.Execute(null);
         window.Settle();
 
-        shellViewModel.CurrentPage.ShouldBeOfType<PlaceholderPageViewModel>();
+        shellViewModel.CurrentPage.ShouldBeOfType<ModBrowserViewModel>();
         modsNavItem.IsActive.ShouldBeTrue();
         shellViewModel.LibraryNavItems[0].IsActive.ShouldBeFalse();
-        window.GetVisualDescendants().OfType<PlaceholderPageView>().ShouldNotBeEmpty();
+        window.GetVisualDescendants().OfType<ModBrowserView>().ShouldNotBeEmpty();
 
         window.Close();
     }

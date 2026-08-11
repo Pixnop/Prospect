@@ -7,6 +7,7 @@ using Prospect.Desktop.ViewModels.Common;
 using Prospect.Desktop.ViewModels.Downloads;
 using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Instance;
+using Prospect.Desktop.ViewModels.Mods;
 using Prospect.Desktop.ViewModels.Versions;
 
 namespace Prospect.Desktop.ViewModels.Shell;
@@ -25,6 +26,7 @@ public sealed partial class ShellViewModel : ObservableObject
     public ShellViewModel(
         HomeViewModel home,
         VersionsViewModel versions,
+        ModBrowserViewModel modBrowser,
         DownloadsViewModel downloads,
         Func<string, InstanceDetailViewModel> instanceDetailFactory,
         IOverlayService overlay,
@@ -33,6 +35,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(home);
         ArgumentNullException.ThrowIfNull(versions);
+        ArgumentNullException.ThrowIfNull(modBrowser);
         ArgumentNullException.ThrowIfNull(downloads);
         ArgumentNullException.ThrowIfNull(instanceDetailFactory);
         ArgumentNullException.ThrowIfNull(overlay);
@@ -41,6 +44,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
         Home = home;
         Versions = versions;
+        ModBrowser = modBrowser;
         Downloads = downloads;
         _instanceDetailFactory = instanceDetailFactory;
         Overlay = overlay;
@@ -48,17 +52,13 @@ public sealed partial class ShellViewModel : ObservableObject
         UseCustomTitlebar = ResolveUseCustomTitlebar(appEnvironment.CurrentOperatingSystem);
         Home.InstanceOpenRequested += (_, slug) => ShowInstanceDetail(slug);
 
-        var modsPage = new PlaceholderPageViewModel(
-            "package",
-            "Navigateur de mods",
-            "Bientôt disponible : recherche et installation de mods depuis le ModDB officiel.");
         var settingsPage = new PlaceholderPageViewModel(
             "settings",
             "Réglages",
             "Bientôt disponible : préférences générales, jeu, réseau et comptes.");
 
         var homeNavItem = new NavItemViewModel("layers", "Accueil", home, Navigate);
-        var modsNavItem = new NavItemViewModel("package", "Mods", modsPage, Navigate);
+        var modsNavItem = new NavItemViewModel("package", "Mods", modBrowser, ShowModBrowser);
         var versionsNavItem = new NavItemViewModel("hard-drive", "Versions", versions, Navigate);
         SettingsNavItem = new NavItemViewModel("settings", "Réglages", settingsPage, Navigate);
 
@@ -74,6 +74,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
     /// <summary>Page « Versions du jeu ».</summary>
     public VersionsViewModel Versions { get; }
+
+    /// <summary>Page « Navigateur de mods ».</summary>
+    public ModBrowserViewModel ModBrowser { get; }
 
     /// <summary>Contenu du popover Téléchargements : une vue sur la file du DownloadManager.</summary>
     public DownloadsViewModel Downloads { get; }
@@ -124,9 +127,31 @@ public sealed partial class ShellViewModel : ObservableObject
         var detail = _instanceDetailFactory(slug);
         detail.BackRequested += (_, _) => ShowHome();
         detail.NavigateToVersionsRequested += (_, _) => Navigate(Versions);
+        detail.BrowseModsRequested += (_, instanceSlug) => ShowModBrowser(instanceSlug);
 
         Navigate(detail);
         _ = detail.InitializeCommand.ExecuteAsync(null);
+    }
+
+    /// <summary>
+    /// Ouvre le navigateur de mods, éventuellement préfiltré sur une instance (bouton « Parcourir
+    /// le ModDB » de l'onglet Mods). Le rechargement est déclenché à chaque entrée sur la page :
+    /// le catalogue a son propre cache, l'appel ne coûte rien tant qu'il est frais.
+    /// </summary>
+    public void ShowModBrowser(string? instanceSlug = null)
+    {
+        if (instanceSlug is not null)
+        {
+            ModBrowser.PendingInstanceSlug = instanceSlug;
+        }
+
+        ShowModBrowser((object)ModBrowser);
+    }
+
+    private void ShowModBrowser(object page)
+    {
+        Navigate(page);
+        _ = ModBrowser.InitializeCommand.ExecuteAsync(null);
     }
 
     // Dispose la page sortante si elle en a besoin (InstanceDetailViewModel se désabonne de

@@ -3,12 +3,16 @@ using System.Net;
 namespace Prospect.Desktop.Tests.TestDoubles;
 
 /// <summary>
-/// Gestionnaire HTTP factice injecté dans la composition root des tests : il sert un catalogue
-/// figé et refuse tout le reste. Aucun test de cet assembly ne peut donc atteindre le réseau réel,
-/// ni en local ni en CI.
+/// Gestionnaire HTTP factice injecté dans la composition root des tests : il sert un catalogue de
+/// versions du jeu figé, délègue le reste au <see cref="FakeModDbHandler"/> et refuse tout ce qui
+/// n'est ni l'un ni l'autre. Aucun test de cet assembly ne peut donc atteindre le réseau réel, ni
+/// en local ni en CI.
 /// </summary>
 internal sealed class FakeCatalogHandler : HttpMessageHandler
 {
+    /// <summary>Serveur ModDB factice adossé à ce gestionnaire, pour les écrans de mods.</summary>
+    public FakeModDbHandler ModDb { get; } = new();
+
     /// <summary>Extrait de <c>stable.json</c> au format réel (docs/research/vslauncher-et-distribution.md).</summary>
     public const string StableJson = """
     {
@@ -64,8 +68,11 @@ internal sealed class FakeCatalogHandler : HttpMessageHandler
             _ => null,
         };
 
-        return Task.FromResult(body is null
-            ? new HttpResponseMessage(HttpStatusCode.NotFound)
-            : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body) });
+        if (body is null)
+        {
+            return Task.FromResult(ModDb.Respond(request));
+        }
+
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body) });
     }
 }

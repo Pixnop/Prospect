@@ -21,6 +21,9 @@ internal sealed class FakeProcessRunner : IProcessRunner
 
     public List<ProcessStartRequest> StartRequests { get; } = [];
 
+    /// <summary>Exception levée par <see cref="RunAsync"/>, pour simuler une commande absente du système.</summary>
+    public Exception? Failure { get; set; }
+
     /// <summary>
     /// Processus rendu par <see cref="Start"/>. Un test qui a besoin de contrôler plusieurs
     /// lancements successifs peut réassigner cette fabrique entre deux appels.
@@ -31,7 +34,9 @@ internal sealed class FakeProcessRunner : IProcessRunner
     {
         Requests.Add(request);
 
-        return Task.FromResult(new ProcessRunResult(ExitCode, StandardOutput, StandardError));
+        return Failure is null
+            ? Task.FromResult(new ProcessRunResult(ExitCode, StandardOutput, StandardError))
+            : Task.FromException<ProcessRunResult>(Failure);
     }
 
     public IRunningProcess Start(ProcessStartRequest request)
