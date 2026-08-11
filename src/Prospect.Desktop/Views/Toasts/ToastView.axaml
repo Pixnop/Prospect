@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Prospect.Desktop.ViewModels.Toasts"
+             xmlns:conv="using:Prospect.Desktop.Converters"
+             mc:Ignorable="d"
+             x:Class="Prospect.Desktop.Views.Toasts.ToastView"
+             x:DataType="vm:ToastViewModel">
+
+  <!-- Port de components/feedback/Toast.jsx : icône teintée par tonalité, titre + description,
+       bouton de fermeture. La pile qui l'héberge vit dans ShellView. -->
+
+  <UserControl.Styles>
+    <Style Selector="Path.tone-info">
+      <Setter Property="Stroke" Value="{DynamicResource InfoText}" />
+    </Style>
+    <Style Selector="Path.tone-success">
+      <Setter Property="Stroke" Value="{DynamicResource SuccessText}" />
+    </Style>
+    <Style Selector="Path.tone-warning">
+      <Setter Property="Stroke" Value="{DynamicResource WarningText}" />
+    </Style>
+    <Style Selector="Path.tone-error">
+      <Setter Property="Stroke" Value="{DynamicResource DangerText}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Border Width="340"
+          Padding="16,14,12,14"
+          CornerRadius="{StaticResource RadiusMd}"
+          Background="{DynamicResource BgSurfaceRaised}"
+          BorderBrush="{DynamicResource BorderDefault}"
+          BorderThickness="1"
+          BoxShadow="{DynamicResource Elev3}">
+    <Grid ColumnDefinitions="Auto,*,Auto">
+      <Path Grid.Column="0"
+            Width="16" Height="16" Margin="0,2,12,0"
+            VerticalAlignment="Top"
+            Stretch="Uniform"
+            Data="{Binding IconKey, Converter={x:Static conv:IconKeyToGeometryConverter.Instance}}"
+            StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round"
+            Classes.tone-info="{Binding Tone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Info}"
+            Classes.tone-success="{Binding Tone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Success}"
+            Classes.tone-warning="{Binding Tone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Warning}"
+            Classes.tone-error="{Binding Tone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Error}" />
+
+      <StackPanel Grid.Column="1" Spacing="2">
+        <TextBlock Text="{Binding Title}"
+                   FontFamily="{DynamicResource FontSans}"
+                   FontSize="{StaticResource FsBodySm}"
+                   FontWeight="{StaticResource FwSemibold}"
+                   Foreground="{DynamicResource Text1}"
+                   TextWrapping="Wrap" />
+        <TextBlock Text="{Binding Description}"
+                   IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   FontSize="{StaticResource FsCaption}"
+                   Foreground="{DynamicResource Text2}"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+
+      <Button Grid.Column="2" Classes="icon sm" Command="{Binding CloseCommand}" VerticalAlignment="Top" ToolTip.Tip="Fermer">
+        <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.x}"
+              Stroke="{DynamicResource Text2}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+      </Button>
+    </Grid>
+  </Border>
+</UserControl>

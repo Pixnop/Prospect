@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Prospect.Desktop.ViewModels.Home"
+             mc:Ignorable="d" d:DesignWidth="212"
+             x:Class="Prospect.Desktop.Views.Home.NewInstanceTileView"
+             x:DataType="vm:NewInstanceTileViewModel">
+
+  <!--
+    Port de la carte Card variant="dashed" interactive de screen-home.jsx. Border n'expose pas de
+    bordure en pointillés (ni Avalonia ni WPF) : un Rectangle à StrokeDashArray en fait office, en
+    CONTENU du bouton plutôt qu'en gabarit — d'où le sélecteur descendant ci-dessous, qui atteint
+    ce Rectangle au survol sans recouvrir le ControlTheme de Button. Classes="ghost" réutilise la
+    variante transparente + survol bg-hover déjà portée dans Button.axaml plutôt que d'en écrire
+    une nouvelle.
+  -->
+
+  <UserControl.Styles>
+    <Style Selector="Button.ghost:pointerover Rectangle#DashedBorder">
+      <Setter Property="Stroke" Value="{DynamicResource Accent}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Button Classes="ghost" Command="{Binding SelectCommand}"
+          Width="212" MinHeight="220" Margin="0,0,20,20" Padding="0" BorderThickness="0"
+          CornerRadius="{StaticResource RadiusMd}" Cursor="Hand">
+    <Grid>
+      <Rectangle Name="DashedBorder" RadiusX="10" RadiusY="10" StrokeThickness="1" StrokeDashArray="4,3"
+                 Stroke="{DynamicResource BorderStrong}" />
+      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+        <Path Width="26" Height="26" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.plus}"
+              Stroke="{DynamicResource Text3}" StrokeThickness="1.4" StrokeLineCap="Round" StrokeJoin="Round" />
+        <TextBlock Text="{StaticResource Card_NewInstance}" HorizontalAlignment="Center"
+                   FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text3}" />
+      </StackPanel>
+    </Grid>
+  </Button>
+</UserControl>

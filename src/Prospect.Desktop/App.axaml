@@ -1,9 +1,16 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:Prospect.Desktop"
              x:Class="Prospect.Desktop.App"
              RequestedThemeVariant="Dark">
              <!-- Le sombre est le thème par défaut du design ; le clair reste une variante
                   secondaire accessible via les ThemeDictionaries des tokens. -->
+
+    <Application.DataTemplates>
+        <!-- Résout n'importe quel ViewModel (page courante du shell, panneau modal, toast...)
+             vers sa vue par convention de nom : voir ViewLocator.cs. -->
+        <local:ViewLocator />
+    </Application.DataTemplates>
 
     <Application.Resources>
         <ResourceDictionary>
@@ -17,6 +24,10 @@
                 <ResourceInclude Source="avares://Prospect.Desktop/Styles/Tokens/Motion.axaml" />
                 <ResourceInclude Source="avares://Prospect.Desktop/Styles/Tokens/Typography.axaml" />
                 <ResourceInclude Source="avares://Prospect.Desktop/Styles/Icons.axaml" />
+
+                <!-- Textes UI centralisés (voir Resources/Strings.axaml pour le partage des rôles
+                     avec Resources/UiText.cs). -->
+                <ResourceInclude Source="avares://Prospect.Desktop/Resources/Strings.axaml" />
 
                 <!-- Contrôles ensuite : leurs ControlThemes consomment les tokens ci-dessus. -->
                 <ResourceInclude Source="avares://Prospect.Desktop/Styles/Controls/Button.axaml" />
@@ -34,9 +45,13 @@
 
     <Application.Styles>
         <FluentTheme />
-        <!-- Badge/Tag stylent un ContentControl nu via classes plutôt qu'un type dédié :
-             ce sont des Style par sélecteur de classe, pas des ressources nommées, donc
-             ils vivent dans Application.Styles et non dans Application.Resources. -->
+        <!-- Badge/Tag/Card/NavItem/MenuFlyout stylent des contrôles nus (ContentControl, Border,
+             Button, MenuItem) via classes plutôt qu'un ControlTheme dédié : ce sont des Style par
+             sélecteur, pas des ressources nommées, donc ils vivent dans Application.Styles et non
+             dans Application.Resources. -->
         <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/Badge.axaml" />
+        <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/Card.axaml" />
+        <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/NavItem.axaml" />
+        <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/MenuFlyout.axaml" />
     </Application.Styles>
 </Application>
