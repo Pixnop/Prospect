@@ -122,6 +122,111 @@ public sealed class ModsHeadlessTests
     }
 
     [AvaloniaFact]
+    public async Task InstanceModsTab_CheckUpdatesThenUpdateOneMod_BadgesTheRowAndAppliesTheReplacement()
+    {
+        // Bout en bout sur des fakes (feature 4b) : vérification, badge, dialog de plan,
+        // confirmation, disparition du badge une fois le fichier remplacé.
+        using var provider = TestServiceProviderFactory.Create(out var fileSystem, out var catalogHandler);
+        provider.SeedInstalledVersion(fileSystem, "1.21.3");
+        var window = provider.GetRequiredService<MainWindow>();
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var home = provider.GetRequiredService<HomeViewModel>();
+        window.Show();
+        var record = await CreateInstanceAsync(shell, home, "Homestead", "1.21.3");
+
+        var mods = provider.GetRequiredService<IInstalledModRepository>();
+        ModDbDoubles.SeedMod(
+            fileSystem,
+            mods.GetModsDirectory(record.Slug),
+            "configlib-1.0.0.zip",
+            ModDbDoubles.ModInfo("configlib", "Config lib", "1.0.0"));
+        catalogHandler.ModDb.UpdatesJson = """
+        {
+          "statuscode": "200",
+          "updates": {
+            "configlib": {
+              "releaseid": 38314, "fileid": 84120, "mainfile": "https://moddbcdn.vintagestory.at/configlib_1.11.1.zip",
+              "filename": "configlib_1.11.1.zip", "downloads": 90210, "tags": ["1.21.3"], "modidstr": "configlib",
+              "modversion": "1.11.1", "changelog": null, "created": "2026-02-11 09:22:10"
+            }
+          }
+        }
+        """;
+
+        shell.ShowInstanceDetail(record.Slug);
+        var detail = shell.CurrentPage.ShouldBeOfType<InstanceDetailViewModel>();
+        await detail.InitializeCommand.ExecuteAsync(null);
+        window.Settle();
+
+        await detail.ModsTab.CheckUpdatesCommand.ExecuteAsync(null);
+        window.Settle();
+
+        var row = detail.ModsTab.Mods.ShouldHaveSingleItem();
+        row.HasUpdateAvailable.ShouldBeTrue();
+        detail.ModsTab.AvailableUpdateCount.ShouldBe(1);
+        window.GetVisualDescendants().OfType<InstanceModsTabView>().ShouldNotBeEmpty();
+
+        await row.UpdateCommand.ExecuteAsync(null);
+        window.Settle();
+
+        shell.Overlay.Active.ShouldBeOfType<ModUpdatePlanDialogViewModel>();
+        window.GetVisualDescendants().OfType<ModUpdatePlanDialogView>().ShouldNotBeEmpty();
+
+        var dialog = (ModUpdatePlanDialogViewModel)shell.Overlay.Active!;
+        await dialog.ConfirmCommand.ExecuteAsync(null);
+        window.Settle();
+
+        detail.ModsTab.Mods.ShouldHaveSingleItem().HasUpdateAvailable.ShouldBeFalse();
+        shell.Overlay.Active.ShouldBeNull();
+    }
+
+    [AvaloniaFact]
+    public async Task HomeCard_ReflectsAnUpdateCheckDoneFromTheInstanceTab_WithoutReloadingTheGrid()
+    {
+        using var provider = TestServiceProviderFactory.Create(out var fileSystem, out var catalogHandler);
+        provider.SeedInstalledVersion(fileSystem, "1.21.3");
+        var window = provider.GetRequiredService<MainWindow>();
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var home = provider.GetRequiredService<HomeViewModel>();
+        window.Show();
+        var record = await CreateInstanceAsync(shell, home, "Homestead", "1.21.3");
+        var card = home.Instances.ShouldHaveSingleItem();
+        card.HasUpdates.ShouldBeFalse();
+
+        var mods = provider.GetRequiredService<IInstalledModRepository>();
+        ModDbDoubles.SeedMod(
+            fileSystem,
+            mods.GetModsDirectory(record.Slug),
+            "configlib-1.0.0.zip",
+            ModDbDoubles.ModInfo("configlib", "Config lib", "1.0.0"));
+        catalogHandler.ModDb.UpdatesJson = """
+        {
+          "statuscode": "200",
+          "updates": {
+            "configlib": {
+              "releaseid": 38314, "fileid": 84120, "mainfile": "https://moddbcdn.vintagestory.at/configlib_1.11.1.zip",
+              "filename": "configlib_1.11.1.zip", "downloads": 90210, "tags": ["1.21.3"], "modidstr": "configlib",
+              "modversion": "1.11.1", "changelog": null, "created": "2026-02-11 09:22:10"
+            }
+          }
+        }
+        """;
+
+        shell.ShowInstanceDetail(record.Slug);
+        var detail = shell.CurrentPage.ShouldBeOfType<InstanceDetailViewModel>();
+        await detail.InitializeCommand.ExecuteAsync(null);
+        await detail.ModsTab.CheckUpdatesCommand.ExecuteAsync(null);
+
+        // ShowHome() ne recharge pas la grille (voir ShellViewModel) : la même InstanceCardViewModel
+        // doit refléter le changement en direct via IModUpdateCheckCache.Changed, pas via un rescan.
+        shell.ShowHome();
+        window.Settle();
+
+        card.HasUpdates.ShouldBeTrue();
+        card.UpdateCount.ShouldBe(1);
+    }
+
+    [AvaloniaFact]
     public async Task BrowseFromTheInstanceTab_OpensTheBrowserPrefilteredOnThatInstance()
     {
         using var provider = TestServiceProviderFactory.Create(out var fileSystem);

@@ -208,4 +208,13 @@
   <x:String x:Key="Mods_Row_Remove">Retirer</x:String>
   <x:String x:Key="Mods_Uninstall_Confirm">Retirer le mod</x:String>
 
+  <!-- ── Détection et application des mises à jour (feature 4b) ─────────────────── -->
+  <x:String x:Key="Mods_Tab_CheckUpdates">Vérifier les mises à jour</x:String>
+  <x:String x:Key="Mods_Tab_UpdateAll">Tout mettre à jour</x:String>
+  <x:String x:Key="Mods_Tab_CancelUpdateAll">Annuler</x:String>
+  <x:String x:Key="Mods_Row_UpdateAvailable">mise à jour</x:String>
+  <x:String x:Key="Mods_Row_UnknownToModDb">inconnu du ModDB</x:String>
+  <x:String x:Key="Mods_Row_Update">Mettre à jour</x:String>
+  <x:String x:Key="Mods_UpdatePlan_Confirm">Mettre à jour</x:String>
+
 </ResourceDictionary>

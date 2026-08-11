@@ -64,6 +64,9 @@ internal static class UiText
     internal static class Home
     {
         internal static string NoSearchResults(string query) => $"Aucune instance ne correspond à « {query} ».";
+
+        /// <summary>Pastille discrète de la carte d'instance (feature 4b), quand une vérification récente en a trouvé.</summary>
+        internal static string UpdatesBadge(int count) => count == 1 ? "1 mise à jour" : $"{count} mises à jour";
     }
 
     internal static class Downloads

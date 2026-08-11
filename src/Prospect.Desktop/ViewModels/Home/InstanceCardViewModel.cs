@@ -5,6 +5,7 @@ using Prospect.Core.Common;
 using Prospect.Core.Instances;
 using Prospect.Core.Launching;
 using Prospect.Desktop.Formatting;
+using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.ViewModels.Dialogs;
 using Prospect.Desktop.ViewModels.Instance;
@@ -112,10 +113,14 @@ public sealed partial class InstanceCardViewModel : ObservableObject, IDisposabl
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUpdates))]
+    [NotifyPropertyChangedFor(nameof(UpdatesBadgeText))]
     private int _updateCount;
 
     /// <summary>Vrai quand la pastille discrète « N mises à jour » de la maquette doit s'afficher.</summary>
     public bool HasUpdates => UpdateCount > 0;
+
+    /// <summary>Texte de la pastille, par exemple « 3 mises à jour ».</summary>
+    public string UpdatesBadgeText => UiText.Home.UpdatesBadge(UpdateCount);
 
     [RelayCommand]
     private void Open() => OpenRequested?.Invoke(this, Slug);
