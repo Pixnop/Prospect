@@ -36,6 +36,7 @@ public sealed class ModpackImportService
     private readonly IInstanceRepository _instanceRepository;
     private readonly GameInstallService _gameInstall;
     private readonly IInstalledGameVersionRepository _installedGameVersions;
+    private readonly IGameVersionCatalog _gameCatalog;
     private readonly IFileSystem _fileSystem;
     private readonly IClock _clock;
 
@@ -47,6 +48,7 @@ public sealed class ModpackImportService
     /// <param name="instanceRepository">Topologie disque, pour poser <c>ModConfig/</c>.</param>
     /// <param name="gameInstall">Installation de la version de jeu du manifest si elle manque.</param>
     /// <param name="installedGameVersions">Pour savoir si cette installation est déjà nécessaire.</param>
+    /// <param name="gameCatalog">Catalogue distant, pour annoncer le poids du téléchargement dans l'aperçu.</param>
     /// <param name="fileSystem">Système de fichiers abstrait.</param>
     /// <param name="clock">Horloge, pour dater la provenance de chaque mod installé.</param>
     public ModpackImportService(
@@ -57,6 +59,7 @@ public sealed class ModpackImportService
         IInstanceRepository instanceRepository,
         GameInstallService gameInstall,
         IInstalledGameVersionRepository installedGameVersions,
+        IGameVersionCatalog gameCatalog,
         IFileSystem fileSystem,
         IClock clock)
     {
@@ -67,6 +70,7 @@ public sealed class ModpackImportService
         ArgumentNullException.ThrowIfNull(instanceRepository);
         ArgumentNullException.ThrowIfNull(gameInstall);
         ArgumentNullException.ThrowIfNull(installedGameVersions);
+        ArgumentNullException.ThrowIfNull(gameCatalog);
         ArgumentNullException.ThrowIfNull(fileSystem);
         ArgumentNullException.ThrowIfNull(clock);
 
@@ -77,6 +81,7 @@ public sealed class ModpackImportService
         _instanceRepository = instanceRepository;
         _gameInstall = gameInstall;
         _installedGameVersions = installedGameVersions;
+        _gameCatalog = gameCatalog;
         _fileSystem = fileSystem;
         _clock = clock;
     }
@@ -95,8 +100,27 @@ public sealed class ModpackImportService
 
         var (manifest, format, hasModConfig) = await ReadSourceAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var installed = _installedGameVersions.IsInstalled(manifest.GameVersion);
+        var downloadSize = installed ? null : await TryResolveDownloadSizeAsync(manifest.GameVersion, cancellationToken).ConfigureAwait(false);
 
-        return new ModpackImportPreview(sourcePath, manifest, format, installed, hasModConfig);
+        return new ModpackImportPreview(sourcePath, manifest, format, installed, hasModConfig, downloadSize);
+    }
+
+    // Confort d'affichage seulement (docs/architecture.md : « avertissement ... avec son coût de
+    // téléchargement ») : un catalogue injoignable ne doit jamais empêcher l'aperçu, juste priver
+    // l'avertissement de sa taille annoncée.
+    private async Task<string?> TryResolveDownloadSizeAsync(GameVersion version, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var catalog = await _gameCatalog.GetAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            var entry = catalog.Versions.FirstOrDefault(candidate => candidate.Version == version);
+
+            return entry is null ? null : _gameInstall.FindInstallableAsset(entry)?.DisplaySize;
+        }
+        catch (GameCatalogUnavailableException)
+        {
+            return null;
+        }
     }
 
     /// <summary>

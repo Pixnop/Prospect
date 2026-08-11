@@ -25,12 +25,19 @@ public enum ModpackSourceFormat
 /// <param name="SourceFormat">Manifest seul, ou archive.</param>
 /// <param name="GameVersionInstalled">Vrai si la version de jeu du manifest est déjà installée.</param>
 /// <param name="HasModConfig">Vrai si l'archive contient un dossier <c>ModConfig/</c> à poser.</param>
+/// <param name="GameVersionDownloadSize">
+/// Taille annoncée par le catalogue pour la version de jeu, telle qu'écrite par celui-ci (ex.
+/// « 590.5 MB »), quand <paramref name="GameVersionInstalled"/> est faux. <see langword="null"/>
+/// si la version est déjà installée, ou si le catalogue n'a pas pu être consulté : un confort
+/// d'affichage, jamais un motif de bloquer l'aperçu.
+/// </param>
 public sealed record ModpackImportPreview(
     string SourcePath,
     ModpackManifest Manifest,
     ModpackSourceFormat SourceFormat,
     bool GameVersionInstalled,
-    bool HasModConfig);
+    bool HasModConfig,
+    string? GameVersionDownloadSize = null);
 
 /// <summary>Étape courante d'un import de modpack.</summary>
 public enum ModpackImportPhase

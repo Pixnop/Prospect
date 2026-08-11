@@ -80,6 +80,7 @@ public sealed class ModpackImportServiceTests
             instanceRepository,
             gameInstall,
             gameVersionRepository,
+            gameCatalog,
             fileSystem,
             clock);
 
@@ -179,6 +180,63 @@ public sealed class ModpackImportServiceTests
         var preview = await harness.Service.PreviewAsync(path, CancellationToken.None);
 
         preview.GameVersionInstalled.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task PreviewAsync_GameVersionMissing_ReportsTheCatalogDownloadSize()
+    {
+        var harness = Create(gameVersionPreinstalled: false);
+        var path = await WriteManifestSourceAsync(harness.FileSystem, ManifestWith());
+
+        var preview = await harness.Service.PreviewAsync(path, CancellationToken.None);
+
+        preview.GameVersionDownloadSize.ShouldBe("1 KB");
+    }
+
+    [Fact]
+    public async Task PreviewAsync_GameVersionAlreadyInstalled_ReportsNoDownloadSize()
+    {
+        var harness = Create(gameVersionPreinstalled: true);
+        var path = await WriteManifestSourceAsync(harness.FileSystem, ManifestWith());
+
+        var preview = await harness.Service.PreviewAsync(path, CancellationToken.None);
+
+        preview.GameVersionDownloadSize.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task PreviewAsync_CatalogUnreachable_StillSucceedsWithoutADownloadSize()
+    {
+        // Confort d'affichage seulement (voir la remarque de ModpackImportService.TryResolveDownloadSizeAsync) :
+        // un catalogue injoignable ne doit jamais empêcher l'aperçu du manifest.
+        var fileSystem = new MockFileSystem();
+        var clock = new FakeClock(Noon);
+        var store = new JsonFileStore(fileSystem);
+        var instanceRepository = new FileSystemInstanceRepository(fileSystem, Paths, store, new InstanceMetadataMigrationPipeline([]));
+        var instanceService = new InstanceService(instanceRepository, fileSystem, clock);
+        var archiveReader = new ModArchiveReader(fileSystem);
+        var modsRepository = new FileSystemInstalledModRepository(fileSystem, instanceRepository, archiveReader, new DisabledSuffixModStateConvention(), store);
+        var server = new ModpackTestServer();
+        var handler = new FakeHttpMessageHandler(server.Respond);
+        var modDbClient = new ModDbClient(new HttpClient(handler), store, Paths, clock, new RetryPolicy(RetryOptions.NoDelay, (_, _) => Task.CompletedTask));
+        var downloads = new DownloadManager(new HttpClient(handler), fileSystem, Paths, clock);
+        var gameVersionRepository = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
+        var gameInstall = new GameInstallService(new UnavailableGameVersionCatalog(), downloads, gameVersionRepository, new FakeGameInstallStrategy());
+        var service = new ModpackImportService(
+            modDbClient, downloads, modsRepository, instanceService, instanceRepository, gameInstall,
+            gameVersionRepository, new UnavailableGameVersionCatalog(), fileSystem, clock);
+        var path = await WriteManifestSourceAsync(fileSystem, ManifestWith());
+
+        var preview = await service.PreviewAsync(path, CancellationToken.None);
+
+        preview.GameVersionInstalled.ShouldBeFalse();
+        preview.GameVersionDownloadSize.ShouldBeNull();
+    }
+
+    private sealed class UnavailableGameVersionCatalog : IGameVersionCatalog
+    {
+        public Task<GameVersionCatalog> GetAsync(bool forceRefresh = false, CancellationToken cancellationToken = default)
+            => throw new GameCatalogUnavailableException();
     }
 
     [Fact]
@@ -670,8 +728,9 @@ public sealed class ModpackImportServiceTests
         var store = new JsonFileStore(fileSystem);
         var instanceRepository = harness.Instances;
         var instanceService = new InstanceService(instanceRepository, fileSystem, new FakeClock(Noon));
+        var gameCatalog = new FakeGameVersionCatalog(ModpackTestServer.BuildGameCatalog());
         var gameInstall = new GameInstallService(
-            new FakeGameVersionCatalog(ModpackTestServer.BuildGameCatalog()),
+            gameCatalog,
             new DownloadManager(new HttpClient(new FakeHttpMessageHandler(harness.Server.Respond)), fileSystem, Paths, new FakeClock(Noon)),
             harness.GameVersions,
             harness.Strategy);
@@ -684,14 +743,15 @@ public sealed class ModpackImportServiceTests
         var downloads = new DownloadManager(new HttpClient(new FakeHttpMessageHandler(harness.Server.Respond)), fileSystem, Paths, new FakeClock(Noon));
         var clock = new FakeClock(Noon);
 
-        Should.Throw<ArgumentNullException>(() => new ModpackImportService(null!, downloads, harness.Mods, instanceService, instanceRepository, gameInstall, harness.GameVersions, fileSystem, clock));
-        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, null!, harness.Mods, instanceService, instanceRepository, gameInstall, harness.GameVersions, fileSystem, clock));
-        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, downloads, null!, instanceService, instanceRepository, gameInstall, harness.GameVersions, fileSystem, clock));
-        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, downloads, harness.Mods, null!, instanceRepository, gameInstall, harness.GameVersions, fileSystem, clock));
-        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, downloads, harness.Mods, instanceService, null!, gameInstall, harness.GameVersions, fileSystem, clock));
-        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, downloads, harness.Mods, instanceService, instanceRepository, null!, harness.GameVersions, fileSystem, clock));
-        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, downloads, harness.Mods, instanceService, instanceRepository, gameInstall, null!, fileSystem, clock));
-        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, downloads, harness.Mods, instanceService, instanceRepository, gameInstall, harness.GameVersions, null!, clock));
-        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, downloads, harness.Mods, instanceService, instanceRepository, gameInstall, harness.GameVersions, fileSystem, null!));
+        Should.Throw<ArgumentNullException>(() => new ModpackImportService(null!, downloads, harness.Mods, instanceService, instanceRepository, gameInstall, harness.GameVersions, gameCatalog, fileSystem, clock));
+        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, null!, harness.Mods, instanceService, instanceRepository, gameInstall, harness.GameVersions, gameCatalog, fileSystem, clock));
+        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, downloads, null!, instanceService, instanceRepository, gameInstall, harness.GameVersions, gameCatalog, fileSystem, clock));
+        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, downloads, harness.Mods, null!, instanceRepository, gameInstall, harness.GameVersions, gameCatalog, fileSystem, clock));
+        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, downloads, harness.Mods, instanceService, null!, gameInstall, harness.GameVersions, gameCatalog, fileSystem, clock));
+        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, downloads, harness.Mods, instanceService, instanceRepository, null!, harness.GameVersions, gameCatalog, fileSystem, clock));
+        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, downloads, harness.Mods, instanceService, instanceRepository, gameInstall, null!, gameCatalog, fileSystem, clock));
+        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, downloads, harness.Mods, instanceService, instanceRepository, gameInstall, harness.GameVersions, null!, fileSystem, clock));
+        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, downloads, harness.Mods, instanceService, instanceRepository, gameInstall, harness.GameVersions, gameCatalog, null!, clock));
+        Should.Throw<ArgumentNullException>(() => new ModpackImportService(modDb, downloads, harness.Mods, instanceService, instanceRepository, gameInstall, harness.GameVersions, gameCatalog, fileSystem, null!));
     }
 }

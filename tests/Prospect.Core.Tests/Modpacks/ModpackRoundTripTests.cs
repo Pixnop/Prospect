@@ -82,6 +82,7 @@ public sealed class ModpackRoundTripTests
             instanceRepository,
             gameInstall,
             gameVersionRepository,
+            gameCatalog,
             fileSystem,
             clock);
 

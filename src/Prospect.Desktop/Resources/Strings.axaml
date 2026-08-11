@@ -44,6 +44,7 @@
   <x:String x:Key="Home_SortLastLaunched">Dernier lancement</x:String>
   <x:String x:Key="Home_SortName">Nom</x:String>
   <x:String x:Key="Home_NewInstance">Nouvelle instance</x:String>
+  <x:String x:Key="Home_ImportModpack">Importer un modpack</x:String>
   <x:String x:Key="Home_EmptyTitle">Aucune instance</x:String>
   <x:String x:Key="Home_EmptyDescription">Une instance isole une version du jeu, ses mods et ses sauvegardes. Crée la première pour commencer.</x:String>
   <x:String x:Key="Home_NoResultsTitle">Aucun résultat</x:String>
@@ -138,6 +139,7 @@
   <x:String x:Key="Instance_Launching">Lancement…</x:String>
   <x:String x:Key="Instance_Playing">En cours</x:String>
   <x:String x:Key="Instance_MoreActions">Plus d'actions</x:String>
+  <x:String x:Key="Instance_Export">Exporter</x:String>
   <x:String x:Key="Instance_Rename">Renommer</x:String>
   <x:String x:Key="Instance_Duplicate">Dupliquer</x:String>
   <x:String x:Key="Instance_Delete">Supprimer</x:String>
@@ -216,5 +218,25 @@
   <x:String x:Key="Mods_Row_UnknownToModDb">inconnu du ModDB</x:String>
   <x:String x:Key="Mods_Row_Update">Mettre à jour</x:String>
   <x:String x:Key="Mods_UpdatePlan_Confirm">Mettre à jour</x:String>
+
+  <!-- ── Dialogue d'export de modpack ────────────────────────────────────────────── -->
+  <x:String x:Key="Dialog_Export_FormatLabel">Forme</x:String>
+  <x:String x:Key="Dialog_Export_FormatManifestOnly">Manifest seul (.json)</x:String>
+  <x:String x:Key="Dialog_Export_FormatArchive">Archive (.zip)</x:String>
+  <x:String x:Key="Dialog_Export_IncludeModConfig">Inclure les réglages des mods (ModConfig)</x:String>
+  <x:String x:Key="Dialog_Export_Confirm">Exporter</x:String>
+  <x:String x:Key="Dialog_Export_Close">Fermer</x:String>
+  <x:String x:Key="Dialog_Export_SkippedNotice">Sans modinfo.json lisible ou sans version exploitable, ces mods ne peuvent pas voyager dans le manifest.</x:String>
+  <x:String x:Key="Dialog_Export_ErrorTitle">Export impossible</x:String>
+
+  <!-- ── Dialogue d'import de modpack ────────────────────────────────────────────── -->
+  <x:String x:Key="Dialog_Import_PreviewTitle">Aperçu du modpack</x:String>
+  <x:String x:Key="Dialog_Import_InstanceNameLabel">Nom de l'instance</x:String>
+  <x:String x:Key="Dialog_Import_Confirm">Importer</x:String>
+  <x:String x:Key="Dialog_Import_Cancel">Annuler</x:String>
+  <x:String x:Key="Dialog_Import_CancelImport">Annuler l'import</x:String>
+  <x:String x:Key="Dialog_Import_ReportTitle">Rapport d'import</x:String>
+  <x:String x:Key="Dialog_Import_Close">Fermer</x:String>
+  <x:String x:Key="Dialog_Import_ErrorTitle">Import impossible</x:String>
 
 </ResourceDictionary>
