@@ -99,11 +99,17 @@ public sealed partial class ShellViewModel : ObservableObject
         }
     }
 
-    private static bool ResolveUseCustomTitlebar(AppOperatingSystem operatingSystem) => operatingSystem switch
+    // Table plutôt qu'un switch/if : les trois OS valent aujourd'hui vrai (voir la docstring
+    // d'UseCustomTitlebar), et une table de correspondance par OS rend ça lisible comme un
+    // réglage plutôt que comme une branche conditionnelle qui semble avoir oublié de différencier
+    // ses cas.
+    private static readonly IReadOnlyDictionary<AppOperatingSystem, bool> CustomTitlebarByOperatingSystem = new Dictionary<AppOperatingSystem, bool>
     {
-        AppOperatingSystem.Windows => true,
-        AppOperatingSystem.MacOs => true,
-        AppOperatingSystem.Linux => true, // à rebasculer sur false si Wayland pose problème, voir docs/architecture.md
-        _ => true,
+        [AppOperatingSystem.Windows] = true,
+        [AppOperatingSystem.MacOs] = true,
+        [AppOperatingSystem.Linux] = true, // à rebasculer sur false si Wayland pose problème, voir docs/architecture.md
     };
+
+    private static bool ResolveUseCustomTitlebar(AppOperatingSystem operatingSystem)
+        => CustomTitlebarByOperatingSystem.GetValueOrDefault(operatingSystem, true);
 }
