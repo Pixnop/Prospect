@@ -1,0 +1,15 @@
+<Project>
+
+  <!-- Réglages communs à tous les projets de la solution. -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <Deterministic>true</Deterministic>
+    <Authors>Pixnop</Authors>
+    <Version>0.1.0-dev</Version>
+  </PropertyGroup>
+
+</Project>
