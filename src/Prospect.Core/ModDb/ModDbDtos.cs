@@ -202,6 +202,22 @@ internal sealed record ModDbReleaseDto
     public string? Created { get; init; }
 }
 
+/// <summary>
+/// Réponse de <c>GET /api/updates</c>. La clé du dictionnaire est le <c>modidstr</c> envoyé dans la
+/// requête, et n'apparaît QUE pour les mods réellement en retard : un mod à jour est simplement
+/// absent, ce qui ne distingue pas « à jour » de « modidstr inconnu du ModDB » (docs/research/moddb-api.md,
+/// section « GET /api/updates »). Réutilise <see cref="ModDbReleaseDto"/> : même forme que
+/// <c>mod.releases[i]</c>, changelog en moins.
+/// </summary>
+internal sealed record ModDbUpdatesResponseDto : IModDbV1Envelope
+{
+    [JsonPropertyName("statuscode")]
+    public string? StatusCode { get; init; }
+
+    [JsonPropertyName("updates")]
+    public Dictionary<string, ModDbReleaseDto>? Updates { get; init; }
+}
+
 /// <summary>Réponse de <c>GET /api/tags</c>.</summary>
 internal sealed record ModDbTagListResponseDto : IModDbV1Envelope
 {

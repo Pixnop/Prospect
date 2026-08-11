@@ -138,6 +138,33 @@ internal static class ModDbMapper
         };
     }
 
+    /// <summary>
+    /// Convertit la réponse de <c>/api/updates</c> : une release par <c>modidstr</c> réellement en
+    /// retard. La clé retenue est celle du dictionnaire reçu (le <c>modidstr</c> envoyé dans la
+    /// requête), pas <see cref="ModDbReleaseDto.ModIdString"/> : c'est elle que le client doit
+    /// comparer aux clés envoyées pour ne pas confondre « à jour » et « modidstr inconnu ».
+    /// </summary>
+    public static IReadOnlyDictionary<string, ModDbRelease> ToUpdates(IReadOnlyDictionary<string, ModDbReleaseDto>? dtos)
+    {
+        var result = new Dictionary<string, ModDbRelease>(StringComparer.OrdinalIgnoreCase);
+        if (dtos is null)
+        {
+            return result;
+        }
+
+        foreach (var (modIdString, dto) in dtos)
+        {
+            if (string.IsNullOrWhiteSpace(modIdString) || ToRelease(dto) is not { } release)
+            {
+                continue;
+            }
+
+            result[modIdString] = release;
+        }
+
+        return result;
+    }
+
     /// <summary>Convertit les tags de catégorie exploitables.</summary>
     public static IReadOnlyList<ModDbTag> ToTags(IEnumerable<ModDbTagDto>? dtos)
         => dtos is null

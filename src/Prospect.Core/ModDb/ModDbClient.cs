@@ -190,6 +190,29 @@ public sealed class ModDbClient : IModDbClient, IDisposable
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<string, ModDbRelease>> GetUpdatesAsync(
+        IReadOnlyDictionary<string, ModVersion> installedMods,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(installedMods);
+
+        var entries = installedMods
+            .Where(pair => !string.IsNullOrWhiteSpace(pair.Key))
+            .Select(pair => $"{pair.Key}@{pair.Value}")
+            .ToArray();
+
+        if (entries.Length == 0)
+        {
+            return new Dictionary<string, ModDbRelease>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        var endpoint = $"updates?mods={Uri.EscapeDataString(string.Join(',', entries))}";
+        var response = await ReadV1Async(endpoint, ModDbJsonContext.Default.ModDbUpdatesResponseDto, cancellationToken).ConfigureAwait(false);
+
+        return ModDbMapper.ToUpdates(response.Updates);
+    }
+
+    /// <inheritdoc />
     public async Task<long?> GetFileSizeAsync(Uri fileUrl, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(fileUrl);
