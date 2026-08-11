@@ -4,6 +4,7 @@ using Prospect.Core.Common;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
 using Prospect.Core.Instances.Migrations;
+using Prospect.Core.Launching;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.Tests.TestDoubles;
@@ -17,7 +18,11 @@ namespace Prospect.Desktop.Tests.ViewModels.Home;
 /// <summary>
 /// Tests unitaires purs (aucun <c>[AvaloniaFact]</c>) de la logique de tri/filtre de
 /// <see cref="HomeViewModel"/> : <see cref="InstanceService"/> et <see cref="IInstanceRepository"/>
-/// réels sur <see cref="MockFileSystem"/>, services Desktop transverses en doubles de test.
+/// réels sur <see cref="MockFileSystem"/>, services Desktop transverses en doubles de test. Le
+/// lancement (<see cref="GameLauncher"/>/<see cref="RunningInstanceTracker"/>) est construit réel
+/// lui aussi (mêmes collaborateurs que <see cref="Prospect.Desktop.CompositionRoot"/>) : ces tests
+/// ne l'exercent pas directement (voir InstanceCardViewModelTests pour Jouer/Arrêter), mais
+/// HomeViewModel en a besoin pour construire ses cartes.
 /// </summary>
 public class HomeViewModelTests
 {
@@ -31,8 +36,37 @@ public class HomeViewModelTests
         var clock = new FakeClock(Now);
         var service = new InstanceService(repository, fileSystem, clock);
         var overlay = new RecordingOverlayService();
-        var viewModel = new HomeViewModel(service, repository, clock, overlay, new RecordingToastService(), WizardFactory(service, overlay, fileSystem));
+        var (launcher, tracker) = CreateLaunching(fileSystem, repository, service, clock);
+        var viewModel = new HomeViewModel(
+            service,
+            repository,
+            launcher,
+            tracker,
+            clock,
+            overlay,
+            new RecordingToastService(),
+            new ImmediateUiDispatcher(),
+            WizardFactory(service, overlay, fileSystem));
         return (viewModel, service, repository);
+    }
+
+    private static (GameLauncher Launcher, RunningInstanceTracker Tracker) CreateLaunching(
+        MockFileSystem fileSystem, IInstanceRepository repository, InstanceService service, IClock clock)
+    {
+        var versions = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
+        var tracker = new RunningInstanceTracker(service, clock);
+        var launcher = new GameLauncher(
+            repository,
+            versions,
+            new FakeDotnetLocator(),
+            tracker,
+            new LinuxGameLaunchStrategy(fileSystem),
+            new FakeProcessRunner(),
+            fileSystem,
+            Paths,
+            clock);
+
+        return (launcher, tracker);
     }
 
     // Le wizard a ses propres dépendances (catalogue, installations) depuis qu'il porte le
@@ -171,14 +205,19 @@ public class HomeViewModelTests
             new JsonFileStore(fileSystem),
             new InstanceMetadataMigrationPipeline([]));
         fileSystem.AddDirectory(brokenRepository.GetInstanceDirectory("ghost-folder"));
-        var brokenService = new InstanceService(brokenRepository, fileSystem, new FakeClock(Now));
+        var brokenClock = new FakeClock(Now);
+        var brokenService = new InstanceService(brokenRepository, fileSystem, brokenClock);
         var brokenOverlay = new RecordingOverlayService();
+        var (brokenLauncher, brokenTracker) = CreateLaunching(fileSystem, brokenRepository, brokenService, brokenClock);
         var brokenViewModel = new HomeViewModel(
             brokenService,
             brokenRepository,
-            new FakeClock(Now),
+            brokenLauncher,
+            brokenTracker,
+            brokenClock,
             brokenOverlay,
             new RecordingToastService(),
+            new ImmediateUiDispatcher(),
             WizardFactory(brokenService, brokenOverlay, fileSystem));
 
         await brokenViewModel.RefreshCommand.ExecuteAsync(null);
