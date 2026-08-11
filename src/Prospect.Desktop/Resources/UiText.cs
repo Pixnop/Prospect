@@ -3,6 +3,7 @@ using System.Globalization;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
 using Prospect.Core.ModDb;
+using Prospect.Core.Modpacks;
 
 namespace Prospect.Desktop.Resources;
 
@@ -57,6 +58,7 @@ internal static class UiText
         internal const string VersionInstalledTitle = "Version installée";
         internal const string VersionUninstalledTitle = "Version désinstallée";
         internal const string LaunchSettingsSavedTitle = "Réglages de lancement enregistrés";
+        internal const string ModpackExportedTitle = "Modpack exporté";
 
         internal static string WithVersion(string name, string version) => $"{name} · {version}";
     }
@@ -372,5 +374,86 @@ internal static class UiText
             => failures.Count == 0
                 ? string.Empty
                 : $"Échec pour {string.Join(", ", failures.Select(failure => failure.ModName))}.";
+    }
+
+    /// <summary>
+    /// Textes de l'export et de l'import de modpacks (feature 5, docs/architecture.md « 5.
+    /// Modpacks »). Voix produit pour le rapport final : jamais de trace technique, des phrases
+    /// qui nomment ce qui a manqué plutôt qu'un code d'erreur.
+    /// </summary>
+    internal static class Modpacks
+    {
+        internal const string ExportPickerTitle = "Exporter le modpack";
+        internal const string ImportPickerTitle = "Choisir un modpack à importer";
+
+        internal static string ExportTitle(string instanceName) => $"Exporter « {instanceName} »";
+
+        internal static string ExportedToastDescription(int modsExported) => modsExported switch
+        {
+            0 => "Aucun mod dans le manifest.",
+            1 => "1 mod dans le manifest.",
+            _ => $"{modsExported} mods dans le manifest.",
+        };
+
+        internal static string ExportSkippedSectionTitle(int count) => count == 1
+            ? "1 mod laissé de côté"
+            : $"{count} mods laissés de côté";
+
+        internal static string ExportSkipReason(ModpackExportSkipReason reason) => reason switch
+        {
+            ModpackExportSkipReason.UnreadableModInfo => "aucun modinfo.json lisible dans l'archive",
+            ModpackExportSkipReason.MissingVersion => "version illisible",
+            _ => "raison inconnue",
+        };
+
+        internal static string ImportPreviewSubtitle(string gameVersion, int modCount) => modCount switch
+        {
+            0 => gameVersion,
+            1 => $"{gameVersion} · 1 mod",
+            _ => $"{gameVersion} · {modCount} mods",
+        };
+
+        internal static string ImportGameVersionWarning(string gameVersion, string displaySize)
+            => string.IsNullOrEmpty(displaySize)
+                ? $"La version {gameVersion} du jeu n'est pas installée. Elle sera téléchargée avant l'import."
+                : $"La version {gameVersion} du jeu n'est pas installée : {displaySize} à télécharger avant l'import.";
+
+        internal const string ImportModConfigNotice = "Les réglages des mods (ModConfig) de ce pack seront repris dans la nouvelle instance.";
+
+        internal const string InstallingGameVersionPhase = "Installation de la version du jeu";
+
+        internal static string InstallingModsPhase(int completedMods, int totalMods, string? currentModId)
+            => string.IsNullOrEmpty(currentModId)
+                ? $"Mods {completedMods}/{totalMods}"
+                : $"Mods {completedMods}/{totalMods} · {currentModId}";
+
+        internal static string ReportGroupTitle(ModpackModImportStatus status, int count) => status switch
+        {
+            ModpackModImportStatus.Installed => count == 1 ? "1 mod installé" : $"{count} mods installés",
+            ModpackModImportStatus.NotFound => count == 1 ? "1 mod introuvable sur le ModDB" : $"{count} mods introuvables sur le ModDB",
+            ModpackModImportStatus.VersionMissing => count == 1 ? "1 version indisponible" : $"{count} versions indisponibles",
+            ModpackModImportStatus.Sha256Mismatch => count == 1 ? "1 empreinte invalide" : $"{count} empreintes invalides",
+            ModpackModImportStatus.NetworkFailure => count == 1 ? "1 échec réseau" : $"{count} échecs réseau",
+            _ => string.Empty,
+        };
+
+        internal static string ReportRowDetail(ModpackImportModReport report) => report.Status switch
+        {
+            ModpackModImportStatus.Installed => report.InstalledVersion?.ToString() ?? string.Empty,
+            ModpackModImportStatus.VersionMissing when report.SuggestedVersion is { } suggestion
+                => $"demandé {report.RequestedVersion} · plus proche compatible : {suggestion}",
+            ModpackModImportStatus.VersionMissing => $"demandé {report.RequestedVersion}",
+            ModpackModImportStatus.NetworkFailure => report.Detail ?? string.Empty,
+            _ => string.Empty,
+        };
+
+        internal static string ImportedToastTitle(string instanceName) => $"« {instanceName} » importée";
+
+        internal static string ImportedToastDescription(int installedCount, int totalCount) => totalCount switch
+        {
+            0 => "Aucun mod dans ce pack.",
+            _ when installedCount == totalCount => $"{installedCount}/{totalCount} mods installés.",
+            _ => $"{installedCount}/{totalCount} mods installés, voir le rapport pour le reste.",
+        };
     }
 }

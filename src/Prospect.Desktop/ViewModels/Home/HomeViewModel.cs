@@ -9,6 +9,7 @@ using Prospect.Core.Launching;
 using Prospect.Desktop.Formatting;
 using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
+using Prospect.Desktop.ViewModels.Modpacks;
 using Prospect.Desktop.ViewModels.Toasts;
 using Prospect.Desktop.ViewModels.Wizard;
 
@@ -33,7 +34,9 @@ public sealed partial class HomeViewModel : ObservableObject
     private readonly IOverlayService _overlay;
     private readonly IToastService _toasts;
     private readonly IUiDispatcher _dispatcher;
+    private readonly IFilePickerService _filePicker;
     private readonly Func<WizardViewModel> _wizardFactory;
+    private readonly Func<string, ImportModpackViewModel> _importFactory;
     private readonly List<InstanceCardViewModel> _allInstances = [];
     private readonly NewInstanceTileViewModel _newInstanceTile;
 
@@ -47,7 +50,9 @@ public sealed partial class HomeViewModel : ObservableObject
         IOverlayService overlay,
         IToastService toasts,
         IUiDispatcher dispatcher,
-        Func<WizardViewModel> wizardFactory)
+        IFilePickerService filePicker,
+        Func<WizardViewModel> wizardFactory,
+        Func<string, ImportModpackViewModel> importFactory)
     {
         ArgumentNullException.ThrowIfNull(instanceService);
         ArgumentNullException.ThrowIfNull(repository);
@@ -58,7 +63,9 @@ public sealed partial class HomeViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(toasts);
         ArgumentNullException.ThrowIfNull(dispatcher);
+        ArgumentNullException.ThrowIfNull(filePicker);
         ArgumentNullException.ThrowIfNull(wizardFactory);
+        ArgumentNullException.ThrowIfNull(importFactory);
 
         _instanceService = instanceService;
         _repository = repository;
@@ -69,7 +76,9 @@ public sealed partial class HomeViewModel : ObservableObject
         _overlay = overlay;
         _toasts = toasts;
         _dispatcher = dispatcher;
+        _filePicker = filePicker;
         _wizardFactory = wizardFactory;
+        _importFactory = importFactory;
         _newInstanceTile = new NewInstanceTileViewModel(NewInstance);
     }
 
@@ -219,6 +228,37 @@ public sealed partial class HomeViewModel : ObservableObject
             ToastTone.Success,
             UiText.Toasts.InstanceCreatedTitle,
             UiText.Toasts.WithVersion(record.Metadata.Name, record.Metadata.GameVersion.ToString()));
+    }
+
+    // Le sélecteur de fichier tranche avant même d'ouvrir le panneau modal (contrairement au
+    // wizard, qui s'ouvre puis charge) : un import n'a rien à montrer tant qu'aucune source n'a
+    // été choisie, et annuler le sélecteur ne doit laisser aucune trace.
+    [RelayCommand]
+    private async Task ImportModpackAsync()
+    {
+        var path = await _filePicker
+            .PickOpenFileAsync(UiText.Modpacks.ImportPickerTitle, ["zip", "json"])
+            .ConfigureAwait(true);
+
+        if (path is null)
+        {
+            return;
+        }
+
+        var import = _importFactory(path);
+        import.Imported += OnModpackImported;
+        _overlay.Show(import);
+        _ = import.LoadPreviewCommand.ExecuteAsync(null);
+    }
+
+    private void OnModpackImported(object? sender, InstanceRecord record)
+    {
+        if (sender is ImportModpackViewModel import)
+        {
+            import.Imported -= OnModpackImported;
+        }
+
+        _ = RefreshAsync(CancellationToken.None);
     }
 
     private void ApplyFilterAndSort()

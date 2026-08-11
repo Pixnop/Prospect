@@ -9,12 +9,14 @@ using Prospect.Core.Instances;
 using Prospect.Core.Instances.Migrations;
 using Prospect.Core.Launching;
 using Prospect.Core.ModDb;
+using Prospect.Core.Modpacks;
 using Prospect.Core.Runtime;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.ViewModels.Downloads;
 using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Instance;
+using Prospect.Desktop.ViewModels.Modpacks;
 using Prospect.Desktop.ViewModels.Mods;
 using Prospect.Desktop.ViewModels.Shell;
 using Prospect.Desktop.ViewModels.Versions;
@@ -69,12 +71,29 @@ public static class CompositionRoot
         AddGameVersions(services, httpMessageHandler);
         AddLaunching(services);
         AddModDb(services, httpMessageHandler);
+        AddModpacks(services);
 
         // Services Desktop transverses.
         services.AddSingleton<IOverlayService, OverlayService>();
         services.AddSingleton<IToastService, ToastService>();
         services.AddSingleton<IUiDispatcher, AvaloniaUiDispatcher>();
         services.AddSingleton<IModUpdateCheckCache, ModUpdateCheckCache>();
+
+        // Sélecteur de fichiers du système (export/import de modpack). Fabrique vers MainWindow
+        // plutôt que la fenêtre elle-même : voir la remarque d'AvaloniaFilePickerService sur le
+        // cycle que la résolution directe créerait avec ShellViewModel/HomeViewModel.
+        services.AddSingleton<Func<MainWindow>>(provider => provider.GetRequiredService<MainWindow>);
+        services.AddSingleton<IFilePickerService, AvaloniaFilePickerService>();
+
+        // L'import de modpack est éphémère (un par fichier choisi) et paramétré par le chemin
+        // source, connu seulement à l'usage : même fabrique paramétrée que la page de détail
+        // d'instance ci-dessous, pour la même raison.
+        services.AddSingleton<Func<string, ImportModpackViewModel>>(provider => sourcePath => new ImportModpackViewModel(
+            sourcePath,
+            provider.GetRequiredService<ModpackImportService>(),
+            provider.GetRequiredService<IOverlayService>(),
+            provider.GetRequiredService<IToastService>(),
+            provider.GetRequiredService<IUiDispatcher>()));
 
         // ViewModels des pages construites eagerly (ShellViewModel construit lui-même les pages
         // placeholder). Singleton : une seule instance de chaque pour la durée de vie de l'app.
@@ -108,7 +127,9 @@ public static class CompositionRoot
             provider.GetRequiredService<IOverlayService>(),
             provider.GetRequiredService<IToastService>(),
             provider.GetRequiredService<IUiDispatcher>(),
-            provider.GetRequiredService<IClock>()));
+            provider.GetRequiredService<IClock>(),
+            provider.GetRequiredService<ModpackExportService>(),
+            provider.GetRequiredService<IFilePickerService>()));
 
         // Fenêtre.
         services.AddSingleton<MainWindow>();
@@ -166,6 +187,15 @@ public static class CompositionRoot
         services.AddSingleton<IInstalledModRepository, FileSystemInstalledModRepository>();
         services.AddSingleton<ModInstallService>();
         services.AddSingleton<ModUpdateChecker>();
+    }
+
+    // Feature 5 (docs/architecture.md, « 5. Modpacks ») : aucun adaptateur propre à ce domaine,
+    // seulement une composition de ce qu'AddGameVersions/AddModDb/AddInstances ont déjà enregistré
+    // plus haut, résolue automatiquement par le conteneur sur la forme constructeur.
+    private static void AddModpacks(IServiceCollection services)
+    {
+        services.AddSingleton<ModpackExportService>();
+        services.AddSingleton<ModpackImportService>();
     }
 
     // Miroir d'AddGameVersions pour le lancement (docs/architecture.md, section « 3. Lancement ») :

@@ -2,13 +2,17 @@ using System.IO.Abstractions.TestingHelpers;
 
 using Prospect.Core.Common;
 using Prospect.Core.GameVersions;
+using Prospect.Core.Http;
 using Prospect.Core.Instances;
 using Prospect.Core.Instances.Migrations;
 using Prospect.Core.Launching;
+using Prospect.Core.ModDb;
+using Prospect.Core.Modpacks;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.Tests.TestDoubles;
 using Prospect.Desktop.ViewModels.Home;
+using Prospect.Desktop.ViewModels.Modpacks;
 using Prospect.Desktop.ViewModels.Wizard;
 
 using Shouldly;
@@ -31,11 +35,24 @@ public class HomeViewModelTests
 
     private static (HomeViewModel ViewModel, InstanceService Service, IInstanceRepository Repository) CreateViewModel()
     {
+        var (viewModel, service, repository, _, _) = CreateViewModelWithDoubles();
+
+        return (viewModel, service, repository);
+    }
+
+    private static (
+        HomeViewModel ViewModel,
+        InstanceService Service,
+        IInstanceRepository Repository,
+        FakeFilePickerService FilePicker,
+        MockFileSystem FileSystem) CreateViewModelWithDoubles()
+    {
         var fileSystem = new MockFileSystem();
         var repository = new FileSystemInstanceRepository(fileSystem, Paths, new JsonFileStore(fileSystem), new InstanceMetadataMigrationPipeline([]));
         var clock = new FakeClock(Now);
         var service = new InstanceService(repository, fileSystem, clock);
         var overlay = new RecordingOverlayService();
+        var filePicker = new FakeFilePickerService();
         var (launcher, tracker) = CreateLaunching(fileSystem, repository, service, clock);
         var viewModel = new HomeViewModel(
             service,
@@ -47,8 +64,10 @@ public class HomeViewModelTests
             overlay,
             new RecordingToastService(),
             new ImmediateUiDispatcher(),
-            WizardFactory(service, overlay, fileSystem));
-        return (viewModel, service, repository);
+            filePicker,
+            WizardFactory(service, overlay, fileSystem),
+            ImportFactory(fileSystem, repository, service, overlay, clock));
+        return (viewModel, service, repository, filePicker, fileSystem);
     }
 
     private static (GameLauncher Launcher, RunningInstanceTracker Tracker) CreateLaunching(
@@ -79,6 +98,22 @@ public class HomeViewModelTests
         var installService = new GameInstallService(catalog, new FakeDownloadManager(), versions, new FakeGameInstallStrategy());
 
         return () => new WizardViewModel(service, overlay, catalog, versions, installService, new ImmediateUiDispatcher());
+    }
+
+    // Même principe que WizardFactory : l'import compose autant de services que le domaine
+    // Modpacks en réutilise (ModDb, versions du jeu, mods), l'Accueil ne les porte pas lui-même.
+    private static Func<string, ImportModpackViewModel> ImportFactory(
+        MockFileSystem fileSystem, IInstanceRepository repository, InstanceService service, IOverlayService overlay, IClock clock)
+    {
+        var mods = ModDbDoubles.CreateRepository(fileSystem, repository, Paths);
+        var modDbClient = ModDbDoubles.CreateClient(fileSystem, Paths, clock);
+        var downloads = new FakeDownloadManager();
+        var versions = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
+        var catalog = new FakeGameVersionCatalog { Catalog = FakeGameVersionCatalog.Build("1.21.3") };
+        var gameInstall = new GameInstallService(catalog, downloads, versions, new FakeGameInstallStrategy());
+        var importService = new ModpackImportService(modDbClient, downloads, mods, service, repository, gameInstall, versions, catalog, fileSystem, clock);
+
+        return sourcePath => new ImportModpackViewModel(sourcePath, importService, overlay, new RecordingToastService(), new ImmediateUiDispatcher());
     }
 
     [Fact]
@@ -220,7 +255,9 @@ public class HomeViewModelTests
             brokenOverlay,
             new RecordingToastService(),
             new ImmediateUiDispatcher(),
-            WizardFactory(brokenService, brokenOverlay, fileSystem));
+            new FakeFilePickerService(),
+            WizardFactory(brokenService, brokenOverlay, fileSystem),
+            ImportFactory(fileSystem, brokenRepository, brokenService, brokenOverlay, brokenClock));
 
         await brokenViewModel.RefreshCommand.ExecuteAsync(null);
 

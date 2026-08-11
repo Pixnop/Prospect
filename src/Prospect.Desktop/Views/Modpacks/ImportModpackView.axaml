@@ -1,0 +1,173 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Prospect.Desktop.ViewModels.Modpacks"
+             xmlns:conv="using:Prospect.Desktop.Converters"
+             mc:Ignorable="d" d:DesignWidth="480"
+             x:Class="Prospect.Desktop.Views.Modpacks.ImportModpackView"
+             x:DataType="vm:ImportModpackViewModel">
+
+  <!-- Un seul panneau qui traverse ImportModpackStep (voir ImportModpackViewModel) : chargement,
+       aperçu (nom modifiable, avertissement de version de jeu), progression par phases, rapport
+       final groupé par catégorie, ou échec. -->
+
+  <Border Width="480" MaxHeight="640" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
+          Background="{DynamicResource BgSurface}" BorderBrush="{DynamicResource BorderDefault}"
+          BorderThickness="1" BoxShadow="{DynamicResource Elev3}">
+    <DockPanel>
+      <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="22,18">
+        <StackPanel>
+          <TextBlock Text="{StaticResource Dialog_Import_PreviewTitle}" TextWrapping="Wrap"
+                     FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                     FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}"
+                     IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Loading}" />
+          <TextBlock Text="{Binding PackName}" TextWrapping="Wrap"
+                     FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                     FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}"
+                     IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Preview}" />
+          <TextBlock Text="{Binding InstanceName}" TextWrapping="Wrap"
+                     FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                     FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}"
+                     IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Importing}" />
+          <TextBlock Text="{StaticResource Dialog_Import_ReportTitle}" TextWrapping="Wrap"
+                     FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                     FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}"
+                     IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Report}" />
+          <TextBlock Text="{StaticResource Dialog_Import_ErrorTitle}" TextWrapping="Wrap"
+                     FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                     FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}"
+                     IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Failed}" />
+        </StackPanel>
+      </Border>
+
+      <!-- ── Pied : aperçu ────────────────────────────────────────────────────────── -->
+      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}"
+              Background="{DynamicResource BgSurfaceRaised}"
+              IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Preview}">
+        <Grid ColumnDefinitions="*,Auto,Auto" Margin="22,16">
+          <Button Grid.Column="0" Classes="ghost" HorizontalAlignment="Left" Command="{Binding CancelPreviewCommand}"
+                  Content="{StaticResource Dialog_Import_Cancel}" />
+          <Button Grid.Column="2" Command="{Binding ConfirmCommand}" Content="{StaticResource Dialog_Import_Confirm}" />
+        </Grid>
+      </Border>
+
+      <!-- ── Pied : progression ───────────────────────────────────────────────────── -->
+      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}"
+              Background="{DynamicResource BgSurfaceRaised}"
+              IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Importing}">
+        <Grid ColumnDefinitions="*,Auto" Margin="22,16">
+          <Button Grid.Column="1" Classes="ghost" Command="{Binding CancelImportCommand}" Content="{StaticResource Dialog_Import_CancelImport}" />
+        </Grid>
+      </Border>
+
+      <!-- ── Pied : rapport ───────────────────────────────────────────────────────── -->
+      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}"
+              Background="{DynamicResource BgSurfaceRaised}"
+              IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Report}">
+        <Grid ColumnDefinitions="*,Auto" Margin="22,16">
+          <Button Grid.Column="1" Command="{Binding CloseReportCommand}" Content="{StaticResource Dialog_Import_Close}" />
+        </Grid>
+      </Border>
+
+      <!-- ── Pied : échec ─────────────────────────────────────────────────────────── -->
+      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}"
+              Background="{DynamicResource BgSurfaceRaised}"
+              IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Failed}">
+        <Grid ColumnDefinitions="*,Auto" Margin="22,16">
+          <Button Grid.Column="1" Command="{Binding CloseFailedCommand}" Content="{StaticResource Dialog_Import_Close}" />
+        </Grid>
+      </Border>
+
+      <ScrollViewer Padding="22">
+        <Grid>
+
+          <!-- ── Chargement ─────────────────────────────────────────────────────── -->
+          <StackPanel Spacing="10" HorizontalAlignment="Center" Margin="0,24"
+                      IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Loading}">
+            <ProgressBar IsIndeterminate="True" Width="200" />
+          </StackPanel>
+
+          <!-- ── Aperçu ─────────────────────────────────────────────────────────── -->
+          <StackPanel Spacing="16" IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Preview}">
+            <TextBlock Text="{Binding PreviewSubtitle}" FontFamily="{DynamicResource FontMono}"
+                       FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+
+            <StackPanel Spacing="6">
+              <TextBlock Text="{StaticResource Dialog_Import_InstanceNameLabel}" FontSize="{StaticResource FsCaption}"
+                         FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+              <TextBox Text="{Binding InstanceName, Mode=TwoWay}" />
+              <TextBlock Text="{Binding InstanceNameError}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource DangerText}"
+                         IsVisible="{Binding InstanceNameError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+
+            <Border Classes="alert warning" IsVisible="{Binding ShowGameVersionWarning}">
+              <TextBlock Text="{Binding GameVersionWarningText}" TextWrapping="Wrap" LineHeight="18"
+                         FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+            </Border>
+
+            <Border Classes="alert info" IsVisible="{Binding ShowModConfigNotice}">
+              <TextBlock Text="{StaticResource Dialog_Import_ModConfigNotice}" TextWrapping="Wrap" LineHeight="18"
+                         FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+            </Border>
+          </StackPanel>
+
+          <!-- ── Progression ────────────────────────────────────────────────────── -->
+          <StackPanel Spacing="12" IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Importing}">
+            <ProgressBar Value="{Binding ProgressPercent}" Minimum="0" Maximum="100" IsIndeterminate="{Binding IsProgressIndeterminate}" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Text="{Binding ProgressPhaseText}" TextTrimming="CharacterEllipsis"
+                         FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text2}" />
+              <TextBlock Grid.Column="1" Text="{Binding ProgressDetailText}" Margin="8,0,0,0"
+                         FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+            </Grid>
+          </StackPanel>
+
+          <!-- ── Rapport ────────────────────────────────────────────────────────── -->
+          <StackPanel Spacing="14" IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Report}">
+            <TextBlock Text="{Binding ReportSummaryText}" TextWrapping="Wrap" LineHeight="20"
+                       FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
+
+            <ItemsControl ItemsSource="{Binding ReportGroups}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ImportReportGroupViewModel">
+                  <StackPanel Spacing="8" Margin="0,0,0,14">
+                    <TextBlock Text="{Binding Title}" FontSize="{StaticResource FsCaption}"
+                               FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+                    <Border Classes="card" Padding="0" ClipToBounds="True">
+                      <ItemsControl ItemsSource="{Binding Rows}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:ImportReportRowViewModel">
+                            <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="14,10">
+                              <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0" Text="{Binding ModId}" TextTrimming="CharacterEllipsis"
+                                           FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}"
+                                           Foreground="{DynamicResource Text1}" />
+                                <TextBlock Grid.Column="1" Text="{Binding DetailText}" Margin="10,0,0,0" TextTrimming="CharacterEllipsis"
+                                           FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}"
+                                           Foreground="{DynamicResource Text4}" />
+                              </Grid>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Border>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <!-- ── Échec ──────────────────────────────────────────────────────────── -->
+          <StackPanel Spacing="10" IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Failed}">
+            <Border Classes="alert danger">
+              <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" LineHeight="18"
+                         FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+            </Border>
+          </StackPanel>
+
+        </Grid>
+      </ScrollViewer>
+    </DockPanel>
+  </Border>
+</UserControl>
