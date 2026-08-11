@@ -2,7 +2,150 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
         x:Class="Prospect.Desktop.MainWindow"
-        Title="Prospect">
+        Title="Prospect"
+        Width="1160" Height="780"
+        Background="{DynamicResource BgWindow}"
+        FontFamily="{DynamicResource FontSans}"
+        Foreground="{DynamicResource Text1}">
+
+  <!--
+    Galerie de vérification PROVISOIRE. Ce n'est pas un écran applicatif : elle sert à
+    prouver que les tokens et les ControlThemes de cette PR se chargent et se rendent
+    correctement (boutons, champs, bascules, progression, badges, polices, canaux). Le
+    shell réel (titlebar, sidebar, navigation) arrive en PR 4 et remplacera entièrement
+    ce contenu.
+  -->
+
+  <ScrollViewer Padding="32">
+    <StackPanel Spacing="32" MaxWidth="880" HorizontalAlignment="Left">
+
+      <StackPanel Spacing="4">
+        <TextBlock Text="Prospect" FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsDisplay}" FontWeight="{StaticResource FwSemibold}" />
+        <TextBlock Text="Galerie de vérification du design system — contenu de développement, remplacé par le shell en PR 4."
+                   Foreground="{DynamicResource Text3}" FontSize="{StaticResource FsBodySm}" />
+      </StackPanel>
+
+      <!-- ── Boutons ─────────────────────────────────────────────────────────────── -->
+      <StackPanel Spacing="12">
+        <TextBlock Text="BOUTONS" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsOverline}" FontWeight="{StaticResource FwMedium}" LetterSpacing="1.1" Foreground="{DynamicResource Text3}" />
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Button Content="Jouer" />
+          <Button Content="Annuler" Classes="secondary" />
+          <Button Content="Paramètres" Classes="ghost" />
+          <Button Content="Retirer le mod" Classes="danger" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Button Content="Jouer" IsEnabled="False" />
+          <Button Content="Annuler" Classes="secondary" IsEnabled="False" />
+          <Button Content="Paramètres" Classes="ghost" IsEnabled="False" />
+          <Button Content="Retirer le mod" Classes="danger" IsEnabled="False" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+          <Button Content="Petit" Classes="sm" />
+          <Button Content="Normal" />
+          <Button Content="Grand" Classes="lg" />
+          <Button Content="Installer la mise à jour" ToolTip.Tip="Télécharge et installe la dernière version" />
+        </StackPanel>
+      </StackPanel>
+
+      <!-- ── Champs ──────────────────────────────────────────────────────────────── -->
+      <StackPanel Spacing="12">
+        <TextBlock Text="CHAMPS" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsOverline}" FontWeight="{StaticResource FwMedium}" LetterSpacing="1.1" Foreground="{DynamicResource Text3}" />
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <TextBox Width="220" Watermark="Nom de l'instance" />
+          <TextBox Width="220" Watermark="chemin/vers/instance" Classes="mono" />
+          <TextBox Width="220" Watermark="Champ désactivé" IsEnabled="False" />
+          <ComboBox Width="180" PlaceholderText="Canal" SelectedIndex="0">
+            <ComboBoxItem Content="stable" />
+            <ComboBoxItem Content="unstable" />
+            <ComboBoxItem Content="pre" />
+          </ComboBox>
+        </StackPanel>
+      </StackPanel>
+
+      <!-- ── Bascules ────────────────────────────────────────────────────────────── -->
+      <StackPanel Spacing="12">
+        <TextBlock Text="BASCULES" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsOverline}" FontWeight="{StaticResource FwMedium}" LetterSpacing="1.1" Foreground="{DynamicResource Text3}" />
+        <StackPanel Orientation="Horizontal" Spacing="24" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="16">
+            <CheckBox Content="Non cochée" />
+            <CheckBox Content="Cochée" IsChecked="True" />
+            <CheckBox Content="Indéterminée" IsThreeState="True" IsChecked="{x:Null}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="16">
+            <RadioButton Content="Option A" GroupName="demo" IsChecked="True" />
+            <RadioButton Content="Option B" GroupName="demo" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="16">
+            <ToggleSwitch IsChecked="False" />
+            <ToggleSwitch IsChecked="True" />
+          </StackPanel>
+        </StackPanel>
+      </StackPanel>
+
+      <!-- ── Progression ─────────────────────────────────────────────────────────── -->
+      <StackPanel Spacing="12">
+        <TextBlock Text="PROGRESSION" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsOverline}" FontWeight="{StaticResource FwMedium}" LetterSpacing="1.1" Foreground="{DynamicResource Text3}" />
+        <StackPanel Spacing="10" Width="360">
+          <ProgressBar Value="62" Maximum="100" />
+          <ProgressBar IsIndeterminate="True" />
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="1.2 GB / 2.1 GB" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource Text3}" FontSize="{StaticResource FsMicro}" />
+            <TextBlock Text="4.2 MB/s" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource Text3}" FontSize="{StaticResource FsMicro}" Margin="16,0,0,0" />
+          </StackPanel>
+        </StackPanel>
+      </StackPanel>
+
+      <!-- ── Badges, tags et canaux ──────────────────────────────────────────────── -->
+      <StackPanel Spacing="12">
+        <TextBlock Text="BADGES ET CANAUX" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsOverline}" FontWeight="{StaticResource FwMedium}" LetterSpacing="1.1" Foreground="{DynamicResource Text3}" />
+        <WrapPanel>
+          <ContentControl Classes="badge neutral" Content="neutral" Margin="0,0,8,8" />
+          <ContentControl Classes="badge accent" Content="1.21.3" Margin="0,0,8,8" />
+          <ContentControl Classes="badge stable" Content="stable" Margin="0,0,8,8" />
+          <ContentControl Classes="badge unstable" Content="unstable" Margin="0,0,8,8" />
+          <ContentControl Classes="badge pre" Content="pre" Margin="0,0,8,8" />
+          <ContentControl Classes="badge incompatible" Content="incompatible" Margin="0,0,8,8" />
+        </WrapPanel>
+        <WrapPanel>
+          <ContentControl Classes="tag" Content="Survie" Margin="0,0,8,8" />
+          <ContentControl Classes="tag on" Content="Installés" Margin="0,0,8,8" />
+          <ContentControl Classes="tag" Content="Multijoueur" Margin="0,0,8,8" />
+        </WrapPanel>
+        <StackPanel Orientation="Horizontal" Spacing="20">
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <Ellipse Width="8" Height="8" Fill="{DynamicResource ChannelStable}" />
+            <TextBlock Text="stable" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <Ellipse Width="8" Height="8" Fill="{DynamicResource ChannelUnstable}" />
+            <TextBlock Text="unstable" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <Ellipse Width="8" Height="8" Fill="{DynamicResource ChannelPre}" />
+            <TextBlock Text="pre" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <Ellipse Width="8" Height="8" Fill="{DynamicResource ChannelIncompatible}" />
+            <TextBlock Text="incompatible" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+          </StackPanel>
+        </StackPanel>
+      </StackPanel>
+
+      <!-- ── Typographie ─────────────────────────────────────────────────────────── -->
+      <StackPanel Spacing="8">
+        <TextBlock Text="TYPOGRAPHIE" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsOverline}" FontWeight="{StaticResource FwMedium}" LetterSpacing="1.1" Foreground="{DynamicResource Text3}" />
+        <TextBlock Text="IBM Plex Sans — Crée ta première instance pour commencer à jouer."
+                   FontFamily="{DynamicResource FontSans}" FontSize="{StaticResource FsSubheading}" />
+        <TextBlock Text="IBM Plex Mono — 1.21.0-rc.2 · 2.1 GB · ~/.prospect/instances/vintage-survival"
+                   FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text2}" />
+        <TextBlock Text="Space Grotesk — Homestead 1.21"
+                   FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}" FontWeight="{StaticResource FwSemibold}" />
+      </StackPanel>
+
+    </StackPanel>
+  </ScrollViewer>
+
 </Window>

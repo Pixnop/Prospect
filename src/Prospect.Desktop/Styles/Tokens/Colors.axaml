@@ -1,0 +1,204 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Port 1:1 de design/tokens/colors.css.
+
+    Les six rampes (stone, copper, clay, verdigris, ochre, slate) sont des ressources
+    Color : elles ne varient jamais avec le thème, exactement comme dans le CSS source où
+    seul `.theme-light` redéfinit les alias sémantiques, jamais les rampes elles-mêmes.
+
+    Les alias sémantiques (bg-*, text-*, border-*, accent-*, danger/success/warning/info,
+    scrollbar-*, channel-*) sont des ressources Brush, déclarées dans les deux variantes de
+    ThemeDictionaries : "Dark" (le thème par défaut de l'application) et "Light". Chaque
+    entrée existe explicitement dans les deux dictionnaires, même quand la valeur ne change
+    pas d'un thème à l'autre (c'est le cas des canaux et de plusieurs teintes danger) :
+    Avalonia ne fait pas de repli automatique d'une variante vers l'autre, donc la
+    duplication explicite est le choix le plus sûr, au prix d'un peu de répétition.
+  -->
+
+  <!-- ══════════════════════════════ Rampes de base ═══════════════════════════════ -->
+
+  <!-- Stone — neutres chauds, teinte ~25°, saturation très basse. Jamais noir pur. -->
+  <Color x:Key="Stone950">#111010</Color>
+  <Color x:Key="Stone900">#171513</Color>
+  <Color x:Key="Stone850">#1D1A18</Color>
+  <Color x:Key="Stone800">#24211E</Color>
+  <Color x:Key="Stone750">#2B2724</Color>
+  <Color x:Key="Stone700">#332E29</Color>
+  <Color x:Key="Stone600">#443D36</Color>
+  <Color x:Key="Stone500">#5B5249</Color>
+  <Color x:Key="Stone400">#7E756B</Color>
+  <Color x:Key="Stone300">#B3A99E</Color>
+  <Color x:Key="Stone200">#D5CCC2</Color>
+  <Color x:Key="Stone100">#EDE6DD</Color>
+  <Color x:Key="Stone050">#F7F2EB</Color>
+
+  <!-- Copper — pivot de la marque. copper-400 vient directement du logo. -->
+  <Color x:Key="Copper200">#F0D2B4</Color>
+  <Color x:Key="Copper300">#E3B489</Color>
+  <Color x:Key="Copper400">#D5A275</Color>
+  <Color x:Key="Copper500">#C4854F</Color>
+  <Color x:Key="Copper600">#A56C3E</Color>
+  <Color x:Key="Copper700">#7E5230</Color>
+  <Color x:Key="Copper800">#563723</Color>
+  <Color x:Key="Copper900">#2E211A</Color>
+
+  <!-- Clay — bande rouge du logo. Danger / destructif. -->
+  <Color x:Key="Clay300">#E0836F</Color>
+  <Color x:Key="Clay400">#D0604A</Color>
+  <Color x:Key="Clay500">#C1503B</Color>
+  <Color x:Key="Clay600">#A34131</Color>
+  <Color x:Key="Clay700">#6E2A20</Color>
+  <Color x:Key="Clay900">#2C1613</Color>
+
+  <!-- Verdigris — succès, à jour, installé. -->
+  <Color x:Key="Verdigris300">#8FC4AF</Color>
+  <Color x:Key="Verdigris400">#7DBBA4</Color>
+  <Color x:Key="Verdigris500">#5E9C86</Color>
+  <Color x:Key="Verdigris600">#4A7E6B</Color>
+  <Color x:Key="Verdigris900">#14231E</Color>
+
+  <!-- Ochre — avertissement, canal unstable, mise à jour disponible. -->
+  <Color x:Key="Ochre300">#E9C583</Color>
+  <Color x:Key="Ochre400">#E0B662</Color>
+  <Color x:Key="Ochre500">#D9A441</Color>
+  <Color x:Key="Ochre600">#B08331</Color>
+  <Color x:Key="Ochre900">#2A2011</Color>
+
+  <!-- Slate — information, canal pre-release, notices neutres. -->
+  <Color x:Key="Slate300">#AFC0D2</Color>
+  <Color x:Key="Slate400">#9AAEC4</Color>
+  <Color x:Key="Slate500">#7C93AE</Color>
+  <Color x:Key="Slate600">#61748C</Color>
+  <Color x:Key="Slate900">#161A20</Color>
+
+  <!-- ═══════════════════════ Alias sémantiques (par thème) ════════════════════════ -->
+
+  <ResourceDictionary.ThemeDictionaries>
+
+    <!-- ── Sombre — thème par défaut de l'application ─────────────────────────── -->
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="BgWindow" Color="{StaticResource Stone950}" />
+      <SolidColorBrush x:Key="BgSidebar" Color="#141211" />
+      <SolidColorBrush x:Key="BgSurface" Color="{StaticResource Stone900}" />
+      <SolidColorBrush x:Key="BgSurfaceRaised" Color="{StaticResource Stone850}" />
+      <SolidColorBrush x:Key="BgInput" Color="{StaticResource Stone850}" />
+      <SolidColorBrush x:Key="BgInputHover" Color="#221F1C" />
+      <SolidColorBrush x:Key="BgHover" Color="#12D5A275" />
+      <SolidColorBrush x:Key="BgActive" Color="#1FD5A275" />
+      <SolidColorBrush x:Key="BgSelected" Color="#24D5A275" />
+      <SolidColorBrush x:Key="BgScrim" Color="#9E090808" />
+
+      <SolidColorBrush x:Key="Text1" Color="{StaticResource Stone100}" />
+      <SolidColorBrush x:Key="Text2" Color="{StaticResource Stone300}" />
+      <SolidColorBrush x:Key="Text3" Color="{StaticResource Stone400}" />
+      <SolidColorBrush x:Key="Text4" Color="{StaticResource Stone500}" />
+      <SolidColorBrush x:Key="TextOnAccent" Color="#1A1512" />
+      <SolidColorBrush x:Key="TextLink" Color="{StaticResource Copper300}" />
+      <SolidColorBrush x:Key="TextLinkHover" Color="{StaticResource Copper200}" />
+
+      <SolidColorBrush x:Key="BorderSubtle" Color="{StaticResource Stone800}" />
+      <SolidColorBrush x:Key="BorderDefault" Color="{StaticResource Stone700}" />
+      <SolidColorBrush x:Key="BorderStrong" Color="{StaticResource Stone600}" />
+      <SolidColorBrush x:Key="BorderFocus" Color="{StaticResource Copper400}" />
+
+      <SolidColorBrush x:Key="Accent" Color="{StaticResource Copper500}" />
+      <SolidColorBrush x:Key="AccentHover" Color="{StaticResource Copper400}" />
+      <SolidColorBrush x:Key="AccentPressed" Color="{StaticResource Copper600}" />
+      <SolidColorBrush x:Key="AccentDisabled" Color="#4A3A2C" />
+      <SolidColorBrush x:Key="AccentText" Color="{StaticResource Copper300}" />
+      <SolidColorBrush x:Key="AccentQuiet" Color="#24D5A275" />
+
+      <SolidColorBrush x:Key="Danger" Color="{StaticResource Clay500}" />
+      <SolidColorBrush x:Key="DangerHover" Color="{StaticResource Clay400}" />
+      <SolidColorBrush x:Key="DangerPressed" Color="{StaticResource Clay600}" />
+      <SolidColorBrush x:Key="DangerText" Color="{StaticResource Clay300}" />
+      <SolidColorBrush x:Key="DangerQuiet" Color="#29C1503B" />
+
+      <SolidColorBrush x:Key="Success" Color="{StaticResource Verdigris500}" />
+      <SolidColorBrush x:Key="SuccessText" Color="{StaticResource Verdigris400}" />
+      <SolidColorBrush x:Key="SuccessQuiet" Color="#295E9C86" />
+
+      <SolidColorBrush x:Key="Warning" Color="{StaticResource Ochre500}" />
+      <SolidColorBrush x:Key="WarningText" Color="{StaticResource Ochre400}" />
+      <SolidColorBrush x:Key="WarningQuiet" Color="#29D9A441" />
+
+      <SolidColorBrush x:Key="Info" Color="{StaticResource Slate500}" />
+      <SolidColorBrush x:Key="InfoText" Color="{StaticResource Slate400}" />
+      <SolidColorBrush x:Key="InfoQuiet" Color="#297C93AE" />
+
+      <SolidColorBrush x:Key="ScrollbarTrack" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollbarThumb" Color="{StaticResource Stone700}" />
+      <SolidColorBrush x:Key="ScrollbarThumbHover" Color="{StaticResource Stone600}" />
+
+      <SolidColorBrush x:Key="ChannelStable" Color="{StaticResource Verdigris500}" />
+      <SolidColorBrush x:Key="ChannelUnstable" Color="{StaticResource Ochre500}" />
+      <SolidColorBrush x:Key="ChannelPre" Color="{StaticResource Slate500}" />
+      <SolidColorBrush x:Key="ChannelIncompatible" Color="{StaticResource Clay500}" />
+    </ResourceDictionary>
+
+    <!-- ── Clair — variante secondaire ─────────────────────────────────────────── -->
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="BgWindow" Color="#EFE9E1" />
+      <SolidColorBrush x:Key="BgSidebar" Color="#E6DFD5" />
+      <SolidColorBrush x:Key="BgSurface" Color="#F7F2EB" />
+      <SolidColorBrush x:Key="BgSurfaceRaised" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="BgInput" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="BgInputHover" Color="#FBF7F2" />
+      <SolidColorBrush x:Key="BgHover" Color="#0F7E5230" />
+      <SolidColorBrush x:Key="BgActive" Color="#1A7E5230" />
+      <SolidColorBrush x:Key="BgSelected" Color="#1F7E5230" />
+      <SolidColorBrush x:Key="BgScrim" Color="#5928201A" />
+
+      <SolidColorBrush x:Key="Text1" Color="#231E1A" />
+      <SolidColorBrush x:Key="Text2" Color="#5B5249" />
+      <SolidColorBrush x:Key="Text3" Color="#7E756B" />
+      <SolidColorBrush x:Key="Text4" Color="#A2988D" />
+      <SolidColorBrush x:Key="TextOnAccent" Color="#FFF8F1" />
+      <SolidColorBrush x:Key="TextLink" Color="{StaticResource Copper700}" />
+      <SolidColorBrush x:Key="TextLinkHover" Color="{StaticResource Copper800}" />
+
+      <SolidColorBrush x:Key="BorderSubtle" Color="#DCD3C7" />
+      <SolidColorBrush x:Key="BorderDefault" Color="#CBC0B2" />
+      <SolidColorBrush x:Key="BorderStrong" Color="#B2A594" />
+      <SolidColorBrush x:Key="BorderFocus" Color="{StaticResource Copper600}" />
+
+      <SolidColorBrush x:Key="Accent" Color="{StaticResource Copper600}" />
+      <SolidColorBrush x:Key="AccentHover" Color="{StaticResource Copper500}" />
+      <SolidColorBrush x:Key="AccentPressed" Color="{StaticResource Copper700}" />
+      <SolidColorBrush x:Key="AccentDisabled" Color="#DCCBB8" />
+      <SolidColorBrush x:Key="AccentText" Color="{StaticResource Copper700}" />
+      <SolidColorBrush x:Key="AccentQuiet" Color="#1FA56C3E" />
+
+      <SolidColorBrush x:Key="Danger" Color="{StaticResource Clay500}" />
+      <SolidColorBrush x:Key="DangerHover" Color="{StaticResource Clay400}" />
+      <SolidColorBrush x:Key="DangerPressed" Color="{StaticResource Clay600}" />
+      <SolidColorBrush x:Key="DangerText" Color="{StaticResource Clay600}" />
+      <SolidColorBrush x:Key="DangerQuiet" Color="#1FC1503B" />
+
+      <SolidColorBrush x:Key="Success" Color="{StaticResource Verdigris600}" />
+      <SolidColorBrush x:Key="SuccessText" Color="{StaticResource Verdigris600}" />
+      <SolidColorBrush x:Key="SuccessQuiet" Color="#1F4A7E6B" />
+
+      <SolidColorBrush x:Key="Warning" Color="{StaticResource Ochre600}" />
+      <SolidColorBrush x:Key="WarningText" Color="{StaticResource Ochre600}" />
+      <SolidColorBrush x:Key="WarningQuiet" Color="#24B08331" />
+
+      <SolidColorBrush x:Key="Info" Color="{StaticResource Slate600}" />
+      <SolidColorBrush x:Key="InfoText" Color="{StaticResource Slate600}" />
+      <SolidColorBrush x:Key="InfoQuiet" Color="#1F61748C" />
+
+      <SolidColorBrush x:Key="ScrollbarTrack" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollbarThumb" Color="#CBC0B2" />
+      <SolidColorBrush x:Key="ScrollbarThumbHover" Color="#B2A594" />
+
+      <SolidColorBrush x:Key="ChannelStable" Color="{StaticResource Verdigris500}" />
+      <SolidColorBrush x:Key="ChannelUnstable" Color="{StaticResource Ochre500}" />
+      <SolidColorBrush x:Key="ChannelPre" Color="{StaticResource Slate500}" />
+      <SolidColorBrush x:Key="ChannelIncompatible" Color="{StaticResource Clay500}" />
+    </ResourceDictionary>
+
+  </ResourceDictionary.ThemeDictionaries>
+
+</ResourceDictionary>

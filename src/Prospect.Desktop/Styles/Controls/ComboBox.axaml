@@ -1,0 +1,159 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Port de .pr-select / .pr-select__trigger / .pr-select__chev / .pr-select__menu /
+       .pr-select__opt. PART_Popup est un nom de partie exigé par ComboBox lui-même. -->
+
+  <ControlTheme x:Key="{x:Type ComboBoxItem}" TargetType="ComboBoxItem">
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="Height" Value="30" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource Text2}" />
+    <Setter Property="FontFamily" Value="{DynamicResource FontSans}" />
+    <Setter Property="FontSize" Value="{StaticResource FsBodySm}" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusXs}" />
+    <Setter Property="Template">
+      <ControlTemplate TargetType="ComboBoxItem">
+        <ContentPresenter Name="PART_ContentPresenter"
+                           Padding="{TemplateBinding Padding}"
+                           Background="{TemplateBinding Background}"
+                           CornerRadius="{TemplateBinding CornerRadius}"
+                           Content="{TemplateBinding Content}"
+                           ContentTemplate="{TemplateBinding ContentTemplate}"
+                           HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                           VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                           TextElement.Foreground="{TemplateBinding Foreground}" />
+      </ControlTemplate>
+    </Setter>
+
+    <Style Selector="^:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource BgHover}" />
+    </Style>
+    <Style Selector="^:pointerover">
+      <Setter Property="Foreground" Value="{DynamicResource Text1}" />
+    </Style>
+    <Style Selector="^:selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource BgSelected}" />
+    </Style>
+    <Style Selector="^:selected">
+      <Setter Property="Foreground" Value="{DynamicResource Text1}" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ComboBox}" TargetType="ComboBox">
+    <Setter Property="Background" Value="{DynamicResource BgInput}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Text1}" />
+    <Setter Property="PlaceholderForeground" Value="{DynamicResource Text4}" />
+    <Setter Property="FontFamily" Value="{DynamicResource FontSans}" />
+    <Setter Property="FontSize" Value="{StaticResource FsBodySm}" />
+    <Setter Property="Padding" Value="14,0,10,0" />
+    <Setter Property="Height" Value="{StaticResource ControlHMd}" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="MaxDropDownHeight" Value="280" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+    <Setter Property="Template">
+      <ControlTemplate TargetType="ComboBox">
+        <Border Name="PART_Border"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{TemplateBinding CornerRadius}">
+          <Border.Transitions>
+            <Transitions>
+              <BrushTransition Property="Background" Duration="{StaticResource DurInstant}" Easing="{StaticResource EaseStandard}" />
+              <BrushTransition Property="BorderBrush" Duration="{StaticResource DurInstant}" Easing="{StaticResource EaseStandard}" />
+            </Transitions>
+          </Border.Transitions>
+          <Grid ColumnDefinitions="*,Auto" Margin="{TemplateBinding Padding}">
+            <TextBlock Name="PART_PlaceholderTextBlock"
+                       Grid.Column="0"
+                       VerticalAlignment="Center"
+                       Foreground="{TemplateBinding PlaceholderForeground}"
+                       Text="{TemplateBinding PlaceholderText}">
+              <TextBlock.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                  <Binding Path="SelectionBoxItem" RelativeSource="{RelativeSource TemplatedParent}" Converter="{x:Static ObjectConverters.IsNull}" />
+                  <Binding Path="!IsEditable" RelativeSource="{RelativeSource TemplatedParent}" />
+                </MultiBinding>
+              </TextBlock.IsVisible>
+            </TextBlock>
+            <ContentControl Grid.Column="0"
+                             VerticalAlignment="Center"
+                             Content="{TemplateBinding SelectionBoxItem}"
+                             ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                             IsVisible="{TemplateBinding IsEditable, Converter={x:Static BoolConverters.Not}}" />
+            <TextBox Name="PART_EditableTextBox"
+                     Grid.Column="0"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Padding="0"
+                     Text="{TemplateBinding Text, Mode=TwoWay}"
+                     IsVisible="{TemplateBinding IsEditable}" />
+            <Path Name="PART_Chevron"
+                  Grid.Column="1"
+                  Width="10" Height="10"
+                  Margin="8,0,0,0"
+                  VerticalAlignment="Center"
+                  Data="{StaticResource Icon.chevron-down}"
+                  Stretch="Uniform"
+                  Stroke="{DynamicResource Text3}"
+                  StrokeThickness="2.2"
+                  StrokeLineCap="Round" StrokeJoin="Round"
+                  RenderTransform="rotate(0deg)">
+              <Path.Transitions>
+                <Transitions>
+                  <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource DurFast}" Easing="{StaticResource EaseStandard}" />
+                </Transitions>
+              </Path.Transitions>
+            </Path>
+            <Popup Name="PART_Popup"
+                   WindowManagerAddShadowHint="False"
+                   IsLightDismissEnabled="True"
+                   InheritsTransform="True"
+                   PlacementTarget="{TemplateBinding}"
+                   MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource TemplatedParent}}"
+                   MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                   IsOpen="{TemplateBinding IsDropDownOpen, Mode=TwoWay}">
+              <Border Background="{DynamicResource BgSurfaceRaised}"
+                      BorderBrush="{DynamicResource BorderDefault}"
+                      BorderThickness="1"
+                      CornerRadius="{StaticResource RadiusSm}"
+                      BoxShadow="{DynamicResource Elev2}"
+                      Padding="4">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                  <ItemsPresenter Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}" />
+                </ScrollViewer>
+              </Border>
+            </Popup>
+          </Grid>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+
+    <Style Selector="^:pointerover /template/ Border#PART_Border">
+      <Setter Property="Background" Value="{DynamicResource BgInputHover}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+    </Style>
+    <Style Selector="^:focus-within /template/ Border#PART_Border">
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderFocus}" />
+    </Style>
+    <Style Selector="^:disabled /template/ Border#PART_Border">
+      <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    </Style>
+    <Style Selector="^[IsDropDownOpen=True] /template/ Path#PART_Chevron">
+      <Setter Property="RenderTransform" Value="rotate(180deg)" />
+    </Style>
+    <Style Selector="^[IsDropDownOpen=True] /template/ Border#PART_Border">
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderFocus}" />
+    </Style>
+  </ControlTheme>
+
+</ResourceDictionary>

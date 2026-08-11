@@ -1,0 +1,120 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Port de .pr-badge et .pr-tag (components/components.css). Contrairement aux autres
+    fichiers de Styles/Controls/, celui-ci ne définit pas de ControlTheme pour un type
+    précis : Badge et Tag n'existent pas comme contrôles Avalonia dédiés, ce sont des
+    styles appliqués à un ContentControl ordinaire via des classes
+    (Classes="badge stable", Classes="tag on"...). C'est pourquoi ce fichier a une racine
+    Styles et se déclare dans Application.Styles plutôt que comme ResourceDictionary dans
+    Application.Resources : les sélecteurs par classe sont une mécanique de style, pas une
+    ressource nommée.
+
+    Les couleurs de bordure teintées (ex. #4CD5A275 = accent à 30% d'opacité) sont des
+    littéraux de components.css qui n'ont pas de token dédié dans colors.css.
+  -->
+
+  <Style Selector="ContentControl.badge">
+    <Setter Property="FontFamily" Value="{DynamicResource FontMono}" />
+    <Setter Property="FontSize" Value="{StaticResource FsMicro}" />
+    <Setter Property="FontWeight" Value="{StaticResource FwMedium}" />
+    <Setter Property="Height" Value="20" />
+    <Setter Property="Padding" Value="8,0" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="Background" Value="#24211E" />
+    <!-- stone-800 -->
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{DynamicResource Text2}" />
+    <Setter Property="Template">
+      <ControlTemplate TargetType="ContentControl">
+        <Border Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{StaticResource RadiusXs}">
+          <ContentPresenter Padding="{TemplateBinding Padding}"
+                             Content="{TemplateBinding Content}"
+                             ContentTemplate="{TemplateBinding ContentTemplate}"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             TextElement.Foreground="{TemplateBinding Foreground}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="ContentControl.badge.accent">
+    <Setter Property="Background" Value="{DynamicResource AccentQuiet}" />
+    <Setter Property="BorderBrush" Value="#4CD5A275" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentText}" />
+  </Style>
+  <Style Selector="ContentControl.badge.stable">
+    <Setter Property="Background" Value="{DynamicResource SuccessQuiet}" />
+    <Setter Property="BorderBrush" Value="#4C5E9C86" />
+    <Setter Property="Foreground" Value="{DynamicResource SuccessText}" />
+  </Style>
+  <Style Selector="ContentControl.badge.unstable">
+    <Setter Property="Background" Value="{DynamicResource WarningQuiet}" />
+    <Setter Property="BorderBrush" Value="#4CD9A441" />
+    <Setter Property="Foreground" Value="{DynamicResource WarningText}" />
+  </Style>
+  <Style Selector="ContentControl.badge.pre">
+    <Setter Property="Background" Value="{DynamicResource InfoQuiet}" />
+    <Setter Property="BorderBrush" Value="#4C7C93AE" />
+    <Setter Property="Foreground" Value="{DynamicResource InfoText}" />
+  </Style>
+  <Style Selector="ContentControl.badge.incompatible">
+    <Setter Property="Background" Value="{DynamicResource DangerQuiet}" />
+    <Setter Property="BorderBrush" Value="#4CC1503B" />
+    <Setter Property="Foreground" Value="{DynamicResource DangerText}" />
+  </Style>
+
+  <!-- ── Tag : pilule interactive (filtres, chips) ──────────────────────────────── -->
+  <Style Selector="ContentControl.tag">
+    <Setter Property="FontFamily" Value="{DynamicResource FontSans}" />
+    <Setter Property="FontSize" Value="{StaticResource FsCaption}" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{DynamicResource Text2}" />
+    <Setter Property="Template">
+      <ControlTemplate TargetType="ContentControl">
+        <Border Name="PART_Border"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{StaticResource RadiusPill}">
+          <Border.Transitions>
+            <Transitions>
+              <BrushTransition Property="Background" Duration="{StaticResource DurInstant}" Easing="{StaticResource EaseStandard}" />
+              <BrushTransition Property="BorderBrush" Duration="{StaticResource DurInstant}" Easing="{StaticResource EaseStandard}" />
+            </Transitions>
+          </Border.Transitions>
+          <ContentPresenter Padding="{TemplateBinding Padding}"
+                             Content="{TemplateBinding Content}"
+                             ContentTemplate="{TemplateBinding ContentTemplate}"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             TextElement.Foreground="{TemplateBinding Foreground}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ContentControl.tag:pointerover /template/ Border#PART_Border">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+  </Style>
+  <Style Selector="ContentControl.tag:pointerover">
+    <Setter Property="Foreground" Value="{DynamicResource Text1}" />
+  </Style>
+  <Style Selector="ContentControl.tag.on">
+    <Setter Property="Background" Value="{DynamicResource AccentQuiet}" />
+    <Setter Property="BorderBrush" Value="#59D5A275" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentText}" />
+  </Style>
+
+</Styles>

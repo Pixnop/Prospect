@@ -1,0 +1,109 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:converters="using:Prospect.Desktop.Converters">
+
+  <!--
+    Port de .pr-progress / .pr-progress__track / .pr-progress__fill. #2B2724 est
+    stone-750, la piste au repos (pas d'alias sémantique dédié, comme pour le switch).
+
+    PART_Indicator est un nom de partie exigé par la classe ProgressBar elle-même. En
+    pratique, son mécanisme interne de recalcul de largeur (basé sur un abonnement aux
+    changements de taille de son parent) ne se redéclenche pas de façon fiable dans cet
+    environnement : la barre restait visuellement vide même à Value non nulle, vérifié à
+    l'écran. PART_Indicator est donc conservé, invisible, pour satisfaire le contrat de la
+    classe, et le remplissage réel est porté par PART_VisualFill et
+    PART_IndeterminateIndicator, dont la largeur est recalculée par liaison ordinaire
+    (ProgressFillWidthConverter / ProgressIndeterminateWidthConverter, dans
+    Converters/ProgressBarConverters.cs) plutôt que par ce mécanisme interne.
+
+    Le chunk indéterminé glisse sur une plage de pixels fixe plutôt que littéralement -35%
+    à 100% du conteneur : Avalonia ne résout pas les unités "%" dans TransformOperations
+    (vérifié), donc une seule keyframe ne peut pas s'adapter à une largeur de conteneur
+    arbitraire ; la plage choisie (-260 à 900px) couvre confortablement les tailles de
+    barre réalistes de ce launcher. C'est la seule animation en boucle du système.
+
+    PART_VisualFill n'a volontairement pas la transition de largeur du CSS source
+    (transition:width dur-normal ease-out) : comme sa largeur est
+    recalculée à chaque changement de Value par la liaison ci-dessus (pas fixée une fois
+    pour toutes), l'animer relance la transition en continu au lieu de la laisser
+    converger, ce qui s'est révélé instable. Le remplissage se met donc à jour
+    instantanément pour l'instant.
+  -->
+
+  <x:TimeSpan x:Key="DurIndeterminate">0:0:1.4</x:TimeSpan>
+
+  <ControlTheme x:Key="{x:Type ProgressBar}" TargetType="ProgressBar">
+    <Setter Property="Background" Value="#2B2724" />
+    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusXs}" />
+    <Setter Property="MinHeight" Value="4" />
+    <Setter Property="Template">
+      <ControlTemplate TargetType="ProgressBar">
+        <Border Background="{TemplateBinding Background}"
+                CornerRadius="{TemplateBinding CornerRadius}"
+                ClipToBounds="True">
+          <Panel>
+            <!-- Partie exigée par la classe ProgressBar, sans rôle visuel (voir commentaire
+                 d'en-tête). -->
+            <Border Name="PART_Indicator" Width="0" Opacity="0" IsHitTestVisible="False" />
+
+            <Border Name="PART_VisualFill"
+                    Background="{TemplateBinding Foreground}"
+                    CornerRadius="{TemplateBinding CornerRadius}"
+                    HorizontalAlignment="Left"
+                    IsVisible="{Binding !IsIndeterminate, RelativeSource={RelativeSource TemplatedParent}}">
+              <Border.Width>
+                <MultiBinding Converter="{x:Static converters:ProgressFillWidthConverter.Instance}">
+                  <TemplateBinding Property="Value" />
+                  <TemplateBinding Property="Minimum" />
+                  <TemplateBinding Property="Maximum" />
+                  <Binding Path="Bounds.Width" RelativeSource="{RelativeSource TemplatedParent}" />
+                </MultiBinding>
+              </Border.Width>
+            </Border>
+
+            <Border Name="PART_IndeterminateIndicator"
+                    Background="{TemplateBinding Foreground}"
+                    CornerRadius="{TemplateBinding CornerRadius}"
+                    HorizontalAlignment="Left"
+                    IsVisible="{Binding IsIndeterminate, RelativeSource={RelativeSource TemplatedParent}}"
+                    Width="{Binding Bounds.Width, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:ProgressIndeterminateWidthConverter.Instance}}" />
+          </Panel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+
+    <Style Selector="^:horizontal">
+      <Setter Property="MinWidth" Value="80" />
+      <Setter Property="MinHeight" Value="4" />
+    </Style>
+
+    <Style Selector="^:indeterminate /template/ Border#PART_IndeterminateIndicator">
+      <Style.Animations>
+        <Animation Duration="{StaticResource DurIndeterminate}" Easing="{StaticResource EaseStandard}" IterationCount="Infinite">
+          <KeyFrame Cue="0%">
+            <Setter Property="TranslateTransform.X" Value="-260" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="TranslateTransform.X" Value="900" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+
+    <Style Selector="^.lg">
+      <Setter Property="MinHeight" Value="6" />
+    </Style>
+    <Style Selector="^.lg /template/ Border#PART_VisualFill, ^.lg /template/ Border#PART_IndeterminateIndicator">
+      <Setter Property="MinHeight" Value="6" />
+    </Style>
+
+    <Style Selector="^.success">
+      <Setter Property="Foreground" Value="{DynamicResource Success}" />
+    </Style>
+    <Style Selector="^.danger">
+      <Setter Property="Foreground" Value="{DynamicResource Danger}" />
+    </Style>
+  </ControlTheme>
+
+</ResourceDictionary>

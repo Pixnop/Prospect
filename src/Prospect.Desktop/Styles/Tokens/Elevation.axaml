@@ -1,0 +1,41 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Port 1:1 de design/tokens/elevation.css. Une élévation, c'est une ombre noire douce
+    plus, pour elev-inset, un liseré clair d'un cran au-dessus de la surface : les deux se
+    lisent directement en BoxShadows Avalonia (syntaxe "OffsetX OffsetY Blur[ Spread]
+    Couleur", plusieurs ombres séparées par une virgule, "inset" en préfixe pour un
+    liseré intérieur).
+
+    elev-0 (aucune ombre) ne varie pas avec le thème. Les trois niveaux, le liseré
+    "inset" et l'anneau de focus changent en revanche de couleur entre sombre et clair
+    (le CSS source ne redéfinit pas focus-ring dans .theme-light, mais son calc()
+    référence bg-window qui change : Avalonia n'a pas de calc() vivant dans une
+    ressource, donc la valeur est recalculée à la main pour chaque variante).
+  -->
+
+  <BoxShadows x:Key="Elev0">none</BoxShadows>
+
+  <ResourceDictionary.ThemeDictionaries>
+
+    <ResourceDictionary x:Key="Dark">
+      <BoxShadows x:Key="Elev1">0 1 2 #66000000</BoxShadows>
+      <BoxShadows x:Key="Elev2">0 1 2 #66000000, 0 8 24 #47000000</BoxShadows>
+      <BoxShadows x:Key="Elev3">0 2 4 #73000000, 0 16 40 #61000000</BoxShadows>
+      <BoxShadows x:Key="ElevInset">inset 0 1 0 #08FFFFFF</BoxShadows>
+      <!-- 2px de la couleur de fenêtre (le "décalage"), puis 2px d'anneau copper. -->
+      <BoxShadows x:Key="FocusRing">0 0 0 2 #111010, 0 0 0 4 #C4854F</BoxShadows>
+    </ResourceDictionary>
+
+    <ResourceDictionary x:Key="Light">
+      <BoxShadows x:Key="Elev1">0 1 2 #1A382A1E</BoxShadows>
+      <BoxShadows x:Key="Elev2">0 1 2 #1A382A1E, 0 8 24 #1A382A1E</BoxShadows>
+      <BoxShadows x:Key="Elev3">0 2 4 #1F382A1E, 0 16 40 #29382A1E</BoxShadows>
+      <BoxShadows x:Key="ElevInset">inset 0 1 0 #B2FFFFFF</BoxShadows>
+      <BoxShadows x:Key="FocusRing">0 0 0 2 #EFE9E1, 0 0 0 4 #A56C3E</BoxShadows>
+    </ResourceDictionary>
+
+  </ResourceDictionary.ThemeDictionaries>
+
+</ResourceDictionary>
