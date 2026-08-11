@@ -386,6 +386,33 @@ exactes ni des wildcards `1.20.*` : cette syntaxe n'existe nulle part, la recher
 `dev < pre < rc < stable` et comparaison `>=`. Du pur calcul, écrit en TDD strict dès la
 PR des fondations, nourri des échantillons collectés.
 
+Dépendances et compatibilité entre mods, en trois niveaux du sûr vers l'heuristique.
+
+**Dépendances déclarées** (l'objet `dependencies` du modinfo.json). À l'installation
+d'un mod, résolution transitive : les dépendances manquantes sont détectées (croisement
+du `resolve-deps` de `/api/v2/mods/install-information` et d'une vérification locale
+contre les zips installés) et proposées à l'installation en un clic, jamais installées
+en silence. À la désinstallation et à la mise à jour, vérification inverse : si retirer
+ou monter B casse la contrainte d'un mod A installé, l'action nomme A avant de demander
+confirmation. Les identifiants spéciaux `game`, `survival` et `creative` sont traités à
+part, comme le fait le ModDB lui-même (`game` alimente la compatibilité de version de
+jeu, les deux autres sont ignorés).
+
+**Compatibilité de version de jeu** : le croisement déjà décrit plus haut, tags
+éditoriaux de release côté ModDB et `dependencies.game` du modinfo, rendu par le badge
+de canal `incompatible` du design.
+
+**Intégrations non déclarées** (prévu juste après le MVP) : réalité du modding VS, des
+mods en référencent d'autres sans dépendance déclarée, typiquement des patches JSON
+ciblant les assets d'un autre `modid:` ou des intégrations conditionnelles. Détection
+heuristique par scan des fichiers de patch du zip installé : une cible étrangère sous
+marqueur conditionnel (`dependsOn`) est une intégration optionnelle, une cible
+étrangère sans condition est une dépendance probablement oubliée. Résultat strictement
+informatif sur la fiche du mod (« référence carrycapacity, non déclaré »), jamais
+bloquant : l'heuristique ne distingue pas l'intégration volontaire de l'oubli, et les
+dépendances de code (références d'assembly) restent hors de portée, ce que la doc
+assumera plutôt que de promettre une détection totale.
+
 ### 5. Modpacks
 
 Décrit plus haut avec le manifest. L'import réutilise tout l'existant (création
