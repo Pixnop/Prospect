@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1160"
+             x:Class="Prospect.Desktop.Views.Shell.TitlebarView">
+
+  <!--
+    Port de components/navigation/Titlebar.jsx : bande pleine largeur en haut de la fenêtre (logo +
+    titre + boutons de fenêtre), la sidebar prenant la hauteur restante en dessous (voir ShellView)
+    plutôt que la structure de la maquette (bloc logo dans le header de la sidebar, titlebar
+    limitée à la zone de contenu) : plus simple à fiabiliser pour le glisser de fenêtre sur les
+    trois OS, visuellement identique (mêmes tokens, même hauteur 38px).
+
+    « control dédié » au sens de docs/architecture.md plutôt que vue+ViewModel : rien ici ne varie
+    selon l'état applicatif, seulement selon l'état natif de la fenêtre. C'est pour cette raison
+    que ce fichier ne déclare aucun x:DataType : il ne contient aucun {Binding}.
+
+    Seule dérogation documentée de ce projet à la règle « zéro code-behind au-delà
+    d'InitializeComponent » : le glisser-déposer et les boutons réduire/agrandir/fermer sont des
+    primitives natives de Window (BeginMoveDrag, WindowState, Close) qu'Avalonia n'expose que via
+    des évènements de vue, jamais via une commande liable à un ViewModel. Voir TitlebarView.axaml.cs.
+  -->
+
+  <Border Height="{StaticResource TitlebarH}"
+          Background="{DynamicResource BgSidebar}"
+          BorderThickness="0,0,0,1"
+          BorderBrush="{DynamicResource BorderSubtle}">
+    <Grid ColumnDefinitions="Auto,*,Auto" PointerPressed="OnDragRegionPointerPressed" Background="Transparent">
+
+      <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9" Margin="14,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
+        <Border Width="16" Height="16" CornerRadius="{StaticResource RadiusXs}" Background="{DynamicResource Accent}" />
+        <TextBlock Text="{StaticResource App_Title}"
+                   FontFamily="{DynamicResource FontDisplay}"
+                   FontSize="{StaticResource FsBodySm}"
+                   FontWeight="{StaticResource FwSemibold}"
+                   Foreground="{DynamicResource Text1}" />
+      </StackPanel>
+
+      <!-- Grid.Column="1" : zone de glisser-déposer, volontairement vide. -->
+
+      <StackPanel Grid.Column="2" Orientation="Horizontal">
+        <Button Classes="icon" Width="44" Height="{StaticResource TitlebarH}" CornerRadius="0"
+                Click="OnMinimizeClick" ToolTip.Tip="{StaticResource Titlebar_Minimize}">
+          <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.minus}"
+                Stroke="{DynamicResource Text3}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+        </Button>
+        <Button Classes="icon" Width="44" Height="{StaticResource TitlebarH}" CornerRadius="0"
+                Click="OnToggleMaximizeClick" ToolTip.Tip="{StaticResource Titlebar_Maximize}">
+          <Panel>
+            <Path x:Name="MaximizeIcon" Width="11" Height="11" Stretch="Uniform" Data="{StaticResource Icon.square}"
+                  Stroke="{DynamicResource Text3}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+            <Path x:Name="RestoreIcon" Width="11" Height="11" Stretch="Uniform" Data="{StaticResource Icon.copy}"
+                  Stroke="{DynamicResource Text3}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" IsVisible="False" />
+          </Panel>
+        </Button>
+        <Button Classes="icon" Width="44" Height="{StaticResource TitlebarH}" CornerRadius="0"
+                Click="OnCloseClick" ToolTip.Tip="{StaticResource Titlebar_Close}">
+          <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.x}"
+                Stroke="{DynamicResource Text3}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+        </Button>
+      </StackPanel>
+    </Grid>
+  </Border>
+</UserControl>

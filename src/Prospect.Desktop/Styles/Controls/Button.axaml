@@ -134,6 +134,51 @@
     <Style Selector="^.danger:disabled /template/ Border#PART_Border">
       <Setter Property="Background" Value="#4C2A23" />
     </Style>
+
+    <!-- ── Icon (carré, icône seule — port de .pr-iconbtn, PR 4) ──────────────────── -->
+    <!-- Ajoutée ici plutôt que dans un fichier séparé : un ControlTheme est unique par clé de
+         ressource ({x:Type Button}), donc une variante de Button doit vivre dans CE fichier pour
+         profiter du même gabarit (PART_Border) que primary/secondary/ghost/danger ci-dessus. -->
+    <Style Selector="^.icon">
+      <Setter Property="Width" Value="{StaticResource ControlHMd}" />
+      <Setter Property="Height" Value="{StaticResource ControlHMd}" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource Text2}" />
+    </Style>
+    <Style Selector="^.icon:pointerover /template/ Border#PART_Border">
+      <Setter Property="Background" Value="{DynamicResource BgHover}" />
+    </Style>
+    <Style Selector="^.icon:pointerover">
+      <Setter Property="Foreground" Value="{DynamicResource Text1}" />
+    </Style>
+    <Style Selector="^.icon:pressed /template/ Border#PART_Border">
+      <Setter Property="Background" Value="{DynamicResource BgActive}" />
+    </Style>
+    <Style Selector="^.icon:disabled /template/ Border#PART_Border">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="^.icon:disabled">
+      <Setter Property="Foreground" Value="{DynamicResource Text4}" />
+    </Style>
+    <Style Selector="^.icon.sm">
+      <Setter Property="Width" Value="{StaticResource ControlHSm}" />
+      <Setter Property="Height" Value="{StaticResource ControlHSm}" />
+    </Style>
+    <Style Selector="^.icon.lg">
+      <Setter Property="Width" Value="{StaticResource ControlHLg}" />
+      <Setter Property="Height" Value="{StaticResource ControlHLg}" />
+    </Style>
+    <Style Selector="^.icon.bordered">
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+    </Style>
+    <Style Selector="^.icon.danger:pointerover /template/ Border#PART_Border">
+      <Setter Property="Background" Value="{DynamicResource DangerQuiet}" />
+    </Style>
+    <Style Selector="^.icon.danger:pointerover">
+      <Setter Property="Foreground" Value="{DynamicResource DangerText}" />
+    </Style>
   </ControlTheme>
 
 </ResourceDictionary>

@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Prospect.Desktop.ViewModels.Dialogs"
+             mc:Ignorable="d" d:DesignWidth="420"
+             x:Class="Prospect.Desktop.Views.Dialogs.DuplicateDialogView"
+             x:DataType="vm:DuplicateDialogViewModel">
+
+  <!-- Deux phases dans le même panneau (voir DuplicateDialogViewModel) : saisie du nom, puis
+       barre de progression annulable branchée sur InstanceService.DuplicateAsync + InstanceCopyProgress. -->
+
+  <Border Width="420" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
+          Background="{DynamicResource BgSurface}" BorderBrush="{DynamicResource BorderDefault}"
+          BorderThickness="1" BoxShadow="{DynamicResource Elev3}">
+    <StackPanel>
+      <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="22,18">
+        <TextBlock Text="{StaticResource Dialog_Duplicate_Title}"
+                   FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                   FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+      </Border>
+
+      <StackPanel Margin="22" Spacing="14">
+        <StackPanel IsVisible="{Binding IsInputPhase}" Spacing="6">
+          <TextBlock Text="{StaticResource Dialog_Duplicate_Label}" FontSize="{StaticResource FsCaption}"
+                     FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+          <TextBox Text="{Binding Name, Mode=TwoWay}" />
+          <TextBlock Text="{Binding Error}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource DangerText}"
+                     IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+
+        <StackPanel IsVisible="{Binding IsInProgress}" Spacing="10">
+          <ProgressBar Value="{Binding ProgressPercent}" Minimum="0" Maximum="100" />
+          <TextBlock Text="{Binding ProgressLabel}" FontFamily="{DynamicResource FontMono}"
+                     FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+        </StackPanel>
+
+        <TextBlock Text="{Binding FailureMessage}" TextWrapping="Wrap" FontSize="{StaticResource FsCaption}"
+                   Foreground="{DynamicResource DangerText}"
+                   IsVisible="{Binding FailureMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </StackPanel>
+
+      <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}" Background="{DynamicResource BgSurfaceRaised}">
+        <Grid ColumnDefinitions="*,Auto,Auto" Margin="22,16">
+          <Button Grid.Column="0" Classes="ghost" Command="{Binding CancelCommand}" HorizontalAlignment="Left"
+                  Content="{StaticResource Dialog_Cancel}" IsVisible="{Binding IsInputPhase}" />
+          <Button Grid.Column="0" Classes="ghost" Command="{Binding CancelCommand}" HorizontalAlignment="Left"
+                  Content="{StaticResource Dialog_Duplicate_CancelCopy}" IsVisible="{Binding IsInProgress}" />
+          <Button Grid.Column="2" Content="{StaticResource Dialog_Duplicate_Confirm}" Command="{Binding ConfirmCommand}"
+                  IsVisible="{Binding IsInputPhase}" />
+        </Grid>
+      </Border>
+    </StackPanel>
+  </Border>
+</UserControl>

@@ -79,6 +79,24 @@ public sealed class InstanceService
     }
 
     /// <summary>
+    /// Change l'icône d'une instance. Même contrat que <see cref="RenameAsync"/> : seul
+    /// <see cref="InstanceMetadata.Icon"/> change, le slug de dossier reste stable. Utilisé par
+    /// l'étape « icône » du wizard de création, qui ne connaît son choix qu'après l'appel à
+    /// <see cref="CreateAsync"/> (l'instance doit déjà exister pour recevoir son icône).
+    /// </summary>
+    /// <exception cref="InstanceNotFoundException">Aucune instance pour <paramref name="slug"/>.</exception>
+    public async Task<InstanceRecord> SetIconAsync(string slug, string icon, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(icon);
+
+        var current = await _repository.LoadAsync(slug, cancellationToken).ConfigureAwait(false);
+        var updated = current with { Metadata = current.Metadata with { Icon = icon } };
+        await _repository.SaveAsync(updated, cancellationToken).ConfigureAwait(false);
+
+        return updated;
+    }
+
+    /// <summary>
     /// Duplique une instance : nouvel identifiant, nouveau slug dérivé de
     /// <paramref name="newName"/>, copie fichier par fichier de <c>data/</c>. Une copie est une
     /// instance neuve du point de vue des statistiques : <see cref="InstanceMetadata.LastLaunchedUtc"/>

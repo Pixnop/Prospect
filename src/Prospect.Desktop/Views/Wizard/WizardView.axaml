@@ -1,0 +1,204 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Prospect.Desktop.ViewModels.Wizard"
+             xmlns:conv="using:Prospect.Desktop.Converters"
+             mc:Ignorable="d" d:DesignWidth="640"
+             x:Class="Prospect.Desktop.Views.Wizard.WizardView"
+             x:DataType="vm:WizardViewModel">
+
+  <!--
+    Port de design/ui_kits/launcher/screen-wizard.jsx. La version du jeu (étape 2) est pour
+    l'instant un champ texte validé par GameVersion.TryParse plutôt que le sélecteur de la
+    maquette (liste de versions du catalogue) : décision documentée dans le corps de la PR, le
+    vrai sélecteur arrive avec la PR du catalogue de versions du jeu. Pas de ligne de connexion
+    entre les pastilles d'étape (contrairement à la maquette) : une UniformGrid les espace
+    également, simplification volontaire qui garde la lecture de la progression intacte.
+  -->
+
+  <UserControl.Styles>
+    <Style Selector="Border.step-dot">
+      <Setter Property="Width" Value="20" />
+      <Setter Property="Height" Value="20" />
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    </Style>
+    <Style Selector="Border.step-dot.current">
+      <Setter Property="Background" Value="{DynamicResource AccentQuiet}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+    </Style>
+    <Style Selector="Border.step-dot.done">
+      <Setter Property="Background" Value="{DynamicResource Accent}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+    </Style>
+    <Style Selector="TextBlock.step-label">
+      <Setter Property="Foreground" Value="{DynamicResource Text1}" />
+    </Style>
+    <Style Selector="TextBlock.step-label.upcoming">
+      <Setter Property="Foreground" Value="{DynamicResource Text4}" />
+    </Style>
+    <Style Selector="Border.icon-choice">
+      <Setter Property="Width" Value="52" />
+      <Setter Property="Height" Value="52" />
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Background" Value="{DynamicResource BgInput}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    </Style>
+    <Style Selector="Border.icon-choice.selected">
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+      <Setter Property="Background" Value="{DynamicResource AccentQuiet}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Border Width="640" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
+          Background="{DynamicResource BgSurface}" BorderBrush="{DynamicResource BorderDefault}"
+          BorderThickness="1" BoxShadow="{DynamicResource Elev3}">
+    <DockPanel>
+
+      <!-- En-tête -->
+      <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}">
+        <Grid ColumnDefinitions="*,Auto" Margin="22,18">
+          <TextBlock Grid.Column="0" Text="{StaticResource Wizard_Title}" VerticalAlignment="Center"
+                     FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                     FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+          <Button Grid.Column="1" Classes="icon" Command="{Binding CancelCommand}" ToolTip.Tip="{StaticResource Wizard_Cancel}">
+            <Path Width="16" Height="16" Stretch="Uniform" Data="{StaticResource Icon.x}"
+                  Stroke="{DynamicResource Text2}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+          </Button>
+        </Grid>
+      </Border>
+
+      <!-- Bandeau d'étapes -->
+      <ItemsControl DockPanel.Dock="Top" Margin="22,16,22,0" ItemsSource="{Binding Steps}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Rows="1" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:WizardStepIndicatorViewModel">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Border Classes="step-dot" Classes.current="{Binding IsCurrent}" Classes.done="{Binding IsDone}">
+                <Panel>
+                  <TextBlock Text="{Binding Number}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                             FontFamily="{DynamicResource FontMono}" FontSize="10" Foreground="{DynamicResource Text4}"
+                             IsVisible="{Binding !IsDone}"
+                             Classes.current="{Binding IsCurrent}">
+                    <TextBlock.Styles>
+                      <Style Selector="TextBlock.current">
+                        <Setter Property="Foreground" Value="{DynamicResource AccentText}" />
+                      </Style>
+                    </TextBlock.Styles>
+                  </TextBlock>
+                  <Path Width="10" Height="10" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Data="{StaticResource Icon.check}" Stroke="{DynamicResource TextOnAccent}"
+                        StrokeThickness="2.5" StrokeLineCap="Round" StrokeJoin="Round" IsVisible="{Binding IsDone}" />
+                </Panel>
+              </Border>
+              <TextBlock Text="{Binding Label}" Classes="step-label" Classes.upcoming="{Binding IsUpcoming}"
+                         FontSize="{StaticResource FsCaption}" VerticalAlignment="Center" />
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- Pied : navigation -->
+      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}"
+              Background="{DynamicResource BgSurfaceRaised}">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="22,16">
+          <Button Grid.Column="0" Classes="ghost" Content="{StaticResource Wizard_Cancel}" Command="{Binding CancelCommand}" />
+          <Button Grid.Column="2" Classes="secondary" Content="{StaticResource Wizard_Previous}" Margin="0,0,8,0"
+                  Command="{Binding BackCommand}" IsVisible="{Binding CanGoBack}" />
+          <Button Grid.Column="3" Content="{StaticResource Wizard_Next}" Command="{Binding NextCommand}"
+                  IsVisible="{Binding !IsLastStep}" />
+          <Button Grid.Column="3" Content="{StaticResource Wizard_Create}" Command="{Binding CreateCommand}"
+                  IsVisible="{Binding IsLastStep}" />
+        </Grid>
+      </Border>
+
+      <!-- Corps : une section par étape -->
+      <Panel Margin="22" MinHeight="250">
+
+        <StackPanel IsVisible="{Binding IsNameStep}" Spacing="18">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{StaticResource Wizard_Step1_NameLabel}" FontSize="{StaticResource FsCaption}"
+                       FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+            <TextBox Text="{Binding Name, Mode=TwoWay}" Watermark="{StaticResource Wizard_Step1_NamePlaceholder}" />
+            <StackPanel Orientation="Horizontal" Spacing="0">
+              <TextBlock Text="{StaticResource Wizard_Step1_SlugPrefix}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+              <TextBlock Text="{Binding SlugPreview}" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+            </StackPanel>
+            <TextBlock Text="{Binding NameError}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource DangerText}"
+                       IsVisible="{Binding NameError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+        </StackPanel>
+
+        <StackPanel IsVisible="{Binding IsVersionStep}" Spacing="18">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{StaticResource Wizard_Step2_VersionLabel}" FontSize="{StaticResource FsCaption}"
+                       FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+            <TextBox Classes="mono" Text="{Binding VersionText, Mode=TwoWay}" Watermark="{StaticResource Wizard_Step2_VersionPlaceholder}" />
+            <TextBlock Text="{StaticResource Wizard_Step2_VersionHint}" FontSize="{StaticResource FsCaption}"
+                       Foreground="{DynamicResource Text3}" TextWrapping="Wrap"
+                       IsVisible="{Binding VersionError, Converter={x:Static ObjectConverters.IsNull}}" />
+            <TextBlock Text="{Binding VersionError}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource DangerText}"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding VersionError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+        </StackPanel>
+
+        <StackPanel IsVisible="{Binding IsIconStep}" Spacing="14">
+          <TextBlock Text="{StaticResource Wizard_Step3_Title}" FontSize="{StaticResource FsBodySm}"
+                     FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text1}" />
+          <TextBlock Text="{StaticResource Wizard_Step3_Description}" FontSize="{StaticResource FsCaption}"
+                     Foreground="{DynamicResource Text3}" TextWrapping="Wrap" />
+          <ItemsControl ItemsSource="{Binding IconChoices}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:IconChoiceOption">
+                <Button Classes="ghost" Command="{Binding SelectCommand}" Margin="0,0,10,10" Padding="0" BorderThickness="0" ToolTip.Tip="{Binding Label}">
+                  <Border Classes="icon-choice" Classes.selected="{Binding IsSelected}">
+                    <Path Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+                          Data="{Binding IconKey, Converter={x:Static conv:IconKeyToGeometryConverter.Instance}}"
+                          Stroke="{DynamicResource Text2}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                  </Border>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <StackPanel IsVisible="{Binding IsSummaryStep}" Spacing="12">
+          <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,0,0,4">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="{StaticResource Wizard_Step4_Name}" Foreground="{DynamicResource Text3}" FontSize="{StaticResource FsBodySm}" Margin="0,0,0,10" />
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Name}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" Margin="0,0,0,10" />
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="{StaticResource Wizard_Step4_Version}" Foreground="{DynamicResource Text3}" FontSize="{StaticResource FsBodySm}" Margin="0,0,0,10" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VersionText}" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" Margin="0,0,0,10" />
+
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="{StaticResource Wizard_Step4_Icon}" Foreground="{DynamicResource Text3}" FontSize="{StaticResource FsBodySm}" Margin="0,0,0,10" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedIconKey}" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" Margin="0,0,0,10" />
+
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="{StaticResource Wizard_Step4_Location}" Foreground="{DynamicResource Text3}" FontSize="{StaticResource FsBodySm}" />
+            <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal">
+              <TextBlock Text="~/.prospect/instances/" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
+              <TextBlock Text="{Binding SlugPreview}" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
+            </StackPanel>
+          </Grid>
+          <TextBlock Text="{StaticResource Wizard_Step4_Note}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding CreateError}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource DangerText}"
+                     IsVisible="{Binding CreateError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+
+      </Panel>
+    </DockPanel>
+  </Border>
+</UserControl>

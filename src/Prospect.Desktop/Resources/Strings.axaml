@@ -1,0 +1,107 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Dictionnaire centralisé des textes UI STATIQUES (design/readme.md, section « Content
+    fundamentals » : tutoiement, casse de phrase, boutons à l'infinitif, jamais d'emoji). Chaque
+    vue consomme ces clés en XAML via {StaticResource Xyz} plutôt que d'écrire du texte en dur.
+
+    Les messages que calcule un ViewModel (confirmation nommant une instance, erreur de
+    validation, texte de toast interpolé...) ne vivent volontairement PAS ici : un ViewModel doit
+    rester constructible et testable sans qu'une Application Avalonia tourne (docs/architecture.md,
+    MVVM strict), or {StaticResource} n'existe que si le système de ressources est initialisé.
+    Ce texte dynamique vit dans Resources/UiText.cs (classe C# simple), documentée avec le même
+    partage des rôles. Les deux ensembles ne se recouvrent jamais : chaque texte n'existe qu'à un
+    seul endroit, choisi selon qui le lit (une vue en XAML, ou un ViewModel en C#).
+  -->
+
+  <x:String x:Key="App_Title">Prospect</x:String>
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Nav_Bibliotheque">Bibliothèque</x:String>
+  <x:String x:Key="Nav_Accueil">Accueil</x:String>
+  <x:String x:Key="Nav_Mods">Mods</x:String>
+  <x:String x:Key="Nav_Versions">Versions</x:String>
+  <x:String x:Key="Nav_Reglages">Réglages</x:String>
+  <x:String x:Key="Nav_Telechargements">Téléchargements</x:String>
+
+  <!-- ── Titlebar ────────────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Titlebar_Minimize">Réduire</x:String>
+  <x:String x:Key="Titlebar_Maximize">Agrandir</x:String>
+  <x:String x:Key="Titlebar_Restore">Restaurer</x:String>
+  <x:String x:Key="Titlebar_Close">Fermer</x:String>
+
+  <!-- ── Popover téléchargements ─────────────────────────────────────────────────── -->
+  <x:String x:Key="Downloads_Title">Téléchargements</x:String>
+  <x:String x:Key="Downloads_EmptyTitle">Aucun téléchargement</x:String>
+  <x:String x:Key="Downloads_EmptyDescription">Les téléchargements de versions du jeu et de mods apparaîtront ici.</x:String>
+  <x:String x:Key="Downloads_Close">Fermer</x:String>
+
+  <!-- ── Accueil ─────────────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Home_Title">Instances</x:String>
+  <x:String x:Key="Home_SearchPlaceholder">Filtrer les instances…</x:String>
+  <x:String x:Key="Home_SortLastLaunched">Dernier lancement</x:String>
+  <x:String x:Key="Home_SortName">Nom</x:String>
+  <x:String x:Key="Home_NewInstance">Nouvelle instance</x:String>
+  <x:String x:Key="Home_EmptyTitle">Aucune instance</x:String>
+  <x:String x:Key="Home_EmptyDescription">Une instance isole une version du jeu, ses mods et ses sauvegardes. Crée la première pour commencer.</x:String>
+  <x:String x:Key="Home_NoResultsTitle">Aucun résultat</x:String>
+  <x:String x:Key="Home_ClearFilter">Effacer le filtre</x:String>
+  <x:String x:Key="Home_BrokenSectionTitle">Instances non chargées</x:String>
+
+  <!-- ── Carte d'instance ────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Card_Play">Jouer</x:String>
+  <x:String x:Key="Card_PlayTooltip">Le lancement arrive dans une prochaine version.</x:String>
+  <x:String x:Key="Card_Actions">Actions</x:String>
+  <x:String x:Key="Card_Rename">Renommer</x:String>
+  <x:String x:Key="Card_Duplicate">Dupliquer</x:String>
+  <x:String x:Key="Card_Delete">Supprimer</x:String>
+  <x:String x:Key="Card_NewInstance">Nouvelle instance</x:String>
+
+  <!-- ── Wizard ──────────────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Wizard_Title">Nouvelle instance</x:String>
+  <x:String x:Key="Wizard_Cancel">Annuler</x:String>
+  <x:String x:Key="Wizard_Previous">Précédent</x:String>
+  <x:String x:Key="Wizard_Next">Suivant</x:String>
+  <x:String x:Key="Wizard_Create">Créer l'instance</x:String>
+
+  <x:String x:Key="Wizard_Step1_NameLabel">Nom de l'instance</x:String>
+  <x:String x:Key="Wizard_Step1_NamePlaceholder">Survie Vintage</x:String>
+  <x:String x:Key="Wizard_Step1_SlugPrefix">Le dossier sera créé sous instances/</x:String>
+
+  <x:String x:Key="Wizard_Step2_VersionLabel">Version du jeu</x:String>
+  <x:String x:Key="Wizard_Step2_VersionPlaceholder">1.21.3</x:String>
+  <x:String x:Key="Wizard_Step2_VersionHint">Format Major.Minor.Patch, par exemple 1.21.3. Le sélecteur de versions installées arrive avec la PR du catalogue de jeu.</x:String>
+
+  <x:String x:Key="Wizard_Step3_Title">Icône de l'instance</x:String>
+  <x:String x:Key="Wizard_Step3_Description">Choisis une icône parmi celles intégrées, ou garde l'icône par défaut. Une icône personnalisée sera possible plus tard.</x:String>
+
+  <x:String x:Key="Wizard_Step4_Name">Nom</x:String>
+  <x:String x:Key="Wizard_Step4_Version">Version</x:String>
+  <x:String x:Key="Wizard_Step4_Icon">Icône</x:String>
+  <x:String x:Key="Wizard_Step4_Location">Emplacement</x:String>
+  <x:String x:Key="Wizard_Step4_Note">Le dossier de l'instance est créé immédiatement, prêt à recevoir mods et sauvegardes.</x:String>
+
+  <!-- ── Dialogues de carte ──────────────────────────────────────────────────────── -->
+  <x:String x:Key="Dialog_Cancel">Annuler</x:String>
+
+  <x:String x:Key="Dialog_Rename_Title">Renommer l'instance</x:String>
+  <x:String x:Key="Dialog_Rename_Label">Nom de l'instance</x:String>
+  <x:String x:Key="Dialog_Rename_Confirm">Renommer</x:String>
+
+  <x:String x:Key="Dialog_Duplicate_Title">Dupliquer l'instance</x:String>
+  <x:String x:Key="Dialog_Duplicate_Label">Nom de la copie</x:String>
+  <x:String x:Key="Dialog_Duplicate_Confirm">Dupliquer</x:String>
+  <x:String x:Key="Dialog_Duplicate_CancelCopy">Annuler la copie</x:String>
+
+  <x:String x:Key="Dialog_Delete_Confirm">Supprimer l'instance</x:String>
+
+  <!-- ── Pages placeholder ───────────────────────────────────────────────────────── -->
+  <x:String x:Key="Placeholder_Mods_Title">Navigateur de mods</x:String>
+  <x:String x:Key="Placeholder_Mods_Description">Bientôt disponible : recherche et installation de mods depuis le ModDB officiel.</x:String>
+  <x:String x:Key="Placeholder_Versions_Title">Versions du jeu</x:String>
+  <x:String x:Key="Placeholder_Versions_Description">Bientôt disponible : téléchargement et gestion des versions du jeu installées.</x:String>
+  <x:String x:Key="Placeholder_Settings_Title">Réglages</x:String>
+  <x:String x:Key="Placeholder_Settings_Description">Bientôt disponible : préférences générales, jeu, réseau et comptes.</x:String>
+
+</ResourceDictionary>
