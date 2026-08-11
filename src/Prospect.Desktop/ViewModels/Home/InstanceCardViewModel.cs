@@ -25,6 +25,7 @@ public sealed partial class InstanceCardViewModel : ObservableObject, IDisposabl
     private readonly InstanceService _instanceService;
     private readonly GameLauncher _launcher;
     private readonly RunningInstanceTracker _tracker;
+    private readonly IModUpdateCheckCache _updateCache;
     private readonly IOverlayService _overlay;
     private readonly IToastService _toasts;
     private readonly IUiDispatcher _dispatcher;
@@ -36,6 +37,7 @@ public sealed partial class InstanceCardViewModel : ObservableObject, IDisposabl
         InstanceService instanceService,
         GameLauncher launcher,
         RunningInstanceTracker tracker,
+        IModUpdateCheckCache updateCache,
         IOverlayService overlay,
         IToastService toasts,
         IUiDispatcher dispatcher,
@@ -45,6 +47,7 @@ public sealed partial class InstanceCardViewModel : ObservableObject, IDisposabl
         ArgumentNullException.ThrowIfNull(instanceService);
         ArgumentNullException.ThrowIfNull(launcher);
         ArgumentNullException.ThrowIfNull(tracker);
+        ArgumentNullException.ThrowIfNull(updateCache);
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(toasts);
         ArgumentNullException.ThrowIfNull(dispatcher);
@@ -53,6 +56,7 @@ public sealed partial class InstanceCardViewModel : ObservableObject, IDisposabl
         _instanceService = instanceService;
         _launcher = launcher;
         _tracker = tracker;
+        _updateCache = updateCache;
         _overlay = overlay;
         _toasts = toasts;
         _dispatcher = dispatcher;
@@ -66,8 +70,10 @@ public sealed partial class InstanceCardViewModel : ObservableObject, IDisposabl
         LastPlayedText = lastPlayedText;
         IconKey = InstanceIconKeyResolver.Resolve(record.Metadata.Icon);
         _isRunning = tracker.IsRunning(Slug);
+        _updateCount = updateCache.TryGet(Slug)?.UpdateCount ?? 0;
 
         _tracker.StatusChanged += OnTrackerStatusChanged;
+        _updateCache.Changed += OnUpdateCacheChanged;
     }
 
     /// <summary>Levé quand la carte (hors bouton Jouer/Arrêter et menu) est cliquée : ouvre la page de détail.</summary>
@@ -99,6 +105,17 @@ public sealed partial class InstanceCardViewModel : ObservableObject, IDisposabl
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
     private bool _isLaunching;
+
+    /// <summary>
+    /// Nombre de mises à jour trouvées par la dernière vérification connue, tous canaux confondus.
+    /// Zéro tant qu'aucune vérification n'a eu lieu cette session (voir <see cref="IModUpdateCheckCache"/>).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUpdates))]
+    private int _updateCount;
+
+    /// <summary>Vrai quand la pastille discrète « N mises à jour » de la maquette doit s'afficher.</summary>
+    public bool HasUpdates => UpdateCount > 0;
 
     [RelayCommand]
     private void Open() => OpenRequested?.Invoke(this, Slug);
@@ -149,12 +166,30 @@ public sealed partial class InstanceCardViewModel : ObservableObject, IDisposabl
         _dispatcher.Post(() => IsRunning = status.State == RunningInstanceState.Started);
     }
 
+    // Garde la pastille vivante même quand la carte n'a pas été reconstruite depuis la dernière
+    // vérification : ShowHome() ne rafraîchit pas l'Accueil (voir ShellViewModel), donc sans cet
+    // abonnement une vérification lancée depuis l'onglet Mods n'apparaîtrait qu'au rafraîchissement
+    // suivant plutôt qu'au retour immédiat sur la carte.
+    private void OnUpdateCacheChanged(object? sender, ModUpdateCacheChange change)
+    {
+        if (!string.Equals(change.Slug, Slug, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _dispatcher.Post(() => UpdateCount = change.Report?.UpdateCount ?? 0);
+    }
+
     /// <summary>
-    /// Se désabonne de <see cref="RunningInstanceTracker"/> : sans ça, chaque rafraîchissement de
-    /// l'Accueil (<c>HomeViewModel.RefreshAsync</c>, qui reconstruit toutes les cartes) laisserait
-    /// le tracker — un singleton qui vit toute la durée de l'application — retenir indéfiniment
-    /// des cartes remplacées, plus l'abonnement lui-même. <see cref="HomeViewModel"/> appelle
-    /// cette méthode avant d'abandonner une carte.
+    /// Se désabonne de <see cref="RunningInstanceTracker"/> et <see cref="IModUpdateCheckCache"/> :
+    /// sans ça, chaque rafraîchissement de l'Accueil (<c>HomeViewModel.RefreshAsync</c>, qui
+    /// reconstruit toutes les cartes) laisserait ces singletons — qui vivent toute la durée de
+    /// l'application — retenir indéfiniment des cartes remplacées, plus leurs abonnements.
+    /// <see cref="HomeViewModel"/> appelle cette méthode avant d'abandonner une carte.
     /// </summary>
-    public void Dispose() => _tracker.StatusChanged -= OnTrackerStatusChanged;
+    public void Dispose()
+    {
+        _tracker.StatusChanged -= OnTrackerStatusChanged;
+        _updateCache.Changed -= OnUpdateCacheChanged;
+    }
 }

@@ -29,6 +29,7 @@ public sealed partial class HomeViewModel : ObservableObject
     private readonly GameLauncher _launcher;
     private readonly RunningInstanceTracker _tracker;
     private readonly IClock _clock;
+    private readonly IModUpdateCheckCache _updateCache;
     private readonly IOverlayService _overlay;
     private readonly IToastService _toasts;
     private readonly IUiDispatcher _dispatcher;
@@ -42,6 +43,7 @@ public sealed partial class HomeViewModel : ObservableObject
         GameLauncher launcher,
         RunningInstanceTracker tracker,
         IClock clock,
+        IModUpdateCheckCache updateCache,
         IOverlayService overlay,
         IToastService toasts,
         IUiDispatcher dispatcher,
@@ -52,6 +54,7 @@ public sealed partial class HomeViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(launcher);
         ArgumentNullException.ThrowIfNull(tracker);
         ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(updateCache);
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(toasts);
         ArgumentNullException.ThrowIfNull(dispatcher);
@@ -62,6 +65,7 @@ public sealed partial class HomeViewModel : ObservableObject
         _launcher = launcher;
         _tracker = tracker;
         _clock = clock;
+        _updateCache = updateCache;
         _overlay = overlay;
         _toasts = toasts;
         _dispatcher = dispatcher;
@@ -154,6 +158,7 @@ public sealed partial class HomeViewModel : ObservableObject
                     _instanceService,
                     _launcher,
                     _tracker,
+                    _updateCache,
                     _overlay,
                     _toasts,
                     _dispatcher,

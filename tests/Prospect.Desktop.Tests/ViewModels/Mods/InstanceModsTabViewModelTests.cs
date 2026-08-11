@@ -5,6 +5,7 @@ using Prospect.Core.Instances;
 using Prospect.Core.Instances.Migrations;
 using Prospect.Core.ModDb;
 using Prospect.Core.Storage;
+using Prospect.Desktop.Services;
 using Prospect.Desktop.Tests.TestDoubles;
 using Prospect.Desktop.ViewModels.Mods;
 
@@ -20,6 +21,9 @@ public sealed class InstanceModsTabViewModelTests
     private sealed record Fixture(
         InstanceModsTabViewModel Tab,
         IInstalledModRepository Mods,
+        FakeModDbHandler Server,
+        IModUpdateCheckCache UpdateCache,
+        FakeClock Clock,
         RecordingOverlayService Overlay,
         RecordingToastService Toasts,
         MockFileSystem FileSystem,
@@ -34,13 +38,19 @@ public sealed class InstanceModsTabViewModelTests
         var record = await service.CreateAsync("Homestead", GameVersion.Parse("1.21.3"));
 
         var mods = ModDbDoubles.CreateRepository(fileSystem, instances, Paths);
-        var installService = ModDbDoubles.CreateInstallService(fileSystem, instances, mods, Paths, clock);
+        var handler = new FakeModDbHandler();
+        var installService = ModDbDoubles.CreateInstallService(fileSystem, instances, mods, Paths, clock, handler);
+        var updateChecker = ModDbDoubles.CreateUpdateChecker(fileSystem, instances, mods, Paths, clock, handler);
+        var updateCache = new ModUpdateCheckCache();
         var overlay = new RecordingOverlayService();
         var toasts = new RecordingToastService();
 
         return new Fixture(
-            new InstanceModsTabViewModel(record.Slug, mods, installService, overlay, toasts),
+            new InstanceModsTabViewModel(record.Slug, mods, installService, updateChecker, updateCache, clock, overlay, toasts),
             mods,
+            handler,
+            updateCache,
+            clock,
             overlay,
             toasts,
             fileSystem,
@@ -202,6 +212,214 @@ public sealed class InstanceModsTabViewModelTests
         fixture.Tab.ModsDirectoryText.ShouldEndWith(fixture.FileSystem.Path.Combine("data", "Mods"));
     }
 
+    // ── Vérification des mises à jour (feature 4b) ────────────────────────────────
+
+    // Reprend exactement la release que ConfigLibJson du FakeModDbHandler déclare déjà (mêmes
+    // identifiants, même version, même tag de version de jeu) : /api/updates et /api/mod/configlib
+    // restent cohérents entre eux, comme le seraient deux endpoints du vrai ModDB.
+    private const string ConfigLibUpdateJson = """
+    {
+      "statuscode": "200",
+      "updates": {
+        "configlib": {
+          "releaseid": 38314, "fileid": 84120, "mainfile": "https://moddbcdn.vintagestory.at/configlib_1.11.1.zip",
+          "filename": "configlib_1.11.1.zip", "downloads": 90210, "tags": ["1.21.3"], "modidstr": "configlib",
+          "modversion": "1.11.1", "changelog": null, "created": "2026-02-11 09:22:10"
+        }
+      }
+    }
+    """;
+
+    [Fact]
+    public async Task LastCheckedText_BeforeAnyCheck_SaysNever()
+    {
+        var fixture = await CreateAsync();
+
+        fixture.Tab.LastCheckedText.ShouldBe("Dernière vérification : jamais");
+    }
+
+    [Fact]
+    public async Task CheckUpdatesAsync_UpdateFound_BadgesTheRowAndSummarizesTheCount()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip", "configlib", "Config lib");
+        fixture.Server.UpdatesJson = ConfigLibUpdateJson;
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+
+        await fixture.Tab.CheckUpdatesCommand.ExecuteAsync(null);
+
+        var row = fixture.Tab.Mods.ShouldHaveSingleItem();
+        row.HasUpdateAvailable.ShouldBeTrue();
+        row.UpdateResult!.AvailableRelease!.Version.ShouldBe(ModVersion.Parse("1.11.1"));
+        fixture.Tab.AvailableUpdateCount.ShouldBe(1);
+        fixture.Tab.HasAvailableUpdates.ShouldBeTrue();
+        fixture.Tab.UpdatesAvailableTitle.ShouldBe("1 mise à jour disponible");
+        fixture.Tab.LastCheckedText.ShouldBe("Dernière vérification : aujourd'hui");
+    }
+
+    [Fact]
+    public async Task CheckUpdatesAsync_NoUpdateFound_RowShowsNoBadge()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip", "configlib", "Config lib");
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+
+        await fixture.Tab.CheckUpdatesCommand.ExecuteAsync(null);
+
+        fixture.Tab.Mods.ShouldHaveSingleItem().HasUpdateAvailable.ShouldBeFalse();
+        fixture.Tab.HasAvailableUpdates.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task CheckUpdatesAsync_DisabledMod_IsStillCheckedAndCanBeBadged()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip.disabled", "configlib", "Config lib");
+        fixture.Server.UpdatesJson = ConfigLibUpdateJson;
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+
+        await fixture.Tab.CheckUpdatesCommand.ExecuteAsync(null);
+
+        var row = fixture.Tab.Mods.ShouldHaveSingleItem();
+        row.IsEnabled.ShouldBeFalse();
+        row.HasUpdateAvailable.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task CheckUpdatesAsync_StoresTheReportInTheSharedCacheForTheHomeCardPill()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip", "configlib", "Config lib");
+        fixture.Server.UpdatesJson = ConfigLibUpdateJson;
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+
+        await fixture.Tab.CheckUpdatesCommand.ExecuteAsync(null);
+
+        fixture.UpdateCache.TryGet(fixture.Slug)!.UpdateCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task CheckUpdatesAsync_ModDbUnreachable_ShowsAnErrorToastRatherThanCrashing()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip", "configlib", "Config lib");
+        fixture.Server.IsOnline = false;
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+
+        await fixture.Tab.CheckUpdatesCommand.ExecuteAsync(null);
+
+        fixture.Toasts.Shown.ShouldContain(toast => toast.Title == "Vérification impossible");
+        fixture.Tab.Mods.ShouldHaveSingleItem().HasUpdateAvailable.ShouldBeFalse();
+    }
+
+    // ── Mise à jour d'un mod ─────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RequestingAnUpdate_OpensThePlanDialogWithTheTargetVersion()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip", "configlib", "Config lib");
+        fixture.Server.UpdatesJson = ConfigLibUpdateJson;
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+        await fixture.Tab.CheckUpdatesCommand.ExecuteAsync(null);
+
+        await fixture.Tab.Mods.ShouldHaveSingleItem().UpdateCommand.ExecuteAsync(null);
+
+        var dialog = fixture.Overlay.Shown.ShouldHaveSingleItem().ShouldBeOfType<ModUpdatePlanDialogViewModel>();
+        dialog.Plan.Updated.Version.ShouldBe(ModVersion.Parse("1.11.1"));
+    }
+
+    [Fact]
+    public async Task RequestingAnUpdate_OtherInstalledModsDependingOnIt_AreListedInformativelyInTheDialog()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip", "configlib", "Config lib");
+        SeedMod(fixture, "carrycapacity-1.0.0.zip", "carrycapacity", "Carry Capacity", dependency: "configlib");
+        fixture.Server.UpdatesJson = ConfigLibUpdateJson;
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+        await fixture.Tab.CheckUpdatesCommand.ExecuteAsync(null);
+
+        var configLibRow = fixture.Tab.Mods.Single(row => row.Name == "Config lib");
+        await configLibRow.UpdateCommand.ExecuteAsync(null);
+
+        var dialog = (ModUpdatePlanDialogViewModel)fixture.Overlay.Shown[0];
+        dialog.HasDependents.ShouldBeTrue();
+        dialog.DependentsNote.ShouldBe("« Carry Capacity » dépend de ce mod.");
+    }
+
+    [Fact]
+    public async Task ConfirmingAnUpdate_ReplacesTheFileAndInvalidatesTheKnownUpdateState()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip", "configlib", "Config lib");
+        fixture.Server.UpdatesJson = ConfigLibUpdateJson;
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+        await fixture.Tab.CheckUpdatesCommand.ExecuteAsync(null);
+        await fixture.Tab.Mods.ShouldHaveSingleItem().UpdateCommand.ExecuteAsync(null);
+        var dialog = (ModUpdatePlanDialogViewModel)fixture.Overlay.Shown[0];
+
+        await dialog.ConfirmCommand.ExecuteAsync(null);
+
+        var row = fixture.Tab.Mods.ShouldHaveSingleItem();
+        row.Mod.Version.ShouldBe(ModVersion.Parse("1.11.1"));
+        row.HasUpdateAvailable.ShouldBeFalse();
+        fixture.Overlay.Active.ShouldBeNull();
+        fixture.Toasts.Shown.ShouldContain(toast => toast.Title == "Config lib mis à jour");
+
+        // Plus aucune affirmation de fraîcheur tant qu'une nouvelle vérification n'a pas eu lieu :
+        // même règle que la pastille de la carte d'Accueil (voir IModUpdateCheckCache).
+        fixture.Tab.LastCheckedText.ShouldBe("Dernière vérification : jamais");
+        fixture.UpdateCache.TryGet(fixture.Slug).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task TogglingAMod_InvalidatesTheKnownUpdateState()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip", "configlib", "Config lib");
+        fixture.Server.UpdatesJson = ConfigLibUpdateJson;
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+        await fixture.Tab.CheckUpdatesCommand.ExecuteAsync(null);
+        fixture.Tab.AvailableUpdateCount.ShouldBe(1);
+
+        fixture.Tab.Mods[0].IsEnabled = false;
+        await Task.Yield();
+
+        fixture.Tab.AvailableUpdateCount.ShouldBe(0);
+        fixture.UpdateCache.TryGet(fixture.Slug).ShouldBeNull();
+    }
+
+    // ── Tout mettre à jour ───────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task UpdateAllCommand_CannotExecute_WithoutAnyKnownUpdate()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip", "configlib", "Config lib");
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+        await fixture.Tab.CheckUpdatesCommand.ExecuteAsync(null);
+
+        fixture.Tab.UpdateAllCommand.CanExecute(null).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateAllCommand_ApplyAllAndReportsProgressThenClearsIt()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip", "configlib", "Config lib");
+        fixture.Server.UpdatesJson = ConfigLibUpdateJson;
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+        await fixture.Tab.CheckUpdatesCommand.ExecuteAsync(null);
+        fixture.Tab.UpdateAllCommand.CanExecute(null).ShouldBeTrue();
+
+        await fixture.Tab.UpdateAllCommand.ExecuteAsync(null);
+
+        fixture.Tab.Mods.ShouldHaveSingleItem().Mod.Version.ShouldBe(ModVersion.Parse("1.11.1"));
+        fixture.Tab.UpdateAllProgressText.ShouldBeEmpty();
+        fixture.Tab.AvailableUpdateCount.ShouldBe(0);
+        fixture.Toasts.Shown.ShouldContain(toast => toast.Title == "1 mod mis à jour");
+    }
+
     [Fact]
     public async Task Constructor_NullArguments_AreRejected()
     {
@@ -210,11 +428,17 @@ public sealed class InstanceModsTabViewModelTests
         var instances = new FileSystemInstanceRepository(fileSystem, Paths, new JsonFileStore(fileSystem), new InstanceMetadataMigrationPipeline([]));
         var mods = ModDbDoubles.CreateRepository(fileSystem, instances, Paths);
         var installService = ModDbDoubles.CreateInstallService(fileSystem, instances, mods, Paths, new FakeClock(Now));
+        var updateChecker = ModDbDoubles.CreateUpdateChecker(fileSystem, instances, mods, Paths, new FakeClock(Now));
+        var updateCache = new ModUpdateCheckCache();
+        var clock = new FakeClock(Now);
 
-        Should.Throw<ArgumentException>(() => new InstanceModsTabViewModel(string.Empty, mods, installService, fixture.Overlay, fixture.Toasts));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", null!, installService, fixture.Overlay, fixture.Toasts));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, null!, fixture.Overlay, fixture.Toasts));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, null!, fixture.Toasts));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, fixture.Overlay, null!));
+        Should.Throw<ArgumentException>(() => new InstanceModsTabViewModel(string.Empty, mods, installService, updateChecker, updateCache, clock, fixture.Overlay, fixture.Toasts));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", null!, installService, updateChecker, updateCache, clock, fixture.Overlay, fixture.Toasts));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, null!, updateChecker, updateCache, clock, fixture.Overlay, fixture.Toasts));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, null!, updateCache, clock, fixture.Overlay, fixture.Toasts));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, updateChecker, null!, clock, fixture.Overlay, fixture.Toasts));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, updateChecker, updateCache, null!, fixture.Overlay, fixture.Toasts));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, updateChecker, updateCache, clock, null!, fixture.Toasts));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, updateChecker, updateCache, clock, fixture.Overlay, null!));
     }
 }

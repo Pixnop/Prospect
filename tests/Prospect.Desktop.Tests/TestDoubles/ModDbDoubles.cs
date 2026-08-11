@@ -62,6 +62,15 @@ internal static class ModDbDoubles
             clock,
             new RetryPolicy(RetryOptions.NoDelay, (_, _) => Task.CompletedTask));
 
+    public static ModUpdateChecker CreateUpdateChecker(
+        IFileSystem fileSystem,
+        IInstanceRepository instances,
+        IInstalledModRepository mods,
+        AppPaths paths,
+        IClock clock,
+        HttpMessageHandler? handler = null)
+        => new(CreateClient(fileSystem, paths, clock, handler), mods, instances, clock);
+
     /// <summary>Pose une archive de mod valide dans le dossier <c>data/Mods/</c> d'une instance.</summary>
     public static void SeedMod(MockFileSystem fileSystem, string modsDirectory, string fileName, string modInfoJson)
         => fileSystem.AddFile(fileSystem.Path.Combine(modsDirectory, fileName), new MockFileData(BuildArchive(modInfoJson)));
@@ -171,6 +180,12 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
     /// <summary>Identifiants de mods à considérer comme compatibles avec la version demandée.</summary>
     public IReadOnlyList<int> CompatibleModIds { get; set; } = [1783, 792];
 
+    /// <summary>
+    /// Corps de <c>/api/updates</c>. Aucune mise à jour par défaut, cohérent avec le catalogue
+    /// figé de ce faux serveur : un test qui veut en simuler une écrase cette valeur.
+    /// </summary>
+    public string UpdatesJson { get; set; } = """{"statuscode":"200","updates":{}}""";
+
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         => Task.FromResult(Respond(request));
 
@@ -203,6 +218,7 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
             "/api/mod/1783" or "/api/mod/configlib" => ConfigLibJson,
             "/api/mod/792" or "/api/mod/betterruins" => BetterRuinsJson,
             "/api/v2/mods/install-information" => """{ "data": {} }""",
+            "/api/updates" => UpdatesJson,
             _ => """{"statuscode":"404"}""",
         };
 
