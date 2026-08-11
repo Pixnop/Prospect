@@ -166,11 +166,11 @@ public sealed partial class WizardViewModel : ObservableObject
         CreateError = null;
         try
         {
-            var created = await _instanceService.CreateAsync(Name.Trim(), version).ConfigureAwait(true);
+            var created = await _instanceService.CreateAsync(Name.Trim(), version, CancellationToken.None).ConfigureAwait(true);
 
             if (SelectedIconKey != IconCatalog[0].Key)
             {
-                created = await _instanceService.SetIconAsync(created.Slug, $"builtin:{SelectedIconKey}").ConfigureAwait(true);
+                created = await _instanceService.SetIconAsync(created.Slug, $"builtin:{SelectedIconKey}", CancellationToken.None).ConfigureAwait(true);
             }
 
             Created?.Invoke(this, created);

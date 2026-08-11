@@ -57,7 +57,7 @@ public sealed partial class DeleteInstanceDialogViewModel : ObservableObject
         IsDeleting = true;
         try
         {
-            await _instanceService.DeleteAsync(_slug).ConfigureAwait(true);
+            await _instanceService.DeleteAsync(_slug, CancellationToken.None).ConfigureAwait(true);
             _overlay.Close();
             await _requestRefresh().ConfigureAwait(true);
         }

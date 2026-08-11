@@ -122,7 +122,7 @@ public sealed partial class HomeViewModel : ObservableObject
                 RelativeDateFormatter.Format(record.Metadata.LastLaunchedUtc, now),
                 _instanceService,
                 _overlay,
-                () => RefreshAsync())));
+                () => RefreshAsync(CancellationToken.None))));
 
             BrokenInstances.Clear();
             foreach (var broken in result.BrokenInstances)
@@ -166,7 +166,7 @@ public sealed partial class HomeViewModel : ObservableObject
 
     private async Task HandleInstanceCreatedAsync(InstanceRecord record)
     {
-        await RefreshAsync().ConfigureAwait(true);
+        await RefreshAsync(CancellationToken.None).ConfigureAwait(true);
         _toasts.Show(
             ToastTone.Success,
             UiText.Toasts.InstanceCreatedTitle,

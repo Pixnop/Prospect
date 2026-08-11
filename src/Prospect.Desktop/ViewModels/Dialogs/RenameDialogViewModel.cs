@@ -61,7 +61,7 @@ public sealed partial class RenameDialogViewModel : ObservableObject
         IsSaving = true;
         try
         {
-            await _instanceService.RenameAsync(_slug, Name.Trim()).ConfigureAwait(true);
+            await _instanceService.RenameAsync(_slug, Name.Trim(), CancellationToken.None).ConfigureAwait(true);
             _overlay.Close();
             await _requestRefresh().ConfigureAwait(true);
         }
