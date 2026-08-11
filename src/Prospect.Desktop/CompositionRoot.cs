@@ -7,10 +7,13 @@ using Prospect.Core.GameVersions;
 using Prospect.Core.Http;
 using Prospect.Core.Instances;
 using Prospect.Core.Instances.Migrations;
+using Prospect.Core.Launching;
+using Prospect.Core.Runtime;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.ViewModels.Downloads;
 using Prospect.Desktop.ViewModels.Home;
+using Prospect.Desktop.ViewModels.Instance;
 using Prospect.Desktop.ViewModels.Shell;
 using Prospect.Desktop.ViewModels.Versions;
 using Prospect.Desktop.ViewModels.Wizard;
@@ -61,6 +64,7 @@ public static class CompositionRoot
         services.AddSingleton<InstanceService>();
 
         AddGameVersions(services, httpMessageHandler);
+        AddLaunching(services);
 
         // Services Desktop transverses.
         services.AddSingleton<IOverlayService, OverlayService>();
@@ -78,6 +82,23 @@ public static class CompositionRoot
         // plutôt qu'en portant lui-même toutes ses dépendances.
         services.AddTransient<WizardViewModel>();
         services.AddSingleton<Func<WizardViewModel>>(provider => provider.GetRequiredService<WizardViewModel>);
+
+        // La page de détail d'instance est elle aussi éphémère (une par instance ouverte), mais
+        // paramétrée par un slug que le conteneur ne connaît qu'à l'usage : la fabrique construit
+        // donc l'instance à la main plutôt que de déclarer un AddTransient résolu par type, seule
+        // façon d'injecter un paramètre runtime avec Microsoft.Extensions.DependencyInjection.
+        services.AddSingleton<Func<string, InstanceDetailViewModel>>(provider => slug => new InstanceDetailViewModel(
+            slug,
+            provider.GetRequiredService<InstanceService>(),
+            provider.GetRequiredService<IInstanceRepository>(),
+            provider.GetRequiredService<GameLauncher>(),
+            provider.GetRequiredService<RunningInstanceTracker>(),
+            provider.GetRequiredService<IAppEnvironment>(),
+            provider.GetRequiredService<IFileSystem>(),
+            provider.GetRequiredService<IOverlayService>(),
+            provider.GetRequiredService<IToastService>(),
+            provider.GetRequiredService<IUiDispatcher>(),
+            provider.GetRequiredService<IClock>()));
 
         // Fenêtre.
         services.AddSingleton<MainWindow>();
@@ -116,6 +137,26 @@ public static class CompositionRoot
             .Resolve(provider.GetRequiredService<IAppEnvironment>().CurrentOperatingSystem));
 
         services.AddSingleton<GameInstallService>();
+    }
+
+    // Miroir d'AddGameVersions pour le lancement (docs/architecture.md, section « 3. Lancement ») :
+    // détection du runtime .NET, stratégie de lancement par OS résolue une fois ici, suivi des
+    // processus en cours, façade GameLauncher. IProcessRunner et IClock sont déjà enregistrés plus
+    // haut (effets de bord du Core), réutilisés tels quels.
+    private static void AddLaunching(IServiceCollection services)
+    {
+        services.AddSingleton<IDotnetLocator, DotnetLocator>();
+
+        services.AddSingleton<LinuxGameLaunchStrategy>();
+        services.AddSingleton<WindowsGameLaunchStrategy>();
+        services.AddSingleton<MacGameLaunchStrategy>();
+        services.AddSingleton<GameLaunchStrategySelector>();
+        services.AddSingleton<IGameLaunchStrategy>(provider => provider
+            .GetRequiredService<GameLaunchStrategySelector>()
+            .Resolve(provider.GetRequiredService<IAppEnvironment>().CurrentOperatingSystem));
+
+        services.AddSingleton<RunningInstanceTracker>();
+        services.AddSingleton<GameLauncher>();
     }
 
     // disposeHandler: false parce qu'un même gestionnaire factice sert les deux clients d'un test.

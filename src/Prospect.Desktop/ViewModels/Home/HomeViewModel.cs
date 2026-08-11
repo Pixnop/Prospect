@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using Prospect.Core.Common;
 using Prospect.Core.Instances;
+using Prospect.Core.Launching;
 using Prospect.Desktop.Formatting;
 using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
@@ -25,9 +26,12 @@ public sealed partial class HomeViewModel : ObservableObject
 {
     private readonly InstanceService _instanceService;
     private readonly IInstanceRepository _repository;
+    private readonly GameLauncher _launcher;
+    private readonly RunningInstanceTracker _tracker;
     private readonly IClock _clock;
     private readonly IOverlayService _overlay;
     private readonly IToastService _toasts;
+    private readonly IUiDispatcher _dispatcher;
     private readonly Func<WizardViewModel> _wizardFactory;
     private readonly List<InstanceCardViewModel> _allInstances = [];
     private readonly NewInstanceTileViewModel _newInstanceTile;
@@ -35,26 +39,38 @@ public sealed partial class HomeViewModel : ObservableObject
     public HomeViewModel(
         InstanceService instanceService,
         IInstanceRepository repository,
+        GameLauncher launcher,
+        RunningInstanceTracker tracker,
         IClock clock,
         IOverlayService overlay,
         IToastService toasts,
+        IUiDispatcher dispatcher,
         Func<WizardViewModel> wizardFactory)
     {
         ArgumentNullException.ThrowIfNull(instanceService);
         ArgumentNullException.ThrowIfNull(repository);
+        ArgumentNullException.ThrowIfNull(launcher);
+        ArgumentNullException.ThrowIfNull(tracker);
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(toasts);
+        ArgumentNullException.ThrowIfNull(dispatcher);
         ArgumentNullException.ThrowIfNull(wizardFactory);
 
         _instanceService = instanceService;
         _repository = repository;
+        _launcher = launcher;
+        _tracker = tracker;
         _clock = clock;
         _overlay = overlay;
         _toasts = toasts;
+        _dispatcher = dispatcher;
         _wizardFactory = wizardFactory;
         _newInstanceTile = new NewInstanceTileViewModel(NewInstance);
     }
+
+    /// <summary>Levé quand une carte est ouverte (clic hors bouton Jouer/Arrêter et menu) : la page de détail correspondante.</summary>
+    public event EventHandler<string>? InstanceOpenRequested;
 
     public ObservableCollection<InstanceCardViewModel> Instances { get; } = new();
 
@@ -120,13 +136,32 @@ public sealed partial class HomeViewModel : ObservableObject
             var result = await _repository.ScanAsync(cancellationToken).ConfigureAwait(true);
             var now = _clock.UtcNow;
 
+            // Chaque carte s'abonne à RunningInstanceTracker.StatusChanged (un singleton qui vit
+            // toute la durée de l'application) : sans ce Dispose, les cartes remplacées à chaque
+            // rafraîchissement s'accumuleraient indéfiniment côté tracker (voir la docstring de
+            // InstanceCardViewModel.Dispose).
+            foreach (var previous in _allInstances)
+            {
+                previous.Dispose();
+            }
+
             _allInstances.Clear();
-            _allInstances.AddRange(result.Instances.Select(record => new InstanceCardViewModel(
-                record,
-                RelativeDateFormatter.Format(record.Metadata.LastLaunchedUtc, now),
-                _instanceService,
-                _overlay,
-                () => RefreshAsync(CancellationToken.None))));
+            _allInstances.AddRange(result.Instances.Select(record =>
+            {
+                var card = new InstanceCardViewModel(
+                    record,
+                    RelativeDateFormatter.Format(record.Metadata.LastLaunchedUtc, now),
+                    _instanceService,
+                    _launcher,
+                    _tracker,
+                    _overlay,
+                    _toasts,
+                    _dispatcher,
+                    () => RefreshAsync(CancellationToken.None));
+                card.OpenRequested += (_, slug) => InstanceOpenRequested?.Invoke(this, slug);
+
+                return card;
+            }));
 
             BrokenInstances.Clear();
             foreach (var broken in result.BrokenInstances)

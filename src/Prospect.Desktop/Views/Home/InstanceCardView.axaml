@@ -12,60 +12,82 @@
     Port de design/components/launcher/InstanceCard.jsx. Écart documenté par rapport à la
     maquette : la ligne meta n'affiche pas de nombre de mods (le domaine Mods n'existe pas encore,
     rien ne permet de le calculer aujourd'hui) — seule la dernière session humanisée reste.
-    « Jouer » est en permanence désactivé pour cette PR (tooltip explicite), donc son icône garde
-    la couleur désactivée en dur plutôt que d'essayer de suivre l'état du bouton.
+
+    Ouverture de la page de détail : la vignette + le nom + la dernière session sont le CONTENU
+    d'un Button "cardHit" sans le moindre chrome propre (Classes="cardHit", voir Button.axaml) —
+    pas un calque transparent posé derrière eux. Un calque derrière ne fonctionne que là où rien
+    d'autre ne couvre le pixel (Background=null laisse passer le clic, mais la vignette a un
+    Background dégradé bien réel, donc opaque au clic) ; en faisant du bloc cliquable le contenu
+    RÉEL du bouton, chaque pixel de cette zone déclenche vraiment OpenCommand. La rangée d'actions
+    (Jouer/Arrêter + menu) reste un Grid ordinaire, frère du bouton plutôt qu'imbriqué dedans : un
+    bouton dans un bouton capte correctement son propre clic sans le laisser remonter, mais autant
+    ne pas en dépendre quand une structure plus simple donne la même garantie.
   -->
 
   <Border Classes="card" Width="212" Margin="0,0,20,20">
     <StackPanel>
-      <Panel Height="96" ClipToBounds="True">
-        <Panel.Background>
-          <LinearGradientBrush StartPoint="30%,0%" EndPoint="70%,100%">
-            <GradientStop Color="{StaticResource Copper900}" Offset="0" />
-            <GradientStop Color="{StaticResource Stone850}" Offset="1" />
-          </LinearGradientBrush>
-        </Panel.Background>
-        <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" />
-        <Path Width="26" Height="26" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
-              Data="{Binding IconKey, Converter={x:Static conv:IconKeyToGeometryConverter.Instance}}"
-              Stroke="{DynamicResource Text4}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
-        <ContentControl Classes="badge" Content="{Binding Version}"
-                        HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
-                        Classes.stable="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=stable}"
-                        Classes.unstable="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=unstable}"
-                        Classes.pre="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=pre}" />
-      </Panel>
+      <Button Classes="cardHit" Command="{Binding OpenCommand}">
+        <StackPanel>
+          <Panel Height="96" ClipToBounds="True">
+            <Panel.Background>
+              <LinearGradientBrush StartPoint="30%,0%" EndPoint="70%,100%">
+                <GradientStop Color="{StaticResource Copper900}" Offset="0" />
+                <GradientStop Color="{StaticResource Stone850}" Offset="1" />
+              </LinearGradientBrush>
+            </Panel.Background>
+            <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" />
+            <Path Width="26" Height="26" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+                  Data="{Binding IconKey, Converter={x:Static conv:IconKeyToGeometryConverter.Instance}}"
+                  Stroke="{DynamicResource Text4}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+            <ContentControl Classes="badge" Content="{Binding Version}"
+                            HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                            Classes.stable="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=stable}"
+                            Classes.unstable="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=unstable}"
+                            Classes.pre="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=pre}" />
+          </Panel>
 
-      <StackPanel Margin="16">
-        <TextBlock Text="{Binding Name}"
-                   FontSize="{StaticResource FsSubheading}" FontWeight="{StaticResource FwSemibold}"
-                   Foreground="{DynamicResource Text1}" TextTrimming="CharacterEllipsis" />
-        <TextBlock Text="{Binding LastPlayedText}" Margin="0,4,0,0"
-                   FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsCaption}"
-                   Foreground="{DynamicResource Text3}" />
+          <StackPanel Margin="16,16,16,0">
+            <TextBlock Text="{Binding Name}"
+                       FontSize="{StaticResource FsSubheading}" FontWeight="{StaticResource FwSemibold}"
+                       Foreground="{DynamicResource Text1}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding LastPlayedText}" Margin="0,4,0,0"
+                       FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsCaption}"
+                       Foreground="{DynamicResource Text3}" />
+          </StackPanel>
+        </StackPanel>
+      </Button>
 
-        <Grid ColumnDefinitions="*,Auto" Margin="0,14,0,0">
-          <Button Grid.Column="0" IsEnabled="False" HorizontalAlignment="Stretch" ToolTip.Tip="{StaticResource Card_PlayTooltip}">
-            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-              <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.play}"
-                    Stroke="{DynamicResource Text4}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
-              <TextBlock Text="{StaticResource Card_Play}" />
-            </StackPanel>
-          </Button>
+      <Grid ColumnDefinitions="*,Auto" Margin="16,14,16,16">
+        <Button Grid.Column="0" IsVisible="{Binding !IsRunning}" Command="{Binding PlayCommand}" HorizontalAlignment="Stretch">
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+            <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.play}"
+                  Stroke="{DynamicResource TextOnAccent}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round"
+                  IsVisible="{Binding !IsLaunching}" />
+            <TextBlock Text="{StaticResource Card_Play}" IsVisible="{Binding !IsLaunching}" />
+            <TextBlock Text="{StaticResource Card_Launching}" IsVisible="{Binding IsLaunching}" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="0" Classes="secondary" IsVisible="{Binding IsRunning}"
+                Command="{Binding RequestStopCommand}" HorizontalAlignment="Stretch">
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+            <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.square}"
+                  Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+            <TextBlock Text="{StaticResource Card_Stop}" />
+          </StackPanel>
+        </Button>
 
-          <Button Grid.Column="1" Classes="icon bordered" Margin="8,0,0,0" ToolTip.Tip="{StaticResource Card_Actions}">
-            <Path Width="16" Height="16" Stretch="Uniform" Data="{StaticResource Icon.more}"
-                  Stroke="{DynamicResource Text2}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
-            <Button.Flyout>
-              <MenuFlyout Placement="Bottom">
-                <MenuItem Header="{StaticResource Card_Rename}" Command="{Binding RenameCommand}" />
-                <MenuItem Header="{StaticResource Card_Duplicate}" Command="{Binding DuplicateCommand}" />
-                <MenuItem Header="{StaticResource Card_Delete}" Command="{Binding DeleteCommand}" />
-              </MenuFlyout>
-            </Button.Flyout>
-          </Button>
-        </Grid>
-      </StackPanel>
+        <Button Grid.Column="1" Classes="icon bordered" Margin="8,0,0,0" ToolTip.Tip="{StaticResource Card_Actions}">
+          <Path Width="16" Height="16" Stretch="Uniform" Data="{StaticResource Icon.more}"
+                Stroke="{DynamicResource Text2}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+          <Button.Flyout>
+            <MenuFlyout Placement="Bottom">
+              <MenuItem Header="{StaticResource Card_Rename}" Command="{Binding RenameCommand}" />
+              <MenuItem Header="{StaticResource Card_Duplicate}" Command="{Binding DuplicateCommand}" />
+              <MenuItem Header="{StaticResource Card_Delete}" Command="{Binding DeleteCommand}" />
+            </MenuFlyout>
+          </Button.Flyout>
+        </Button>
+      </Grid>
     </StackPanel>
   </Border>
 </UserControl>
