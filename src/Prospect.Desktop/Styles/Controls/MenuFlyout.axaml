@@ -1,0 +1,21 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Re-teinte légère des MenuItem natifs (FluentTheme) utilisés par le menu d'actions d'une carte
+    d'instance. Le design fourni ne définit aucun composant « menu contextuel » (voir
+    design/readme.md, l'inventaire de composants n'en liste pas) : seules les propriétés directes
+    de MenuItem (police, couleurs) sont retouchées, sans recouvrir tout son ControlTheme.
+  -->
+
+  <Style Selector="MenuItem">
+    <Setter Property="FontFamily" Value="{DynamicResource FontSans}" />
+    <Setter Property="FontSize" Value="{StaticResource FsBodySm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Text2}" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="MenuItem:pointerover">
+    <Setter Property="Foreground" Value="{DynamicResource Text1}" />
+  </Style>
+
+</Styles>

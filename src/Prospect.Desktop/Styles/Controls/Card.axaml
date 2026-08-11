@@ -1,0 +1,49 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Port de .pr-card (components/components.css). Cible Border directement (racine Styles, comme
+    Badge.axaml) plutôt qu'un ControlTheme : Border rend nativement Background/BorderBrush/
+    BorderThickness/CornerRadius/BoxShadow, il n'y a pas de gabarit à recouvrir.
+
+    La variante dashed (carte « nouvelle instance ») n'est volontairement pas ici : Border n'expose
+    pas de bordure en pointillés (ni Avalonia ni WPF ne le font). Elle est composée directement
+    dans Views/Home/HomeView.axaml avec un Rectangle à StrokeDashArray, la solution habituelle
+    pour ce besoin précis.
+
+    :pressed n'est pas porté (variante interactive pressée côté CSS) : ce pseudo-état n'existe que
+    pour les contrôles qui suivent une pression (Button...), pas pour un Border nu, qui n'a pas
+    cette notion.
+  -->
+
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusMd}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource Elev1}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+
+  <Style Selector="Border.card.raised">
+    <Setter Property="Background" Value="{DynamicResource BgSurfaceRaised}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource Elev2}" />
+  </Style>
+
+  <Style Selector="Border.card.flat">
+    <Setter Property="BoxShadow" Value="{StaticResource Elev0}" />
+  </Style>
+
+  <Style Selector="Border.card.interactive">
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Border.card.interactive:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource Elev2}" />
+  </Style>
+
+  <Style Selector="Border.card.selected">
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+  </Style>
+
+</Styles>

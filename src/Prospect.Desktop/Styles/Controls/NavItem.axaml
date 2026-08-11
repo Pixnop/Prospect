@@ -1,0 +1,28 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Port de .pr-navitem (components/components.css). Réutilise le ControlTheme Button existant en
+    combinant Classes="ghost navitem" : ghost fournit déjà transparent, survol en bg-hover et
+    pressed en bg-active, identiques au repos de pr-navitem. navitem n'ajoute que la mise en page
+    (hauteur de ligne, bloc pleine largeur) et l'état actif (fond bg-selected, texte en medium).
+    Écart volontaire avec le design : pas de barre d'accent verticale sur l'entrée active (un
+    pseudo-élément CSS dans la source), le fond teinté suffit à signaler l'état sans recouvrir le
+    gabarit de Button pour cette seule variante.
+  -->
+
+  <Style Selector="Button.navitem">
+    <Setter Property="Height" Value="34" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="FontWeight" Value="{StaticResource FwRegular}" />
+  </Style>
+
+  <Style Selector="Button.navitem.active">
+    <Setter Property="Background" Value="{DynamicResource BgSelected}" />
+    <Setter Property="Foreground" Value="{DynamicResource Text1}" />
+    <Setter Property="FontWeight" Value="{StaticResource FwMedium}" />
+  </Style>
+
+</Styles>
