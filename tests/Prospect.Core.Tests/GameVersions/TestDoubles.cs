@@ -18,26 +18,6 @@ internal sealed class RecordingUnixFilePermissions : IUnixFilePermissions
     public void SetMode(string path, UnixFileMode mode) => Modes[path] = mode;
 }
 
-/// <summary>
-/// Double de test d'<see cref="IProcessRunner"/> : enregistre ce qu'on a voulu lancer et rend le
-/// code de sortie que le test a choisi. Aucun processus n'est démarré.
-/// </summary>
-internal sealed class FakeProcessRunner : IProcessRunner
-{
-    public List<ProcessRunRequest> Requests { get; } = [];
-
-    public int ExitCode { get; set; }
-
-    public string StandardError { get; set; } = string.Empty;
-
-    public Task<ProcessRunResult> RunAsync(ProcessRunRequest request, CancellationToken cancellationToken = default)
-    {
-        Requests.Add(request);
-
-        return Task.FromResult(new ProcessRunResult(ExitCode, string.Empty, StandardError));
-    }
-}
-
 /// <summary>Double de test d'<see cref="IGameVersionCatalog"/> nourri d'un catalogue fixe.</summary>
 internal sealed class FakeGameVersionCatalog : IGameVersionCatalog
 {

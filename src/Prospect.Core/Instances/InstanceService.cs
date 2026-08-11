@@ -149,6 +149,64 @@ public sealed class InstanceService
     }
 
     /// <summary>
+    /// Remplace les réglages de lancement (arguments supplémentaires et variables
+    /// d'environnement) d'une instance. Même contrat que <see cref="RenameAsync"/> et
+    /// <see cref="SetIconAsync"/> : un seul champ change, consommé par l'onglet Options de la page
+    /// de détail.
+    /// </summary>
+    /// <exception cref="InstanceNotFoundException">Aucune instance pour <paramref name="slug"/>.</exception>
+    public async Task<InstanceRecord> UpdateLaunchSettingsAsync(string slug, InstanceLaunchSettings settings, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var current = await _repository.LoadAsync(slug, cancellationToken).ConfigureAwait(false);
+        var updated = current with { Metadata = current.Metadata with { Launch = settings } };
+        await _repository.SaveAsync(updated, cancellationToken).ConfigureAwait(false);
+
+        return updated;
+    }
+
+    /// <summary>
+    /// Marque l'instance comme lancée à l'instant courant (<see cref="InstanceMetadata.LastLaunchedUtc"/>).
+    /// Appelée par <c>RunningInstanceTracker</c> au DÉMARRAGE du processus de jeu, pas à sa sortie :
+    /// « dernier lancement » décrit le moment où l'utilisateur a cliqué sur Jouer, et une session
+    /// encore en cours doit immédiatement remonter en tête du tri par défaut de l'Accueil
+    /// (<c>HomeSortMode.LastLaunched</c>) sans attendre que le joueur quitte le jeu, ce qui peut
+    /// prendre des heures.
+    /// </summary>
+    /// <exception cref="InstanceNotFoundException">Aucune instance pour <paramref name="slug"/>.</exception>
+    public async Task<InstanceRecord> MarkLaunchedAsync(string slug, CancellationToken cancellationToken = default)
+    {
+        var current = await _repository.LoadAsync(slug, cancellationToken).ConfigureAwait(false);
+        var updated = current with { Metadata = current.Metadata with { LastLaunchedUtc = _clock.UtcNow } };
+        await _repository.SaveAsync(updated, cancellationToken).ConfigureAwait(false);
+
+        return updated;
+    }
+
+    /// <summary>
+    /// Ajoute <paramref name="additionalSeconds"/> au temps de jeu cumulé de l'instance
+    /// (<see cref="InstanceMetadata.TotalPlaytimeSeconds"/>). Appelée par
+    /// <c>RunningInstanceTracker</c> à la SORTIE du processus de jeu, avec la durée réellement
+    /// écoulée depuis le lancement : contrairement à <see cref="MarkLaunchedAsync"/>, cette
+    /// donnée n'a de sens qu'une fois la session terminée.
+    /// </summary>
+    /// <exception cref="InstanceNotFoundException">Aucune instance pour <paramref name="slug"/>.</exception>
+    public async Task<InstanceRecord> AddPlaytimeAsync(string slug, long additionalSeconds, CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(additionalSeconds);
+
+        var current = await _repository.LoadAsync(slug, cancellationToken).ConfigureAwait(false);
+        var updated = current with
+        {
+            Metadata = current.Metadata with { TotalPlaytimeSeconds = current.Metadata.TotalPlaytimeSeconds + additionalSeconds },
+        };
+        await _repository.SaveAsync(updated, cancellationToken).ConfigureAwait(false);
+
+        return updated;
+    }
+
+    /// <summary>
     /// Supprime définitivement une instance (dossier <c>instances/&lt;slug&gt;</c> entier, dont
     /// <c>data/</c>). La double confirmation face à l'utilisateur est la responsabilité de l'UI,
     /// pas de ce service.

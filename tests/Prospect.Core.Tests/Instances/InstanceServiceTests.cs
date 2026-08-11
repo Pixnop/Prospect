@@ -345,6 +345,127 @@ public class InstanceServiceTests
     }
 
     [Fact]
+    public async Task UpdateLaunchSettingsAsync_ExistingInstance_ReplacesLaunchSettings()
+    {
+        var (service, _, _, _) = CreateService();
+        var created = await service.CreateAsync("Homestead", SampleVersion, CancellationToken.None);
+        var settings = new InstanceLaunchSettings
+        {
+            ExtraArgs = ["--logfile", "custom.log"],
+            Env = new Dictionary<string, string> { ["MESA_GLTHREAD"] = "true" },
+        };
+
+        var updated = await service.UpdateLaunchSettingsAsync(created.Slug, settings, CancellationToken.None);
+
+        updated.Metadata.Launch.ShouldBe(settings);
+        updated.Metadata.Id.ShouldBe(created.Metadata.Id);
+    }
+
+    [Fact]
+    public async Task UpdateLaunchSettingsAsync_ExistingInstance_PersistsLaunchSettings()
+    {
+        var (service, repository, _, _) = CreateService();
+        var created = await service.CreateAsync("Homestead", SampleVersion, CancellationToken.None);
+        var settings = new InstanceLaunchSettings { ExtraArgs = ["--dev"] };
+
+        await service.UpdateLaunchSettingsAsync(created.Slug, settings, CancellationToken.None);
+        var reloaded = await repository.LoadAsync(created.Slug, CancellationToken.None);
+
+        reloaded.Metadata.Launch.ShouldBe(settings);
+    }
+
+    [Fact]
+    public async Task UpdateLaunchSettingsAsync_UnknownSlug_ThrowsInstanceNotFoundException()
+    {
+        var (service, _, _, _) = CreateService();
+
+        await Should.ThrowAsync<InstanceNotFoundException>(
+            () => service.UpdateLaunchSettingsAsync("ghost", InstanceLaunchSettings.Empty, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task UpdateLaunchSettingsAsync_NullSettings_ThrowsArgumentNullException()
+    {
+        var (service, _, _, _) = CreateService();
+        var created = await service.CreateAsync("Homestead", SampleVersion, CancellationToken.None);
+
+        await Should.ThrowAsync<ArgumentNullException>(() => service.UpdateLaunchSettingsAsync(created.Slug, null!, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task MarkLaunchedAsync_ExistingInstance_SetsLastLaunchedUtcFromClock()
+    {
+        var (service, _, _, clock) = CreateService();
+        var created = await service.CreateAsync("Homestead", SampleVersion, CancellationToken.None);
+        clock.UtcNow = Now.AddHours(2);
+
+        var updated = await service.MarkLaunchedAsync(created.Slug, CancellationToken.None);
+
+        updated.Metadata.LastLaunchedUtc.ShouldBe(Now.AddHours(2));
+    }
+
+    [Fact]
+    public async Task MarkLaunchedAsync_ExistingInstance_PersistsLastLaunchedUtc()
+    {
+        var (service, repository, _, clock) = CreateService();
+        var created = await service.CreateAsync("Homestead", SampleVersion, CancellationToken.None);
+        clock.UtcNow = Now.AddHours(2);
+
+        await service.MarkLaunchedAsync(created.Slug, CancellationToken.None);
+        var reloaded = await repository.LoadAsync(created.Slug, CancellationToken.None);
+
+        reloaded.Metadata.LastLaunchedUtc.ShouldBe(Now.AddHours(2));
+    }
+
+    [Fact]
+    public async Task MarkLaunchedAsync_UnknownSlug_ThrowsInstanceNotFoundException()
+    {
+        var (service, _, _, _) = CreateService();
+
+        await Should.ThrowAsync<InstanceNotFoundException>(() => service.MarkLaunchedAsync("ghost", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task AddPlaytimeAsync_FirstSession_SetsTotalToElapsed()
+    {
+        var (service, _, _, _) = CreateService();
+        var created = await service.CreateAsync("Homestead", SampleVersion, CancellationToken.None);
+
+        var updated = await service.AddPlaytimeAsync(created.Slug, 1800, CancellationToken.None);
+
+        updated.Metadata.TotalPlaytimeSeconds.ShouldBe(1800L);
+    }
+
+    [Fact]
+    public async Task AddPlaytimeAsync_SecondSession_AccumulatesOnTopOfPrevious()
+    {
+        var (service, _, _, _) = CreateService();
+        var created = await service.CreateAsync("Homestead", SampleVersion, CancellationToken.None);
+        await service.AddPlaytimeAsync(created.Slug, 1800, CancellationToken.None);
+
+        var updated = await service.AddPlaytimeAsync(created.Slug, 600, CancellationToken.None);
+
+        updated.Metadata.TotalPlaytimeSeconds.ShouldBe(2400L);
+    }
+
+    [Fact]
+    public async Task AddPlaytimeAsync_NegativeSeconds_ThrowsArgumentOutOfRangeException()
+    {
+        var (service, _, _, _) = CreateService();
+        var created = await service.CreateAsync("Homestead", SampleVersion, CancellationToken.None);
+
+        await Should.ThrowAsync<ArgumentOutOfRangeException>(() => service.AddPlaytimeAsync(created.Slug, -1, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task AddPlaytimeAsync_UnknownSlug_ThrowsInstanceNotFoundException()
+    {
+        var (service, _, _, _) = CreateService();
+
+        await Should.ThrowAsync<InstanceNotFoundException>(() => service.AddPlaytimeAsync("ghost", 60, CancellationToken.None));
+    }
+
+    [Fact]
     public async Task DeleteAsync_ExistingInstance_RemovesInstanceDirectoryEntirely()
     {
         var (service, repository, fileSystem, _) = CreateService();

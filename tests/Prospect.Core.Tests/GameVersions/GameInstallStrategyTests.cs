@@ -2,6 +2,7 @@ using System.IO.Abstractions.TestingHelpers;
 
 using Prospect.Core.GameVersions;
 using Prospect.Core.Storage;
+using Prospect.Core.Tests.Common;
 
 using Shouldly;
 
