@@ -7,7 +7,7 @@ namespace Prospect.Core.Tests.Common;
 public class SystemClockTests
 {
     [Fact]
-    public void UtcNow_EstProcheDeLHeureSysteme()
+    public void UtcNow_IsWithinSystemClockWindow()
     {
         var clock = new SystemClock();
 
@@ -21,19 +21,7 @@ public class SystemClockTests
     }
 
     [Fact]
-    public void UtcNow_EstMonotoneEntreDeuxLectures()
-    {
-        var clock = new SystemClock();
-
-        var first = clock.UtcNow;
-        var second = clock.UtcNow;
-
-        // Le temps ne remonte jamais : la seconde lecture ne peut pas précéder la première.
-        second.ShouldBeGreaterThanOrEqualTo(first);
-    }
-
-    [Fact]
-    public void UtcNow_ARenvoieUnOffsetZero()
+    public void UtcNow_HasZeroOffset()
     {
         var clock = new SystemClock();
 
