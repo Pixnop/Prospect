@@ -26,6 +26,10 @@
     <!-- Système de fichiers abstrait (Storage) -->
     <PackageVersion Include="System.IO.Abstractions" Version="22.2.0" />
     <PackageVersion Include="System.IO.Abstractions.TestingHelpers" Version="22.2.0" />
+
+    <!-- Composition root et MVVM (Desktop) -->
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
   </ItemGroup>
 
 </Project>

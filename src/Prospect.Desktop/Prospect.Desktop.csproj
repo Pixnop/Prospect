@@ -4,6 +4,17 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Décision d'architecture (docs/architecture.md) : bindings compilés partout. Chaque vue
+         doit déclarer x:DataType ; une vue qui l'omet échoue à la compilation plutôt que de
+         retomber silencieusement sur une liaison par réflexion. -->
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- AVLN3001 : MainWindow n'a plus de constructeur sans paramètre depuis son passage à
+         l'injection de constructeur (ShellViewModel résolu par le conteneur DI, voir
+         CompositionRoot). L'avertissement porte sur le chargeur XAML par réflexion utilisé par
+         l'aperçu de l'IDE ; l'application ne construit jamais ses fenêtres de cette façon
+         (toujours via ServiceProvider.GetRequiredService), la capacité perdue n'est donc jamais
+         utilisée. -->
+    <NoWarn>$(NoWarn);AVLN3001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,6 +22,8 @@
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
     <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
   </ItemGroup>
 
   <!-- Polices embarquées et autres assets (logo, géométries) : non couverts par les
