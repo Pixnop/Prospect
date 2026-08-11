@@ -1,6 +1,8 @@
 # Prospect
 
 [![CI](https://github.com/Pixnop/Prospect/actions/workflows/ci.yml/badge.svg)](https://github.com/Pixnop/Prospect/actions/workflows/ci.yml)
+[![Quality gate](https://sonarcloud.io/api/project_badges/measure?project=Pixnop_Prospect&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Pixnop_Prospect)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Pixnop_Prospect&metric=coverage)](https://sonarcloud.io/component_measures?id=Pixnop_Prospect&metric=coverage)
 
 Prospect is a Vintage Story launcher in the spirit of Prism Launcher.
 
