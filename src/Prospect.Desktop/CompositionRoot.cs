@@ -74,6 +74,7 @@ public static class CompositionRoot
         services.AddSingleton<IOverlayService, OverlayService>();
         services.AddSingleton<IToastService, ToastService>();
         services.AddSingleton<IUiDispatcher, AvaloniaUiDispatcher>();
+        services.AddSingleton<IModUpdateCheckCache, ModUpdateCheckCache>();
 
         // ViewModels des pages construites eagerly (ShellViewModel construit lui-même les pages
         // placeholder). Singleton : une seule instance de chaque pour la durée de vie de l'app.
@@ -100,6 +101,8 @@ public static class CompositionRoot
             provider.GetRequiredService<RunningInstanceTracker>(),
             provider.GetRequiredService<IInstalledModRepository>(),
             provider.GetRequiredService<ModInstallService>(),
+            provider.GetRequiredService<ModUpdateChecker>(),
+            provider.GetRequiredService<IModUpdateCheckCache>(),
             provider.GetRequiredService<IAppEnvironment>(),
             provider.GetRequiredService<IFileSystem>(),
             provider.GetRequiredService<IOverlayService>(),
@@ -162,6 +165,7 @@ public static class CompositionRoot
         services.AddSingleton<IModStateConvention, DisabledSuffixModStateConvention>();
         services.AddSingleton<IInstalledModRepository, FileSystemInstalledModRepository>();
         services.AddSingleton<ModInstallService>();
+        services.AddSingleton<ModUpdateChecker>();
     }
 
     // Miroir d'AddGameVersions pour le lancement (docs/architecture.md, section « 3. Lancement ») :

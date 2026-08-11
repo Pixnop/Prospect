@@ -157,6 +157,30 @@ internal static class ModDbSamples
     {"reason":"This information was previously available, but is no longer distributed.","statuscode":"410"}
     """;
 
+    /// <summary>
+    /// <c>GET /api/updates?mods=configlib@1.0.0</c>, forme observée en direct (docs/research/moddb-api.md,
+    /// section « GET /api/updates ») : une release par <c>modidstr</c> réellement en retard, sous la
+    /// même forme que <c>mod.releases[i]</c> mais sans <c>changelog</c>.
+    /// </summary>
+    public const string UpdatesCheck = """
+    {
+      "statuscode": "200",
+      "updates": {
+        "configlib": {
+          "releaseid": 39980,
+          "mainfile": "https://moddbcdn.vintagestory.at/configlib_1.12.0_abc123.zip?dl=configlib_1.12.0.zip",
+          "filename": "configlib_1.12.0.zip",
+          "fileid": 88961,
+          "downloads": 118728,
+          "tags": ["1.22.0-pre.1", "1.22.0-rc.1", "1.22.0", "1.22.1"],
+          "modidstr": "configlib",
+          "modversion": "1.12.0",
+          "created": "2026-05-01 12:03:34"
+        }
+      }
+    }
+    """;
+
     /// <summary><c>GET /api/tags</c> : noter le <c>tagid</c> en CHAÎNE, contrairement à /api/gameversions.</summary>
     public const string TagList = """
     {

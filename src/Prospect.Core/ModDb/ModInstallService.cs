@@ -207,6 +207,177 @@ public sealed class ModInstallService
         => _repository.SetEnabledAsync(slug, installedMod, enabled, cancellationToken);
 
     /// <summary>
+    /// Prépare la mise à jour d'un mod déjà installé vers la release trouvée par
+    /// <see cref="ModUpdateChecker"/> : téléchargement dans le cache, lecture des dépendances de la
+    /// NOUVELLE version (jamais supposées identiques à celles de l'ancienne), et vérification
+    /// INFORMATIVE des mods installés qui déclarent dépendre de celui qu'on met à jour.
+    /// </summary>
+    /// <param name="slug">Instance cible.</param>
+    /// <param name="updateResult">
+    /// Résultat de <see cref="ModUpdateChecker.CheckAsync"/> pour ce mod, avec
+    /// <see cref="ModUpdateResult.HasUpdate"/> vrai.
+    /// </param>
+    /// <param name="mode">Strict, ou élargi à la série mineure pour la résolution des dépendances manquantes.</param>
+    /// <param name="progress">Avancement du téléchargement.</param>
+    /// <param name="cancellationToken">Annulation.</param>
+    /// <exception cref="ArgumentException"><paramref name="updateResult"/> ne propose pas de mise à jour.</exception>
+    public async Task<ModUpdatePlan> PrepareUpdateAsync(
+        string slug,
+        ModUpdateResult updateResult,
+        ModCompatibilityMode mode = ModCompatibilityMode.ExactGameVersion,
+        IProgress<DownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(updateResult);
+        if (updateResult.AvailableRelease is not { } release)
+        {
+            throw new ArgumentException("Ce résultat de vérification ne propose pas de mise à jour.", nameof(updateResult));
+        }
+
+        var instance = await _instances.LoadAsync(slug, cancellationToken).ConfigureAwait(false);
+        var gameVersion = instance.Metadata.GameVersion;
+        var previous = updateResult.Mod;
+
+        var modDbModId = previous.Provenance?.ModId
+            ?? await ResolveModDbIdAsync(release.ModIdString, cancellationToken).ConfigureAwait(false);
+        var size = updateResult.AnnouncedSizeBytes
+            ?? await _client.GetFileSizeAsync(release.DownloadUrl, cancellationToken).ConfigureAwait(false);
+
+        var updated = new ModInstallItem(
+            modDbModId,
+            previous.DisplayName,
+            release,
+            updateResult.IsApproximateMatch,
+            BuildFileName(release.ModIdString, release.Version),
+            size);
+
+        var archivePath = await DownloadAsync(updated, progress, cancellationToken).ConfigureAwait(false);
+        var content = _archiveReader.Read(archivePath);
+
+        var installed = await _repository.ScanAsync(slug, cancellationToken).ConfigureAwait(false);
+        var remote = await ResolveRemoteDependenciesAsync(release.ModIdString, gameVersion, cancellationToken).ConfigureAwait(false);
+        var issues = ModDependencyResolver.FindUnsatisfied(content.Result.Info, installed, remote);
+
+        var (dependencies, unresolved) = await ResolveDependencyItemsAsync(issues, gameVersion, mode, cancellationToken).ConfigureAwait(false);
+        var dependents = ModDependencyResolver.FindDependents(previous, installed);
+
+        return new ModUpdatePlan(previous, updated, dependencies, issues, unresolved, dependents, gameVersion);
+    }
+
+    /// <summary>
+    /// Exécute un plan de mise à jour : pose la nouvelle version, préserve l'état activé/désactivé
+    /// de l'ancienne, PUIS retire l'ancien fichier (jamais l'inverse : une panne pendant le
+    /// téléchargement laisse l'ancienne version en place plutôt que de casser l'instance). Les
+    /// nouvelles dépendances cochées sont installées comme pour <see cref="ApplyAsync"/> : rien
+    /// n'est jamais installé en silence.
+    /// </summary>
+    /// <param name="slug">Instance cible.</param>
+    /// <param name="plan">Plan produit par <see cref="PrepareUpdateAsync"/>.</param>
+    /// <param name="selectedDependencies">
+    /// Identifiants des dépendances à installer. <see langword="null"/> ou vide n'en installe
+    /// aucune : c'est un choix explicite de l'utilisateur, jamais un défaut implicite.
+    /// </param>
+    /// <param name="progress">Avancement du téléchargement.</param>
+    /// <param name="cancellationToken">Annulation.</param>
+    public async Task<ModInstallOutcome> ApplyUpdateAsync(
+        string slug,
+        ModUpdatePlan plan,
+        IReadOnlyCollection<string>? selectedDependencies = null,
+        IProgress<DownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+
+        var wasEnabled = plan.Previous.IsEnabled;
+        var updated = await InstallItemAsync(slug, plan.Updated, progress, cancellationToken).ConfigureAwait(false);
+        if (!wasEnabled)
+        {
+            updated = await _repository.SetEnabledAsync(slug, updated, enabled: false, cancellationToken).ConfigureAwait(false);
+        }
+
+        // L'ancien fichier n'est retiré qu'APRÈS le succès du nouveau : si InstallItemAsync avait
+        // échoué (téléchargement coupé, disque plein), on n'atteint jamais cette ligne et l'ancienne
+        // version reste utilisable telle quelle.
+        await _repository.RemoveAsync(slug, plan.Previous, cancellationToken).ConfigureAwait(false);
+
+        var installed = new List<InstalledMod> { updated };
+        var skipped = new List<string>();
+        var selected = new HashSet<string>(selectedDependencies ?? [], StringComparer.OrdinalIgnoreCase);
+
+        foreach (var dependency in plan.MissingDependencies)
+        {
+            if (selected.Contains(dependency.ModIdString))
+            {
+                installed.Add(await InstallItemAsync(slug, dependency, progress, cancellationToken).ConfigureAwait(false));
+            }
+            else
+            {
+                skipped.Add(dependency.ModIdString);
+            }
+        }
+
+        return new ModInstallOutcome(installed, skipped);
+    }
+
+    /// <summary>
+    /// Applique séquentiellement toutes les mises à jour disponibles d'une instance (bouton « Tout
+    /// mettre à jour »). N'installe jamais de nouvelle dépendance : une dépendance nouvellement
+    /// requise par une mise à jour est comptée comme non résolue plutôt qu'installée d'autorité
+    /// (docs/architecture.md, « jamais en silence »), à traiter ensuite depuis la mise à jour
+    /// individuelle de ce mod, qui montre le plan complet.
+    /// </summary>
+    /// <param name="slug">Instance cible.</param>
+    /// <param name="updates">
+    /// Résultats de <see cref="ModUpdateChecker.CheckAsync"/> ; seuls ceux avec
+    /// <see cref="ModUpdateResult.HasUpdate"/> vrai sont traités, les autres sont ignorés.
+    /// </param>
+    /// <param name="progress">Avancement agrégé, un cran par mod traité.</param>
+    /// <param name="cancellationToken">
+    /// Annulation honorée uniquement ENTRE deux mods : une fois la mise à jour d'un mod entamée,
+    /// elle va toujours jusqu'à son terme (succès ou échec propre), jamais coupée au milieu d'un
+    /// remplacement.
+    /// </param>
+    public async Task<BulkUpdateOutcome> ApplyAllUpdatesAsync(
+        string slug,
+        IReadOnlyList<ModUpdateResult> updates,
+        IProgress<BulkUpdateProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(updates);
+
+        var pending = updates.Where(result => result.HasUpdate).ToArray();
+        var updated = new List<InstalledMod>();
+        var failed = new List<BulkUpdateFailure>();
+
+        for (var index = 0; index < pending.Length; index++)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+
+            var result = pending[index];
+            progress?.Report(new BulkUpdateProgress(index, pending.Length, result.Mod.DisplayName));
+
+            try
+            {
+                var plan = await PrepareUpdateAsync(slug, result, ModCompatibilityMode.ExactGameVersion, progress: null, CancellationToken.None).ConfigureAwait(false);
+                var outcome = await ApplyUpdateAsync(slug, plan, selectedDependencies: null, progress: null, CancellationToken.None).ConfigureAwait(false);
+
+                updated.Add(outcome.Installed[0]);
+            }
+            catch (Exception exception) when (exception is ModDbApiException or ModDbUnavailableException or DownloadFailedException or ModInstallFailedException)
+            {
+                failed.Add(new BulkUpdateFailure(result.Mod.DisplayName, exception.Message));
+            }
+        }
+
+        progress?.Report(new BulkUpdateProgress(pending.Length, pending.Length, string.Empty));
+
+        return new BulkUpdateOutcome(updated, failed);
+    }
+
+    /// <summary>
     /// Nom du fichier posé dans <c>data/Mods/</c> : <c>&lt;modid&gt;-&lt;version&gt;.zip</c>, la
     /// convention de VS Launcher, lisible et stable. Le nom publié sur le ModDB n'est jamais
     /// réutilisé tel quel : il est libre côté auteur, parfois préfixé (<c>ExtraInfo-v2.2.1.zip</c>
@@ -242,6 +413,25 @@ public sealed class ModInstallService
             choice.IsApproximate,
             BuildFileName(choice.Release.ModIdString, choice.Release.Version),
             size);
+    }
+
+    // Chemin de secours pour un mod mis à jour sans provenance préalable (déposé à la main, jamais
+    // installé par Prospect) : /api/updates ne renvoie qu'un modidstr, jamais l'identifiant
+    // numérique de la fiche. Best effort — cet identifiant n'est relu nulle part ailleurs dans le
+    // domaine (voir ModProvenance.ModId), son absence ne doit donc jamais bloquer une mise à jour
+    // par ailleurs prête.
+    private async Task<int> ResolveModDbIdAsync(string modIdString, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var detail = await _client.GetModAsync(modIdString, cancellationToken).ConfigureAwait(false);
+
+            return detail.ModId;
+        }
+        catch (Exception exception) when (exception is ModDbApiException or ModDbUnavailableException)
+        {
+            return 0;
+        }
     }
 
     private async Task<IReadOnlyList<string>> ResolveRemoteDependenciesAsync(string modIdString, GameVersion gameVersion, CancellationToken cancellationToken)

@@ -68,6 +68,26 @@ public interface IModDbClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Interroge <c>/api/updates</c> en UN appel pour tous les mods installés IDENTIFIABLES d'une
+    /// instance : ne renvoie que ceux réellement en retard, avec leur dernière release.
+    /// </summary>
+    /// <param name="installedMods">
+    /// Version actuellement installée par <c>modidstr</c> (clé insensible à la casse). Un dictionnaire
+    /// vide court-circuite l'appel réseau.
+    /// </param>
+    /// <param name="cancellationToken">Annulation.</param>
+    /// <returns>
+    /// Une release par <c>modidstr</c> en retard, indexée par la clé envoyée. L'ABSENCE d'un
+    /// <c>modidstr</c> envoyé ne distingue pas « à jour » de « inconnu du ModDB » (docs/research/moddb-api.md) :
+    /// c'est à l'appelant de comparer le résultat aux clés de <paramref name="installedMods"/>.
+    /// </returns>
+    /// <exception cref="ModDbApiException">Requête malformée (400 réel sur cet endpoint).</exception>
+    /// <exception cref="ModDbUnavailableException">ModDB injoignable.</exception>
+    Task<IReadOnlyDictionary<string, ModDbRelease>> GetUpdatesAsync(
+        IReadOnlyDictionary<string, ModVersion> installedMods,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Taille annoncée par le CDN pour une URL de fichier (requête <c>HEAD</c>,
     /// <c>Content-Length</c>), ou <see langword="null"/> si elle n'est pas annoncée.
     /// </summary>

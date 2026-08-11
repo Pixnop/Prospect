@@ -5,8 +5,10 @@ using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
 using Prospect.Core.Instances.Migrations;
 using Prospect.Core.Launching;
+using Prospect.Core.ModDb;
 using Prospect.Core.Runtime;
 using Prospect.Core.Storage;
+using Prospect.Desktop.Services;
 using Prospect.Desktop.Tests.TestDoubles;
 using Prospect.Desktop.ViewModels.Dialogs;
 using Prospect.Desktop.ViewModels.Home;
@@ -35,7 +37,9 @@ public sealed class InstanceCardViewModelTests
         FakeProcessRunner ProcessRunner,
         FakeDotnetLocator DotnetLocator,
         RecordingToastService Toasts,
-        RecordingOverlayService Overlay);
+        RecordingOverlayService Overlay,
+        IModUpdateCheckCache UpdateCache,
+        string Slug);
 
     private static Fixture Create(bool installVersion = true)
     {
@@ -59,10 +63,12 @@ public sealed class InstanceCardViewModelTests
             repository, versions, dotnetLocator, tracker, new LinuxGameLaunchStrategy(fileSystem), processRunner, fileSystem, Paths, clock);
         var overlay = new RecordingOverlayService();
         var toasts = new RecordingToastService();
+        var updateCache = new ModUpdateCheckCache();
 
-        var card = new InstanceCardViewModel(record, "jamais", service, launcher, tracker, overlay, toasts, new ImmediateUiDispatcher(), () => Task.CompletedTask);
+        var card = new InstanceCardViewModel(
+            record, "jamais", service, launcher, tracker, updateCache, overlay, toasts, new ImmediateUiDispatcher(), () => Task.CompletedTask);
 
-        return new Fixture(card, tracker, processRunner, dotnetLocator, toasts, overlay);
+        return new Fixture(card, tracker, processRunner, dotnetLocator, toasts, overlay, updateCache, record.Slug);
     }
 
     [Fact]
@@ -173,6 +179,93 @@ public sealed class InstanceCardViewModelTests
         fixture.Card.IsRunning.ShouldBeFalse();
     }
 
+    // ── Pastille « N mises à jour » (feature 4b) ─────────────────────────────────────
+
+    [Fact]
+    public void HasUpdates_NoCheckPerformedThisSession_IsFalse()
+    {
+        var fixture = Create();
+
+        fixture.Card.HasUpdates.ShouldBeFalse();
+        fixture.Card.UpdateCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task UpdateCount_CacheAlreadyKnowsAResultAtConstruction_IsReadImmediately()
+    {
+        var fileSystem = new MockFileSystem();
+        var repository = new FileSystemInstanceRepository(fileSystem, Paths, new JsonFileStore(fileSystem), new InstanceMetadataMigrationPipeline([]));
+        var clock = new FakeClock(Now);
+        var service = new InstanceService(repository, fileSystem, clock);
+        var record = await service.CreateAsync("Homestead", SampleVersion);
+        var versions = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
+        var tracker = new RunningInstanceTracker(service, clock);
+        var launcher = new GameLauncher(
+            repository, versions, new FakeDotnetLocator(), tracker, new LinuxGameLaunchStrategy(fileSystem), new FakeProcessRunner(), fileSystem, Paths, clock);
+        var updateCache = new ModUpdateCheckCache();
+        updateCache.Store(record.Slug, SampleReport(2));
+
+        var card = new InstanceCardViewModel(
+            record, "jamais", service, launcher, tracker, updateCache,
+            new RecordingOverlayService(), new RecordingToastService(), new ImmediateUiDispatcher(), () => Task.CompletedTask);
+
+        card.UpdateCount.ShouldBe(2);
+        card.HasUpdates.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void UpdateCount_SharedCacheStoresANewReportForThisInstance_ReflectsItLiveWithoutRebuildingTheCard()
+    {
+        var fixture = Create();
+
+        fixture.UpdateCache.Store(fixture.Slug, SampleReport(3));
+
+        fixture.Card.UpdateCount.ShouldBe(3);
+        fixture.Card.HasUpdates.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void UpdateCount_SharedCacheStoresAReportForAnotherInstance_IsIgnored()
+    {
+        var fixture = Create();
+
+        fixture.UpdateCache.Store("some-other-instance", SampleReport(5));
+
+        fixture.Card.UpdateCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public void UpdateCount_SharedCacheInvalidated_GoesBackToZero()
+    {
+        var fixture = Create();
+        fixture.UpdateCache.Store(fixture.Slug, SampleReport(4));
+
+        fixture.UpdateCache.Invalidate(fixture.Slug);
+
+        fixture.Card.UpdateCount.ShouldBe(0);
+        fixture.Card.HasUpdates.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Dispose_SharedCacheChangesNoLongerUpdateTheCard()
+    {
+        var fixture = Create();
+        fixture.Card.Dispose();
+
+        fixture.UpdateCache.Store(fixture.Slug, SampleReport(1));
+
+        fixture.Card.UpdateCount.ShouldBe(0);
+    }
+
+    private static InstanceUpdateReport SampleReport(int updateCount)
+    {
+        var results = Enumerable.Range(0, updateCount).Select(index => new ModUpdateResult(
+            new InstalledMod { FilePath = $"/mod-{index}.zip", FileName = $"mod-{index}.zip", IsEnabled = true },
+            ModUpdateStatus.UpdateAvailable));
+
+        return new InstanceUpdateReport(results.ToArray(), Now);
+    }
+
     [Fact]
     public async Task Constructor_NullArguments_ThrowArgumentNullException()
     {
@@ -188,15 +281,17 @@ public sealed class InstanceCardViewModelTests
         var overlay = new RecordingOverlayService();
         var toasts = new RecordingToastService();
         var dispatcher = new ImmediateUiDispatcher();
+        var updateCache = new ModUpdateCheckCache();
         Func<Task> requestRefresh = () => Task.CompletedTask;
 
-        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(null!, "jamais", service, launcher, tracker, overlay, toasts, dispatcher, requestRefresh));
-        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(record, "jamais", null!, launcher, tracker, overlay, toasts, dispatcher, requestRefresh));
-        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(record, "jamais", service, null!, tracker, overlay, toasts, dispatcher, requestRefresh));
-        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(record, "jamais", service, launcher, null!, overlay, toasts, dispatcher, requestRefresh));
-        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(record, "jamais", service, launcher, tracker, null!, toasts, dispatcher, requestRefresh));
-        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(record, "jamais", service, launcher, tracker, overlay, null!, dispatcher, requestRefresh));
-        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(record, "jamais", service, launcher, tracker, overlay, toasts, null!, requestRefresh));
-        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(record, "jamais", service, launcher, tracker, overlay, toasts, dispatcher, null!));
+        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(null!, "jamais", service, launcher, tracker, updateCache, overlay, toasts, dispatcher, requestRefresh));
+        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(record, "jamais", null!, launcher, tracker, updateCache, overlay, toasts, dispatcher, requestRefresh));
+        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(record, "jamais", service, null!, tracker, updateCache, overlay, toasts, dispatcher, requestRefresh));
+        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(record, "jamais", service, launcher, null!, updateCache, overlay, toasts, dispatcher, requestRefresh));
+        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(record, "jamais", service, launcher, tracker, null!, overlay, toasts, dispatcher, requestRefresh));
+        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(record, "jamais", service, launcher, tracker, updateCache, null!, toasts, dispatcher, requestRefresh));
+        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(record, "jamais", service, launcher, tracker, updateCache, overlay, null!, dispatcher, requestRefresh));
+        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(record, "jamais", service, launcher, tracker, updateCache, overlay, toasts, null!, requestRefresh));
+        Should.Throw<ArgumentNullException>(() => new InstanceCardViewModel(record, "jamais", service, launcher, tracker, updateCache, overlay, toasts, dispatcher, null!));
     }
 }

@@ -64,6 +64,9 @@ internal static class UiText
     internal static class Home
     {
         internal static string NoSearchResults(string query) => $"Aucune instance ne correspond à « {query} ».";
+
+        /// <summary>Pastille discrète de la carte d'instance (feature 4b), quand une vérification récente en a trouvé.</summary>
+        internal static string UpdatesBadge(int count) => count == 1 ? "1 mise à jour" : $"{count} mises à jour";
     }
 
     internal static class Downloads
@@ -314,5 +317,60 @@ internal static class UiText
                 ? $"Le mod {joined} en dépend et risque de ne plus fonctionner."
                 : $"Les mods {joined} en dépendent et risquent de ne plus fonctionner.";
         }
+
+        // ── Détection et application des mises à jour (feature 4b) ─────────────────
+
+        internal const string CheckUpdatesFailedTitle = "Vérification impossible";
+        internal const string UpdateFailedTitle = "Mise à jour impossible";
+
+        internal static string LastCheckedLabel(string relativeCheckedText) => $"Dernière vérification : {relativeCheckedText}";
+
+        internal static string UpdatesAvailableTitle(int count) => count switch
+        {
+            0 => string.Empty,
+            1 => "1 mise à jour disponible",
+            _ => $"{count} mises à jour disponibles",
+        };
+
+        internal static string UpdatePlanTitle(string modName) => $"Mettre à jour « {modName} » ?";
+
+        internal static string UpdatePlanMessage(string currentVersion, string targetVersion)
+            => $"La version {currentVersion} sera remplacée par la {targetVersion}.";
+
+        internal static string UpdateDependentsNote(IReadOnlyList<string> modNames)
+        {
+            if (modNames.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            var quoted = modNames.Select(name => $"« {name} »").ToArray();
+            var joined = quoted.Length == 1
+                ? quoted[0]
+                : $"{string.Join(", ", quoted[..^1])} et {quoted[^1]}";
+
+            return quoted.Length == 1
+                ? $"{joined} dépend de ce mod."
+                : $"{joined} dépendent de ce mod.";
+        }
+
+        internal static string UpdatedTitle(string modName) => $"{modName} mis à jour";
+
+        internal static string UpdatedMessage(string targetVersion) => $"Version {targetVersion} installée.";
+
+        internal static string BulkUpdateProgress(int completedCount, int totalCount, string modName)
+            => $"{completedCount + 1}/{totalCount} · {modName}";
+
+        internal static string BulkUpdateDoneTitle(int count) => count switch
+        {
+            0 => "Aucune mise à jour appliquée",
+            1 => "1 mod mis à jour",
+            _ => $"{count} mods mis à jour",
+        };
+
+        internal static string BulkUpdateFailures(IReadOnlyList<BulkUpdateFailure> failures)
+            => failures.Count == 0
+                ? string.Empty
+                : $"Échec pour {string.Join(", ", failures.Select(failure => failure.ModName))}.";
     }
 }

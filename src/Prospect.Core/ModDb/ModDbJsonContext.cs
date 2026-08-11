@@ -10,6 +10,7 @@ namespace Prospect.Core.ModDb;
 [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(ModDbModListResponseDto))]
 [JsonSerializable(typeof(ModDbModDetailResponseDto))]
+[JsonSerializable(typeof(ModDbUpdatesResponseDto))]
 [JsonSerializable(typeof(ModDbTagListResponseDto))]
 [JsonSerializable(typeof(ModDbV2ReleaseDto))]
 [JsonSerializable(typeof(ModDbV2InstallInformationResponseDto))]

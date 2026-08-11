@@ -48,6 +48,8 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         RunningInstanceTracker tracker,
         IInstalledModRepository mods,
         ModInstallService modInstallService,
+        ModUpdateChecker updateChecker,
+        IModUpdateCheckCache updateCache,
         IAppEnvironment appEnvironment,
         IFileSystem fileSystem,
         IOverlayService overlay,
@@ -62,6 +64,8 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         ArgumentNullException.ThrowIfNull(tracker);
         ArgumentNullException.ThrowIfNull(mods);
         ArgumentNullException.ThrowIfNull(modInstallService);
+        ArgumentNullException.ThrowIfNull(updateChecker);
+        ArgumentNullException.ThrowIfNull(updateCache);
         ArgumentNullException.ThrowIfNull(appEnvironment);
         ArgumentNullException.ThrowIfNull(fileSystem);
         ArgumentNullException.ThrowIfNull(overlay);
@@ -97,7 +101,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         _optionsTab = new InstanceOptionsTabViewModel(slug, InstanceLaunchSettings.Empty, instanceService, appEnvironment, toasts);
         _isRunning = tracker.IsRunning(slug);
 
-        ModsTab = new InstanceModsTabViewModel(slug, mods, modInstallService, overlay, toasts);
+        ModsTab = new InstanceModsTabViewModel(slug, mods, modInstallService, updateChecker, updateCache, clock, overlay, toasts);
         ModsTab.BrowseRequested += (_, instanceSlug) => BrowseModsRequested?.Invoke(this, instanceSlug);
 
         _tracker.StatusChanged += OnTrackerStatusChanged;
@@ -329,6 +333,14 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
     partial void OnLaunchErrorMessageChanged(string? value) => OnPropertyChanged(nameof(ShowLaunchError));
 
-    /// <summary>Se désabonne de <see cref="RunningInstanceTracker"/> (voir <see cref="Home.InstanceCardViewModel.Dispose"/> pour la même raison).</summary>
-    public void Dispose() => _tracker.StatusChanged -= OnTrackerStatusChanged;
+    /// <summary>
+    /// Se désabonne de <see cref="RunningInstanceTracker"/> (voir <see cref="Home.InstanceCardViewModel.Dispose"/>
+    /// pour la même raison) et dispose <see cref="ModsTab"/>, qui porte le jeton d'annulation d'un
+    /// éventuel « Tout mettre à jour » en cours.
+    /// </summary>
+    public void Dispose()
+    {
+        _tracker.StatusChanged -= OnTrackerStatusChanged;
+        ModsTab.Dispose();
+    }
 }

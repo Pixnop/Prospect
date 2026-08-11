@@ -53,6 +53,12 @@
             <TextBlock Text="{Binding LastPlayedText}" Margin="0,4,0,0"
                        FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsCaption}"
                        Foreground="{DynamicResource Text3}" />
+            <!-- Pastille discrète : dernier résultat connu d'une vérification de mises à jour
+                 (feature 4b), invalidé par toute modification des mods. Pas de vérification
+                 automatique au démarrage en MVP, donc absente tant qu'aucune vérification
+                 explicite n'a eu lieu cette session (voir IModUpdateCheckCache). -->
+            <ContentControl Classes="badge unstable" Content="{Binding UpdatesBadgeText}"
+                            Margin="0,6,0,0" HorizontalAlignment="Left" IsVisible="{Binding HasUpdates}" />
           </StackPanel>
         </StackPanel>
       </Button>

@@ -46,6 +46,7 @@ public sealed class ModDbClientTests
             "/api/tags" => FakeHttpMessageHandler.Text(ModDbSamples.TagList),
             "/api/mod/1783" or "/api/mod/configlib" => FakeHttpMessageHandler.Text(ModDbSamples.ModDetail),
             "/api/v2/mods/install-information" => FakeHttpMessageHandler.Text(ModDbSamples.V2InstallInformationWithDependencies),
+            "/api/updates" => FakeHttpMessageHandler.Text(ModDbSamples.UpdatesCheck),
             _ => FakeHttpMessageHandler.Text(ModDbSamples.NotFound),
         };
     }
@@ -384,6 +385,74 @@ public sealed class ModDbClientTests
 
         information.ShouldBeEmpty();
         handler.Requests.ShouldBeEmpty();
+    }
+
+    // ── Vérification de mise à jour en masse (/api/updates) ──────────────────────────
+
+    [Fact]
+    public async Task GetUpdatesAsync_RealSample_ReturnsTheOutOfDateReleaseKeyedByTheSentModIdString()
+    {
+        using var handler = CatalogHandler();
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+
+        var updates = await client.GetUpdatesAsync(
+            new Dictionary<string, ModVersion> { ["configlib"] = ModVersion.Parse("1.0.0") },
+            CancellationToken.None);
+
+        updates.ShouldContainKey("configlib");
+        var release = updates["configlib"];
+        release.Version.ShouldBe(ModVersion.Parse("1.12.0"));
+        release.ReleaseId.ShouldBe(39980);
+        release.FileId.ShouldBe(88961);
+        release.CompatibleGameVersionTags.ShouldContain("1.22.1");
+        release.Changelog.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetUpdatesAsync_JoinsModIdAtVersionPairsWithCommasAndEscapesTheWhole()
+    {
+        using var handler = CatalogHandler();
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+
+        await client.GetUpdatesAsync(
+            new Dictionary<string, ModVersion>
+            {
+                ["configlib"] = ModVersion.Parse("1.0.0"),
+                ["jsonpatcheslib"] = ModVersion.Parse("1.5.6"),
+            },
+            CancellationToken.None);
+
+        var query = handler.Requests.Single(request => request.Url.AbsolutePath == "/api/updates").Url.Query;
+        query.ShouldContain("configlib%401.0.0%2Cjsonpatcheslib%401.5.6");
+    }
+
+    [Fact]
+    public async Task GetUpdatesAsync_NoInstalledMods_DoesNotCallTheApiAtAll()
+    {
+        using var handler = CatalogHandler();
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+
+        var updates = await client.GetUpdatesAsync(new Dictionary<string, ModVersion>(), CancellationToken.None);
+
+        updates.ShouldBeEmpty();
+        handler.Requests.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task GetUpdatesAsync_RejectedByTheServer_ThrowsRatherThanSilentlyReportingNoUpdates()
+    {
+        // /api/updates est un des rares endpoints v1 où un vrai code HTTP 400 sort (docs/research/moddb-api.md),
+        // sur une entrée sans @ : notre client ne peut jamais en construire lui-même, mais si le
+        // serveur rejette quand même la requête, ça ne doit surtout pas se lire comme « aucun mod en
+        // retard ». EnsureSuccessStatusCode() sur GetStringAsync lève une HttpRequestException, que
+        // GetUpdatesAsync convertit en ModDbUnavailableException plutôt que de la laisser fuiter :
+        // c'est le contrat documenté sur IModDbClient.GetUpdatesAsync.
+        using var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Status(HttpStatusCode.BadRequest));
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+
+        await Should.ThrowAsync<ModDbUnavailableException>(() => client.GetUpdatesAsync(
+            new Dictionary<string, ModVersion> { ["configlib"] = ModVersion.Parse("1.0.0") },
+            CancellationToken.None));
     }
 
     // ── HEAD de taille, seul garde-fou disponible faute de checksum ──────────────────
