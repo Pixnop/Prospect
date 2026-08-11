@@ -4,8 +4,10 @@ using Avalonia;
 
 namespace Prospect.Desktop;
 
-// Scellée : aucun sous-type dans cet assembly, recommandation de l'analyseur (CA1852).
-sealed class Program
+// Statique : la classe ne contient que des membres statiques, ce que Sonar (S1118) exige de
+// traduire soit par un constructeur privé, soit par une classe statique ; la seconde option est
+// la plus idiomatique ici et rend `sealed` redondant (une classe statique l'est déjà).
+static class Program
 {
     // Initialization code. Don't use any Avalonia, third-party APIs or any
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
