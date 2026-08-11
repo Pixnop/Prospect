@@ -11,9 +11,7 @@ namespace Prospect.Core.Storage;
 public sealed class SystemAppEnvironment : IAppEnvironment
 {
     /// <inheritdoc />
-    public AppOperatingSystem CurrentOperatingSystem => GetCurrentOperatingSystem();
-
-    private static AppOperatingSystem GetCurrentOperatingSystem()
+    public AppOperatingSystem CurrentOperatingSystem
         => OperatingSystem.IsWindows() switch
         {
             true => AppOperatingSystem.Windows,
