@@ -39,7 +39,10 @@
             <Path Width="26" Height="26" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
                   Data="{Binding IconKey, Converter={x:Static conv:IconKeyToGeometryConverter.Instance}}"
                   Stroke="{DynamicResource Text4}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
-            <ContentControl Classes="badge" Content="{Binding Version}"
+            <!-- pinned : ce badge est posé sur la bande d'art, fixe dans les deux thèmes (voir le
+                 commentaire de la variante "pinned" dans Badge.axaml) — son texte doit donc rester
+                 lisible sur un fond qui ne bascule jamais en clair. -->
+            <ContentControl Classes="badge pinned" Content="{Binding Version}"
                             HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
                             Classes.stable="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=stable}"
                             Classes.unstable="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=unstable}"

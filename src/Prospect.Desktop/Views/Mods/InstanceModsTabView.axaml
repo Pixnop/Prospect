@@ -102,7 +102,7 @@
                   <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
                     <TextBlock Text="{Binding AuthorText}" TextTrimming="CharacterEllipsis"
                                FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
-                    <TextBlock Text="·" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Stone600}" />
+                    <TextBlock Text="·" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
                     <TextBlock Text="{Binding FileNameText}" TextTrimming="CharacterEllipsis" FontFamily="{DynamicResource FontMono}"
                                FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
                   </StackPanel>

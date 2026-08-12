@@ -136,6 +136,16 @@
       <SolidColorBrush x:Key="ChannelUnstable" Color="{StaticResource Ochre500}" />
       <SolidColorBrush x:Key="ChannelPre" Color="{StaticResource Slate500}" />
       <SolidColorBrush x:Key="ChannelIncompatible" Color="{StaticResource Clay500}" />
+
+      <!-- Surfaces neutres ponctuelles : colors.css les pose en littéral direct sur une rampe
+           (pas d'alias dédié), ce qui les fige de fait dans les deux thèmes côté web (jamais
+           testé en clair côté launcher avant la QA visuelle qui a suivi la PR 12). Chaque valeur
+           Dark ci-dessous reproduit exactement l'ancien littéral figé pour ne rien changer au
+           rendu sombre déjà validé ; seule la variante Light est nouvelle. -->
+      <SolidColorBrush x:Key="NeutralQuiet" Color="{StaticResource Stone800}" />
+      <SolidColorBrush x:Key="SwitchTrackOff" Color="{StaticResource Stone700}" />
+      <SolidColorBrush x:Key="ProgressTrackBg" Color="{StaticResource Stone750}" />
+      <SolidColorBrush x:Key="TooltipBg" Color="{StaticResource Stone750}" />
     </ResourceDictionary>
 
     <!-- ── Clair — variante secondaire ─────────────────────────────────────────── -->
@@ -197,6 +207,17 @@
       <SolidColorBrush x:Key="ChannelUnstable" Color="{StaticResource Ochre500}" />
       <SolidColorBrush x:Key="ChannelPre" Color="{StaticResource Slate500}" />
       <SolidColorBrush x:Key="ChannelIncompatible" Color="{StaticResource Clay500}" />
+
+      <!-- Surfaces neutres ponctuelles (voir le commentaire du dictionnaire Dark). NeutralQuiet et
+           ProgressTrackBg reprennent la valeur claire de BorderSubtle (un cran sous bg-surface,
+           comme leur pendant sombre coïncide avec BorderSubtle) ; SwitchTrackOff reprend celle de
+           BorderDefault, pour la même raison. TooltipBg va au blanc plein comme BgSurfaceRaised :
+           l'infobulle est une petite surface flottante dont le texte (Text1) passe sombre en clair,
+           elle a besoin du contraste maximal, pas d'une simple teinte de bordure. -->
+      <SolidColorBrush x:Key="NeutralQuiet" Color="#DCD3C7" />
+      <SolidColorBrush x:Key="SwitchTrackOff" Color="#CBC0B2" />
+      <SolidColorBrush x:Key="ProgressTrackBg" Color="#DCD3C7" />
+      <SolidColorBrush x:Key="TooltipBg" Color="#FFFFFF" />
     </ResourceDictionary>
 
   </ResourceDictionary.ThemeDictionaries>

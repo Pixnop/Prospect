@@ -6,10 +6,12 @@
     montre jamais Content/OnContent/OffContent sur le switch, l'étiquette voisine vit à
     côté dans l'écran) : le template ne rend donc que la piste et le pouce.
 
-    #332E29 est stone-700, la piste au repos ; c'est la seule rampe utilisée telle quelle
-    par ce composant (pas d'alias sémantique dédié dans colors.css), donc écrite en
-    littéral plutôt que via une ressource Color qui ne convertit pas implicitement en
-    Brush.
+    SwitchTrackOff (Styles/Tokens/Colors.axaml) est la piste au repos : stone-700 en sombre,
+    littéral dédié en clair. colors.css n'a pas d'alias pour cet état (littéral stone-700 direct,
+    identique dans les deux thèmes du CSS) ; repris tel quel ici aurait laissé la piste presque
+    noire sur un fond de carte devenu clair, plus du tout raccord avec le reste du contrôle
+    (bordure et pouce, eux, suivent déjà le thème) — trouvé au balayage qui a suivi la QA visuelle
+    du thème clair.
 
     La classe ToggleSwitch d'Avalonia déplace elle-même le pouce en C# via Canvas.Left
     (et gère le glisser-déposer à la souris) : PART_SwitchKnob (un Canvas) et
@@ -33,7 +35,7 @@
       <ControlTemplate TargetType="ToggleSwitch">
         <Grid Width="34" Height="18">
           <Border Name="PART_Track"
-                  Background="#332E29"
+                  Background="{DynamicResource SwitchTrackOff}"
                   BorderBrush="{DynamicResource BorderStrong}"
                   BorderThickness="1"
                   CornerRadius="{StaticResource RadiusPill}">

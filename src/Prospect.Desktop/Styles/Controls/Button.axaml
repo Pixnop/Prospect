@@ -216,12 +216,25 @@
     <!-- ── CardHit (surface cliquable sans chrome — carte d'Accueil) ──────────────── -->
     <!-- Aucune couleur/état propre : ce bouton n'existe que pour porter un clic sur la vignette
          et le nom d'une InstanceCard (voir le commentaire d'en-tête d'InstanceCardView.axaml),
-         il ne doit jamais avoir l'air d'un bouton. -->
+         il ne doit jamais avoir l'air d'un bouton.
+
+         Height="NaN" et ClipToBounds="False" annulent explicitement deux valeurs héritées du
+         ControlTheme Button générique : Height="{StaticResource ControlHMd}" (32px, pensé pour un
+         bouton texte/icône ordinaire) et ClipToBounds=True (par défaut sur tout TemplatedControl).
+         Sans ce recouvrement, un cardHit qui enveloppe un contenu plus grand que 32px (vignette +
+         nom + dernière session, ~150px) se voit imposer une hauteur de 32px puis rogner tout ce qui
+         dépasse : seule la tranche supérieure de la bande d'art survit, nom et dernière session
+         disparaissent entièrement, quel que soit le thème (repéré aux captures headless du thème
+         clair, mais le rognage touchait tout autant le sombre — invisible faute d'y avoir regardé
+         de aussi près). Auto-hauteur restaure le comportement normal d'un Button : il se dimensionne
+         sur son contenu comme n'importe quel autre conteneur. -->
     <Style Selector="^.cardHit">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="CornerRadius" Value="0" />
       <Setter Property="Padding" Value="0" />
+      <Setter Property="Height" Value="NaN" />
+      <Setter Property="ClipToBounds" Value="False" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     </Style>

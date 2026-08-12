@@ -3,8 +3,10 @@
                     xmlns:converters="using:Prospect.Desktop.Converters">
 
   <!--
-    Port de .pr-progress / .pr-progress__track / .pr-progress__fill. #2B2724 est
-    stone-750, la piste au repos (pas d'alias sémantique dédié, comme pour le switch).
+    Port de .pr-progress / .pr-progress__track / .pr-progress__fill. ProgressTrackBg (Styles/
+    Tokens/Colors.axaml) est la piste au repos : stone-750 en sombre, comme le littéral direct de
+    colors.css (pas d'alias sémantique dédié côté CSS, comme pour le switch), plus une variante
+    claire ajoutée ici — sans elle la piste restait presque noire sur une carte devenue claire.
 
     PART_Indicator est un nom de partie exigé par la classe ProgressBar elle-même. En
     pratique, son mécanisme interne de recalcul de largeur (basé sur un abonnement aux
@@ -33,7 +35,7 @@
   <x:TimeSpan x:Key="DurIndeterminate">0:0:1.4</x:TimeSpan>
 
   <ControlTheme x:Key="{x:Type ProgressBar}" TargetType="ProgressBar">
-    <Setter Property="Background" Value="#2B2724" />
+    <Setter Property="Background" Value="{DynamicResource ProgressTrackBg}" />
     <Setter Property="Foreground" Value="{DynamicResource Accent}" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusXs}" />
     <Setter Property="MinHeight" Value="4" />
