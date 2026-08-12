@@ -7,6 +7,7 @@ using Avalonia.Styling;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Prospect.Core.Auth;
 using Prospect.Core.Settings;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.ViewModels.Shell;
@@ -47,6 +48,12 @@ public partial class App : Application
             var settings = _serviceProvider.GetRequiredService<SettingsService>();
             settings.LoadAsync().GetAwaiter().GetResult();
             _serviceProvider.GetRequiredService<ThemeService>().ApplyStartupTheme();
+
+            // Même moment, même raison, même blocage assumé : la session de compte doit être relue
+            // avant la première fenêtre pour que la section Comptes et la checklist de premier
+            // lancement montrent tout de suite l'état réel. Une session absente ou illisible ne lève
+            // jamais, elle laisse simplement l'application déconnectée (voir ISecretStore.LoadAsync).
+            _serviceProvider.GetRequiredService<VsAccountService>().LoadAsync().GetAwaiter().GetResult();
 
             desktop.MainWindow = _serviceProvider.GetRequiredService<MainWindow>();
 

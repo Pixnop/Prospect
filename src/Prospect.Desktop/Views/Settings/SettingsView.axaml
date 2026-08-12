@@ -183,21 +183,102 @@
           </StackPanel>
         </StackPanel>
 
-        <!-- ── Comptes ───────────────────────────────────────────────────────────── -->
+        <!-- ── Comptes ───────────────────────────────────────────────────────────────
+             Trois états exclusifs portés par SettingsAccountsViewModel : formulaire, demande du
+             code à six chiffres, état connecté. Le champ de mot de passe est masqué par
+             PasswordChar (le ControlTheme TextBox le relaie déjà au presenter) et sa valeur ne
+             quitte jamais le ViewModel, qui la vide dès la fin du flux. -->
         <StackPanel Spacing="12" MaxWidth="640" HorizontalAlignment="Left"
                     IsVisible="{Binding SelectedTab, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Accounts}">
           <TextBlock Text="{StaticResource Settings_AccountsSectionTitle}" FontSize="{StaticResource FsCaption}"
                      FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
-          <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="Transparent"
-                  BorderBrush="{DynamicResource BorderDefault}">
-            <StackPanel HorizontalAlignment="Center" Spacing="12" Margin="32,48" MaxWidth="400">
-              <Path Width="40" Height="40" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.user}"
-                    Stroke="{DynamicResource Text4}" StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round" />
-              <TextBlock Text="{StaticResource Settings_AccountsEmptyTitle}" HorizontalAlignment="Center"
-                         FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
-                         FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
-              <TextBlock Text="{StaticResource Settings_AccountsEmptyDescription}" HorizontalAlignment="Center" TextAlignment="Center"
-                         TextWrapping="Wrap" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text3}" LineHeight="20" />
+
+          <Border Classes="card" Padding="20" DataContext="{Binding Accounts}" x:DataType="vm:SettingsAccountsViewModel">
+            <StackPanel Spacing="16">
+              <TextBlock Text="{StaticResource Settings_AccountsIntro}" TextWrapping="Wrap" LineHeight="20"
+                         FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text3}" />
+
+              <!-- État déconnecté : identifiants -->
+              <StackPanel Spacing="14">
+                <StackPanel.IsVisible>
+                  <MultiBinding Converter="{x:Static BoolConverters.And}">
+                    <Binding Path="IsSignedIn" Converter="{x:Static BoolConverters.Not}" />
+                    <Binding Path="IsTwoFactorPending" Converter="{x:Static BoolConverters.Not}" />
+                  </MultiBinding>
+                </StackPanel.IsVisible>
+
+                <StackPanel Spacing="6">
+                  <TextBlock Text="{StaticResource Settings_AccountsEmailLabel}" FontSize="{StaticResource FsBodySm}"
+                             FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text1}" />
+                  <TextBox Text="{Binding Email, Mode=TwoWay}" MaxWidth="360" HorizontalAlignment="Left" Width="360" />
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                  <TextBlock Text="{StaticResource Settings_AccountsPasswordLabel}" FontSize="{StaticResource FsBodySm}"
+                             FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text1}" />
+                  <TextBox Text="{Binding Password, Mode=TwoWay}" PasswordChar="•" MaxWidth="360" HorizontalAlignment="Left" Width="360" />
+                  <TextBlock Text="{StaticResource Settings_AccountsPasswordHint}" TextWrapping="Wrap" MaxWidth="420"
+                             FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                  <Button Content="{StaticResource Settings_AccountsSignIn}" Command="{Binding SignInCommand}" />
+                  <TextBlock Text="{StaticResource Settings_AccountsSigningIn}" VerticalAlignment="Center"
+                             FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}"
+                             IsVisible="{Binding IsBusy}" />
+                </StackPanel>
+              </StackPanel>
+
+              <!-- Deuxième passe : code à six chiffres -->
+              <StackPanel Spacing="14" IsVisible="{Binding IsTwoFactorPending}">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="{StaticResource Settings_AccountsTwoFactorTitle}" FontSize="{StaticResource FsBodySm}"
+                             FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text1}" />
+                  <TextBlock Text="{StaticResource Settings_AccountsTwoFactorHint}" TextWrapping="Wrap" MaxWidth="420"
+                             FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                  <TextBlock Text="{StaticResource Settings_AccountsTwoFactorLabel}" FontSize="{StaticResource FsBodySm}"
+                             FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text1}" />
+                  <TextBox Text="{Binding TwoFactorCode, Mode=TwoWay}" MaxLength="6" MaxWidth="160" HorizontalAlignment="Left" Width="160"
+                           FontFamily="{DynamicResource FontMono}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <Button Content="{StaticResource Settings_AccountsTwoFactorSubmit}" Command="{Binding SubmitTwoFactorCommand}" />
+                  <Button Classes="ghost" Content="{StaticResource Settings_AccountsTwoFactorCancel}" Command="{Binding CancelTwoFactorCommand}" />
+                </StackPanel>
+              </StackPanel>
+
+              <!-- État connecté -->
+              <StackPanel Spacing="14" IsVisible="{Binding IsSignedIn}">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <Border Grid.Column="0" Width="40" Height="40" CornerRadius="{StaticResource RadiusMd}"
+                          Background="{DynamicResource BgSurfaceRaised}" BorderBrush="{DynamicResource BorderDefault}" BorderThickness="1">
+                    <Path Width="20" Height="20" Stretch="Uniform" Data="{StaticResource Icon.user}"
+                          Stroke="{DynamicResource Text2}" StrokeThickness="1.5" StrokeLineCap="Round" StrokeJoin="Round" />
+                  </Border>
+                  <StackPanel Grid.Column="1" Spacing="3" Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding PlayerName}" TextTrimming="CharacterEllipsis"
+                               FontSize="{StaticResource FsBodySm}" FontWeight="{StaticResource FwMedium}"
+                               Foreground="{DynamicResource Text1}" />
+                    <TextBlock Text="{Binding PlayerUid}" TextTrimming="CharacterEllipsis"
+                               FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}"
+                               Foreground="{DynamicResource Text4}" />
+                  </StackPanel>
+                  <Button Grid.Column="2" Classes="secondary sm" VerticalAlignment="Center"
+                          Content="{StaticResource Settings_AccountsSignOut}" Command="{Binding SignOutCommand}" />
+                </Grid>
+                <TextBlock Text="{StaticResource Settings_AccountsSignedInHint}" TextWrapping="Wrap"
+                           FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+              </StackPanel>
+
+              <!-- Échec de la dernière tentative, nommé par cas (voir UiText.Account) -->
+              <Border Classes="alert danger" IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" LineHeight="19"
+                           FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource DangerText}" />
+              </Border>
             </StackPanel>
           </Border>
         </StackPanel>

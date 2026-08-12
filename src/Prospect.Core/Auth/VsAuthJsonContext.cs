@@ -9,11 +9,13 @@ namespace Prospect.Core.Auth;
 /// comme un <see cref="JsonObject"/> pour n'en toucher que les huit clés du contrat.
 /// </summary>
 /// <remarks>
-/// Interne comme les DTO qu'il expose, et sans <c>PropertyNamingPolicy</c> : les noms de champs
-/// sont ici imposés par deux contrats extérieurs (le service d'authentification, puis le jeu), pas
-/// choisis par Prospect. Chaque nom est donc écrit explicitement à l'endroit qui le porte plutôt
-/// que dérivé d'une convention.
+/// Interne, comme les DTO qu'il expose. Le camelCase ne s'applique qu'à <see cref="VsSession"/>,
+/// pour que <c>session.json</c> ressemble aux autres fichiers de Prospect : les noms de la réponse
+/// du service sont imposés de l'extérieur et portés un par un par des attributs explicites, et les
+/// clés du <c>clientsettings.json</c> du jeu sont écrites à la main dans le
+/// <see cref="ClientSettingsSessionWriter"/>, aucune convention ne les touche.
 /// </remarks>
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(VsGameLoginResponseDto))]
 [JsonSerializable(typeof(VsSession))]
 [JsonSerializable(typeof(JsonObject))]

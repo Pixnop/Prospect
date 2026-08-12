@@ -153,7 +153,7 @@ public sealed class FileSecretStoreTests
     public async Task LoadAsync_TruncatedDocumentMissingFields_IsToleratedAsSignedOut()
     {
         var fixture = CreateFixture();
-        fixture.FileSystem.AddFile(Paths.SessionFilePath, new MockFileData("""{ "playerName": "Sylve" }"""));
+        fixture.FileSystem.AddFile(Paths.SessionFilePath, new MockFileData("""{ "playerName": "Sylve", "email": "x@example.invalid" }"""));
 
         (await fixture.Store.LoadAsync(CancellationToken.None)).ShouldBeNull();
     }

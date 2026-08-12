@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Prospect.Core.Auth;
 using Prospect.Core.Common;
 using Prospect.Core.Migration;
 using Prospect.Core.Settings;
@@ -17,8 +18,8 @@ namespace Prospect.Desktop.ViewModels.Settings;
 /// Écran Réglages (design/ui_kits/launcher/screen-settings.jsx) : cinq sections en onglets —
 /// Général (thème, langue, revoir le premier lancement, et l'action d'adoption VS Launcher,
 /// toujours accessible ici), Jeu (emplacement des données), Réseau (téléchargements simultanés),
-/// Comptes (état vide, le chantier compte est le prochain) et À propos (version, licence, dépôt,
-/// site officiel). Même flux d'adoption que <see cref="Home.HomeViewModel.FirstRun"/> (même
+/// Comptes (connexion au compte Vintage Story pour le multijoueur) et À propos (version, licence,
+/// dépôt, site officiel). Même flux d'adoption que <see cref="Home.HomeViewModel.FirstRun"/> (même
 /// dialogue <see cref="AdoptVslViewModel"/>, même service de détection) mais TOUJOURS disponible
 /// ici, avec un choix de dossier manuel si la détection automatique ne trouve rien à l'emplacement
 /// par défaut de l'OS.
@@ -42,7 +43,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         FirstRunScreenViewModel firstRun,
         SettingsService settings,
         AppPaths appPaths,
-        IExternalUrlOpener urlOpener)
+        IExternalUrlOpener urlOpener,
+        VsAccountService accounts)
     {
         ArgumentNullException.ThrowIfNull(detector);
         ArgumentNullException.ThrowIfNull(adoptFactory);
@@ -53,6 +55,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(appPaths);
         ArgumentNullException.ThrowIfNull(urlOpener);
+        ArgumentNullException.ThrowIfNull(accounts);
 
         _detector = detector;
         _adoptFactory = adoptFactory;
@@ -64,6 +67,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         General = new SettingsGeneralViewModel(settings);
         Game = new SettingsGameViewModel(appPaths, urlOpener);
         Network = new SettingsNetworkViewModel(settings);
+        Accounts = new SettingsAccountsViewModel(accounts, overlay);
         About = new SettingsAboutViewModel(urlOpener);
     }
 
@@ -91,6 +95,9 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     /// <summary>Section Réseau : téléchargements simultanés.</summary>
     public SettingsNetworkViewModel Network { get; }
+
+    /// <summary>Section Comptes : connexion au compte Vintage Story, pour le multijoueur.</summary>
+    public SettingsAccountsViewModel Accounts { get; }
 
     /// <summary>Section À propos : version, licence, dépôt.</summary>
     public SettingsAboutViewModel About { get; }

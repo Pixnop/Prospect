@@ -1,5 +1,6 @@
 using System.IO.Abstractions.TestingHelpers;
 
+using Prospect.Core.Auth;
 using Prospect.Core.Common;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
@@ -33,7 +34,21 @@ public sealed class FirstRunScreenViewModelTests
         RecordingOverlayService Overlay,
         SettingsService Settings,
         IInstalledGameVersionRepository GameVersions,
-        VslAdoptionService AdoptionService);
+        VslAdoptionService AdoptionService,
+        VsAccountService Accounts,
+        MemorySecretStore SecretStore);
+
+    private static readonly VsSession Session = new()
+    {
+        Email = "joueuse@example.invalid",
+        PlayerName = "Sylve",
+        PlayerUid = "3f2b8e14",
+        Entitlements = "singleplayer",
+        SessionKey = "cle",
+        SessionSignature = "signature",
+        MpToken = "jeton",
+        HostGameServer = "false",
+    };
 
     // FakeAppEnvironment (Desktop) ne permet pas de poser de variable d'environnement : voir la
     // remarque équivalente de FirstRunViewModelTests, VslPaths retombe donc toujours sur son repli
@@ -51,8 +66,18 @@ public sealed class FirstRunScreenViewModelTests
         var gameVersions = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
         var adoptionService = new VslAdoptionService(instanceService, instanceRepository, gameVersions, store, fileSystem, clock);
         var settings = new SettingsService(fileSystem, Paths, store, new SettingsMigrationPipeline([]));
+        var secretStore = new MemorySecretStore();
+        var accounts = new VsAccountService(new VsAccountClient(new HttpClient()), secretStore);
 
-        return new Fixture(fileSystem, environment, new RecordingOverlayService(), settings, gameVersions, adoptionService);
+        return new Fixture(fileSystem, environment, new RecordingOverlayService(), settings, gameVersions, adoptionService, accounts, secretStore);
+    }
+
+    // Connecte le service comme le ferait un vrai démarrage : la session vient du stockage, aucun
+    // appel réseau n'est nécessaire ni simulé pour ces tests-ci.
+    private static async Task SignInAsync(Fixture fixture)
+    {
+        fixture.SecretStore.Stored = Session;
+        await fixture.Accounts.LoadAsync();
     }
 
     private static FirstRunScreenViewModel CreateViewModel(Fixture fixture)
@@ -67,7 +92,7 @@ public sealed class FirstRunScreenViewModelTests
             new RecordingToastService(),
             new ImmediateUiDispatcher());
 
-        return new FirstRunScreenViewModel(fixture.Settings, fixture.GameVersions, Paths, detector, adoptFactory, fixture.Overlay);
+        return new FirstRunScreenViewModel(fixture.Settings, fixture.GameVersions, Paths, detector, adoptFactory, fixture.Overlay, fixture.Accounts);
     }
 
     private static void SeedInstalledVersion(MockFileSystem fileSystem, string version)
@@ -97,12 +122,13 @@ public sealed class FirstRunScreenViewModelTests
         var detector = new VslDetector(fixture.FileSystem, fixture.Environment);
         Func<VslDetectionResult, AdoptVslViewModel> adoptFactory = _ => null!;
 
-        Should.Throw<ArgumentNullException>(() => new FirstRunScreenViewModel(null!, fixture.GameVersions, Paths, detector, adoptFactory, fixture.Overlay));
-        Should.Throw<ArgumentNullException>(() => new FirstRunScreenViewModel(fixture.Settings, null!, Paths, detector, adoptFactory, fixture.Overlay));
-        Should.Throw<ArgumentNullException>(() => new FirstRunScreenViewModel(fixture.Settings, fixture.GameVersions, null!, detector, adoptFactory, fixture.Overlay));
-        Should.Throw<ArgumentNullException>(() => new FirstRunScreenViewModel(fixture.Settings, fixture.GameVersions, Paths, null!, adoptFactory, fixture.Overlay));
-        Should.Throw<ArgumentNullException>(() => new FirstRunScreenViewModel(fixture.Settings, fixture.GameVersions, Paths, detector, null!, fixture.Overlay));
-        Should.Throw<ArgumentNullException>(() => new FirstRunScreenViewModel(fixture.Settings, fixture.GameVersions, Paths, detector, adoptFactory, null!));
+        Should.Throw<ArgumentNullException>(() => new FirstRunScreenViewModel(null!, fixture.GameVersions, Paths, detector, adoptFactory, fixture.Overlay, fixture.Accounts));
+        Should.Throw<ArgumentNullException>(() => new FirstRunScreenViewModel(fixture.Settings, null!, Paths, detector, adoptFactory, fixture.Overlay, fixture.Accounts));
+        Should.Throw<ArgumentNullException>(() => new FirstRunScreenViewModel(fixture.Settings, fixture.GameVersions, null!, detector, adoptFactory, fixture.Overlay, fixture.Accounts));
+        Should.Throw<ArgumentNullException>(() => new FirstRunScreenViewModel(fixture.Settings, fixture.GameVersions, Paths, null!, adoptFactory, fixture.Overlay, fixture.Accounts));
+        Should.Throw<ArgumentNullException>(() => new FirstRunScreenViewModel(fixture.Settings, fixture.GameVersions, Paths, detector, null!, fixture.Overlay, fixture.Accounts));
+        Should.Throw<ArgumentNullException>(() => new FirstRunScreenViewModel(fixture.Settings, fixture.GameVersions, Paths, detector, adoptFactory, null!, fixture.Accounts));
+        Should.Throw<ArgumentNullException>(() => new FirstRunScreenViewModel(fixture.Settings, fixture.GameVersions, Paths, detector, adoptFactory, fixture.Overlay, null!));
     }
 
     [Fact]
@@ -159,6 +185,53 @@ public sealed class FirstRunScreenViewModelTests
     }
 
     [Fact]
+    public async Task InitializeAsync_SignedOut_AccountStepIsProposedWithoutSoundingMandatory()
+    {
+        var fixture = CreateServices();
+        var viewModel = CreateViewModel(fixture);
+
+        await viewModel.InitializeCommand.ExecuteAsync(null);
+
+        var accountStep = viewModel.Steps[2];
+        accountStep.Title.ShouldBe("Compte Vintage Story");
+        accountStep.IsDone.ShouldBeFalse();
+        accountStep.HasAction.ShouldBeTrue();
+        accountStep.ActionCommand.ShouldBeSameAs(viewModel.GoToAccountSettingsCommand);
+        accountStep.Subtitle.ShouldContain("multijoueur");
+    }
+
+    [Fact]
+    public async Task InitializeAsync_SignedIn_AccountStepIsDoneAndNamesThePlayer()
+    {
+        var fixture = CreateServices();
+        await SignInAsync(fixture);
+        var viewModel = CreateViewModel(fixture);
+
+        await viewModel.InitializeCommand.ExecuteAsync(null);
+
+        var accountStep = viewModel.Steps[2];
+        accountStep.IsDone.ShouldBeTrue();
+        accountStep.HasAction.ShouldBeFalse();
+        accountStep.Subtitle.ShouldContain("Sylve");
+    }
+
+    [Fact]
+    public async Task GoToAccountSettingsAsync_MarksSeenClosesTheOverlayAndRaisesNavigation()
+    {
+        var fixture = CreateServices();
+        var viewModel = CreateViewModel(fixture);
+        fixture.Overlay.Show(viewModel);
+        var navigated = false;
+        viewModel.NavigateToAccountSettingsRequested += (_, _) => navigated = true;
+
+        await viewModel.GoToAccountSettingsCommand.ExecuteAsync(null);
+
+        fixture.Settings.Current.HasSeenFirstRun.ShouldBeTrue();
+        fixture.Overlay.Active.ShouldBeNull();
+        navigated.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task InitializeAsync_NothingDetected_StepsHasNoVslEntry()
     {
         var fixture = CreateServices();
@@ -166,11 +239,11 @@ public sealed class FirstRunScreenViewModelTests
 
         await viewModel.InitializeCommand.ExecuteAsync(null);
 
-        viewModel.Steps.Count.ShouldBe(2);
+        viewModel.Steps.Count.ShouldBe(3);
     }
 
     [Fact]
-    public async Task InitializeAsync_VslDetected_AddsAThirdEntryWithAdoptAction()
+    public async Task InitializeAsync_VslDetected_AddsAFourthEntryWithAdoptAction()
     {
         var fixture = CreateServices();
         WriteVslConfigWithOneInstallation(fixture.FileSystem);
@@ -178,8 +251,8 @@ public sealed class FirstRunScreenViewModelTests
 
         await viewModel.InitializeCommand.ExecuteAsync(null);
 
-        viewModel.Steps.Count.ShouldBe(3);
-        var vslStep = viewModel.Steps[2];
+        viewModel.Steps.Count.ShouldBe(4);
+        var vslStep = viewModel.Steps[3];
         vslStep.IsDone.ShouldBeFalse();
         vslStep.HasAction.ShouldBeTrue();
         vslStep.ActionCommand.ShouldBeSameAs(viewModel.OpenVslAdoptionCommand);

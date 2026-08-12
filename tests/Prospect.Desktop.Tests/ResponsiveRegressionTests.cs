@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Headless.XUnit;
 using Avalonia.Styling;
 
@@ -8,6 +9,8 @@ using Prospect.Core.Modpacks;
 using Prospect.Core.Storage;
 
 using Prospect.Desktop.Tests.Support;
+using Prospect.Desktop.Tests.TestDoubles;
+using Prospect.Desktop.ViewModels.Dialogs;
 using Prospect.Desktop.ViewModels.FirstRun;
 using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Instance;
@@ -405,6 +408,74 @@ public sealed class ResponsiveRegressionTests
         window.Close();
     }
 
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Settings_AccountsTab_TwoFactorAndErrorStates_HoldTheirBoxes(bool refused)
+    {
+        // Les deux états les plus chargés de la section Comptes : la deuxième passe (champ de code
+        // en plus du formulaire) et le message d'échec, qui est du texte long dans un cadre.
+        using var provider = ResponsiveScenario.CreateProvider(out _, out var handler);
+        handler.Auth.Responses = refused ? [FakeVsAuthHandler.InvalidCredentialsJson] : [FakeVsAuthHandler.TwoFactorJson];
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.SettingsNavItem.SelectCommand.Execute(null);
+        shell.Settings.SelectTabCommand.Execute(SettingsTab.Accounts);
+        shell.Settings.Accounts.Email = "joueuse@example.invalid";
+        shell.Settings.Accounts.Password = "mot-de-passe-de-test";
+        await shell.Settings.Accounts.SignInCommand.ExecuteAsync(null);
+        window.Settle();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize(refused ? "Réglages, Comptes, refus" : "Réglages, Comptes, code 2FA");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task Settings_AccountsTab_SignedIn_HoldsItsBoxesInTheLightTheme()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out _, out var handler);
+        handler.Auth.Responses = [FakeVsAuthHandler.SuccessJson];
+        var window = ResponsiveScenario.ShowWindow(provider, ThemeVariant.Light);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.SettingsNavItem.SelectCommand.Execute(null);
+        shell.Settings.SelectTabCommand.Execute(SettingsTab.Accounts);
+        shell.Settings.Accounts.Email = "joueuse@example.invalid";
+        shell.Settings.Accounts.Password = "mot-de-passe-de-test";
+        await shell.Settings.Accounts.SignInCommand.ExecuteAsync(null);
+        window.Settle();
+        shell.Settings.Accounts.IsSignedIn.ShouldBeTrue();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Réglages, Comptes, connecté, thème clair");
+
+        Application.Current!.RequestedThemeVariant = ThemeVariant.Dark;
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task SignOutDialog_HoldsItsBoxes()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out _, out var handler);
+        handler.Auth.Responses = [FakeVsAuthHandler.SuccessJson];
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.SettingsNavItem.SelectCommand.Execute(null);
+        shell.Settings.SelectTabCommand.Execute(SettingsTab.Accounts);
+        shell.Settings.Accounts.Email = "joueuse@example.invalid";
+        shell.Settings.Accounts.Password = "mot-de-passe-de-test";
+        await shell.Settings.Accounts.SignInCommand.ExecuteAsync(null);
+        shell.Settings.Accounts.SignOutCommand.Execute(null);
+        window.Settle();
+        shell.Overlay.Active.ShouldBeOfType<SignOutDialogViewModel>();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Déconnexion du compte");
+
+        window.Close();
+    }
+
     [AvaloniaFact]
     public void Settings_AboutTab_HoldsItsBoxes()
     {
@@ -504,8 +575,9 @@ public sealed class ResponsiveRegressionTests
     [AvaloniaFact]
     public void FirstRun_VersionInstalledAndVslDetected_HoldsItsBoxes()
     {
-        // Le scénario le plus chargé de l'écran (trois lignes plutôt que deux) : celui qui tend le
-        // plus la boîte de la carte à la hauteur plancher de la fenêtre (960x600).
+        // Le scénario le plus chargé de l'écran (quatre lignes : dossier, version, compte, VS
+        // Launcher) : celui qui tend le plus la boîte de la carte à la hauteur plancher de la
+        // fenêtre (960x600).
         using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
         provider.SeedInstalledVersion(fileSystem, "1.20.4");
         provider.SeedVslInstallation(fileSystem, "/vsl/installations/" + ResponsiveScenario.LongInstanceName, "1.20.4");
@@ -515,7 +587,7 @@ public sealed class ResponsiveRegressionTests
         shell.ShowFirstRunIfNeeded();
         window.Settle();
         var firstRun = shell.Overlay.Active.ShouldBeOfType<FirstRunScreenViewModel>();
-        firstRun.Steps.Count.ShouldBe(3);
+        firstRun.Steps.Count.ShouldBe(4);
 
         window.ShouldHoldLayoutInvariantsAtEverySize("Premier lancement, version installée et VS Launcher détecté");
 

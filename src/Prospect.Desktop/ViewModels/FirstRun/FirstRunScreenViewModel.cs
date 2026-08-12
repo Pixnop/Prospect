@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Prospect.Core.Auth;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Migration;
 using Prospect.Core.Settings;
@@ -23,14 +24,14 @@ namespace Prospect.Desktop.ViewModels.FirstRun;
 /// (tokens actuels uniquement, voir docs/architecture.md).
 /// </summary>
 /// <remarks>
-/// Écart assumé avec la maquette statique, qui montre trois cartes figées (dossier de données,
-/// COMPTE VINTAGE STORY, version du jeu) partageant un unique bouton « Configurer » générique. La
-/// carte « compte » ne correspond à aucune fonctionnalité réelle : l'authentification est post-MVP
-/// (docs/architecture.md, section « Après le MVP »), l'afficher aurait été de la simulation, ce que
-/// la mission interdit explicitement. Elle est donc remplacée par une checklist réellement
-/// dynamique : dossier de données (toujours satisfait), version du jeu installée, et une entrée
-/// d'adoption VS Launcher qui n'apparaît QUE si <see cref="VslDetector"/> trouve quelque chose.
-/// Chaque ligne reflète l'état réel des services plutôt qu'un texte figé.
+/// La maquette statique montrait trois cartes figées (dossier de données, compte Vintage Story,
+/// version du jeu) partageant un bouton « Configurer » générique. Cette checklist-ci est
+/// entièrement dynamique : chaque ligne lit l'état réel d'un service. La ligne « compte » avait
+/// été délibérément omise à sa création, faute de fonctionnalité derrière — l'afficher aurait été
+/// de la simulation. Elle est là depuis que le chantier compte existe : elle montre le vrai état de
+/// <see cref="VsAccountService"/> et mène aux Réglages, ce qui referme l'écart documenté à
+/// l'époque. Reste conditionnelle, en revanche, l'entrée d'adoption VS Launcher, qui n'apparaît que
+/// si <see cref="VslDetector"/> trouve quelque chose.
 /// </remarks>
 public sealed partial class FirstRunScreenViewModel : ObservableObject
 {
@@ -40,6 +41,7 @@ public sealed partial class FirstRunScreenViewModel : ObservableObject
     private readonly VslDetector _detector;
     private readonly Func<VslDetectionResult, AdoptVslViewModel> _adoptFactory;
     private readonly IOverlayService _overlay;
+    private readonly VsAccountService _accounts;
 
     private VslDetectionResult? _detection;
 
@@ -49,7 +51,8 @@ public sealed partial class FirstRunScreenViewModel : ObservableObject
         AppPaths appPaths,
         VslDetector detector,
         Func<VslDetectionResult, AdoptVslViewModel> adoptFactory,
-        IOverlayService overlay)
+        IOverlayService overlay,
+        VsAccountService accounts)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(installedGameVersions);
@@ -57,6 +60,7 @@ public sealed partial class FirstRunScreenViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(detector);
         ArgumentNullException.ThrowIfNull(adoptFactory);
         ArgumentNullException.ThrowIfNull(overlay);
+        ArgumentNullException.ThrowIfNull(accounts);
 
         _settings = settings;
         _installedGameVersions = installedGameVersions;
@@ -64,10 +68,14 @@ public sealed partial class FirstRunScreenViewModel : ObservableObject
         _detector = detector;
         _adoptFactory = adoptFactory;
         _overlay = overlay;
+        _accounts = accounts;
     }
 
     /// <summary>Levée quand la ligne « Version du jeu » demande la navigation vers la page Versions.</summary>
     public event EventHandler? NavigateToVersionsRequested;
+
+    /// <summary>Levée quand la ligne « Compte Vintage Story » demande d'aller se connecter (Réglages, Comptes).</summary>
+    public event EventHandler? NavigateToAccountSettingsRequested;
 
     /// <summary>Levée quand une adoption VS Launcher ouverte depuis cet écran se termine : l'Accueil doit se rafraîchir.</summary>
     public event EventHandler<VslAdoptionOutcome>? VslAdopted;
@@ -119,6 +127,20 @@ public sealed partial class FirstRunScreenViewModel : ObservableObject
             ActionLabel: hasInstalledVersion ? null : UiText.FirstRun.InstallVersionAction,
             ActionCommand: hasInstalledVersion ? null : GoToVersionsCommand));
 
+        // Facultative au sens du produit : le jeu se télécharge et se joue en solo sans compte
+        // (docs/research/vslauncher-et-distribution.md, verdict). La ligne dit donc à quoi ça sert
+        // plutôt que de faire peser une obligation, et elle se coche dès qu'une session existe.
+        var session = _accounts.CurrentSession;
+        Steps.Add(new FirstRunStepViewModel(
+            IconKey: "user",
+            Title: UiText.FirstRun.AccountTitle,
+            Subtitle: session is null
+                ? UiText.FirstRun.AccountSignedOut
+                : UiText.Account.SignedInSubtitle(session.PlayerName),
+            IsDone: session is not null,
+            ActionLabel: session is null ? UiText.FirstRun.AccountSignInAction : null,
+            ActionCommand: session is null ? GoToAccountSettingsCommand : null));
+
         // Conditionnelle : absente tant que VslDetector ne trouve rien (docs de la mission,
         // « l'entrée d'adoption VS Launcher quand la détection de la #31 trouve quelque chose »).
         if (detection.IsDetected && detection.HasAnyContent)
@@ -142,6 +164,16 @@ public sealed partial class FirstRunScreenViewModel : ObservableObject
         await MarkSeenAsync().ConfigureAwait(true);
         _overlay.Close();
         NavigateToVersionsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    // Même sortie que GoToVersions : fermer le panneau avant d'emmener l'utilisateur ailleurs,
+    // ici vers Réglages > Comptes, le seul endroit où la connexion se fait.
+    [RelayCommand]
+    private async Task GoToAccountSettingsAsync()
+    {
+        await MarkSeenAsync().ConfigureAwait(true);
+        _overlay.Close();
+        NavigateToAccountSettingsRequested?.Invoke(this, EventArgs.Empty);
     }
 
     // Remplace ce panneau par le dialogue d'adoption (même IOverlayService à slot unique que le

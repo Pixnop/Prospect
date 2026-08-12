@@ -82,7 +82,7 @@ public sealed class SettingsViewModelTests
             () => throw new InvalidOperationException("Non exercé par ces tests."),
             _ => throw new InvalidOperationException("Non exercé par ces tests."),
             firstRun);
-        var firstRunScreen = new FirstRunScreenViewModel(settings, gameVersions, Paths, detector, firstRunAdoptFactory, overlay);
+        var firstRunScreen = new FirstRunScreenViewModel(settings, gameVersions, Paths, detector, firstRunAdoptFactory, overlay, AccountDoubles.SignedOut());
 
         return new Fixture(fileSystem, environment, overlay, filePicker, home, firstRunScreen, adoptionService, detector, settings, urlOpener);
     }
@@ -112,7 +112,9 @@ public sealed class SettingsViewModelTests
             new FakeProcessRunner(),
             fileSystem,
             Paths,
-            clock);
+            clock,
+            AccountDoubles.SignedOut(),
+            AccountDoubles.ClientSettings(fileSystem));
 
         return (launcher, tracker);
     }
@@ -127,7 +129,8 @@ public sealed class SettingsViewModelTests
             fixture.FirstRunScreen,
             fixture.Settings,
             Paths,
-            fixture.UrlOpener);
+            fixture.UrlOpener,
+            AccountDoubles.SignedOut());
 
     private static void WriteConfigWithOneInstallation(MockFileSystem fileSystem, string root)
     {
@@ -146,15 +149,18 @@ public sealed class SettingsViewModelTests
         var fixture = CreateServices();
         Func<VslDetectionResult, AdoptVslViewModel> adoptFactory = _ => null!;
 
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(null!, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, fixture.Settings, Paths, fixture.UrlOpener));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, null!, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, fixture.Settings, Paths, fixture.UrlOpener));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, null!, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, fixture.Settings, Paths, fixture.UrlOpener));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, null!, fixture.Home, fixture.FirstRunScreen, fixture.Settings, Paths, fixture.UrlOpener));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, null!, fixture.FirstRunScreen, fixture.Settings, Paths, fixture.UrlOpener));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, null!, fixture.Settings, Paths, fixture.UrlOpener));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, null!, Paths, fixture.UrlOpener));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, fixture.Settings, null!, fixture.UrlOpener));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, fixture.Settings, Paths, null!));
+        var accounts = AccountDoubles.SignedOut();
+
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(null!, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, fixture.Settings, Paths, fixture.UrlOpener, accounts));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, null!, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, fixture.Settings, Paths, fixture.UrlOpener, accounts));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, null!, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, fixture.Settings, Paths, fixture.UrlOpener, accounts));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, null!, fixture.Home, fixture.FirstRunScreen, fixture.Settings, Paths, fixture.UrlOpener, accounts));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, null!, fixture.FirstRunScreen, fixture.Settings, Paths, fixture.UrlOpener, accounts));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, null!, fixture.Settings, Paths, fixture.UrlOpener, accounts));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, null!, Paths, fixture.UrlOpener, accounts));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, fixture.Settings, null!, fixture.UrlOpener, accounts));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, fixture.Settings, Paths, null!, accounts));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, fixture.Settings, Paths, fixture.UrlOpener, null!));
     }
 
     [Fact]
