@@ -8,16 +8,20 @@ using Prospect.Core.Http;
 using Prospect.Core.Instances;
 using Prospect.Core.Instances.Migrations;
 using Prospect.Core.Launching;
+using Prospect.Core.Migration;
 using Prospect.Core.ModDb;
 using Prospect.Core.Modpacks;
 using Prospect.Core.Runtime;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.ViewModels.Downloads;
+using Prospect.Desktop.ViewModels.FirstRun;
 using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Instance;
+using Prospect.Desktop.ViewModels.Migration;
 using Prospect.Desktop.ViewModels.Modpacks;
 using Prospect.Desktop.ViewModels.Mods;
+using Prospect.Desktop.ViewModels.Settings;
 using Prospect.Desktop.ViewModels.Shell;
 using Prospect.Desktop.ViewModels.Versions;
 using Prospect.Desktop.ViewModels.Wizard;
@@ -72,6 +76,7 @@ public static class CompositionRoot
         AddLaunching(services);
         AddModDb(services, httpMessageHandler);
         AddModpacks(services);
+        AddMigration(services);
 
         // Services Desktop transverses.
         services.AddSingleton<IOverlayService, OverlayService>();
@@ -101,9 +106,26 @@ public static class CompositionRoot
             provider.GetRequiredService<IToastService>(),
             provider.GetRequiredService<IUiDispatcher>()));
 
-        // ViewModels des pages construites eagerly (ShellViewModel construit lui-même les pages
-        // placeholder). Singleton : une seule instance de chaque pour la durée de vie de l'app.
+        // Le dialogue d'adoption VS Launcher est éphémère (un par ouverture) et paramétré par le
+        // résultat de détection, connu seulement à l'usage (Réglages ou rappel de premier
+        // lancement) : même fabrique paramétrée que l'import de modpack ci-dessus.
+        services.AddSingleton<Func<VslDetectionResult, AdoptVslViewModel>>(provider => detection => new AdoptVslViewModel(
+            detection,
+            provider.GetRequiredService<VslAdoptionService>(),
+            provider.GetRequiredService<IInstalledGameVersionRepository>(),
+            provider.GetRequiredService<IFileSystem>(),
+            provider.GetRequiredService<IOverlayService>(),
+            provider.GetRequiredService<IToastService>(),
+            provider.GetRequiredService<IUiDispatcher>()));
+
+        // ViewModels des pages construites eagerly. Singleton : une seule instance de chaque pour
+        // la durée de vie de l'app. FirstRunViewModel et SettingsViewModel dépendent tous deux de
+        // HomeViewModel (rafraîchir la grille après une adoption) : HomeViewModel doit donc déjà
+        // être enregistré, même si l'ordre des appels AddSingleton n'a pas d'importance pour la
+        // résolution elle-même (résolue paresseusement, pas à l'enregistrement).
         services.AddSingleton<HomeViewModel>();
+        services.AddSingleton<FirstRunViewModel>();
+        services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<VersionsViewModel>();
         services.AddSingleton<ModBrowserViewModel>();
         services.AddSingleton<DownloadsViewModel>();
@@ -202,6 +224,15 @@ public static class CompositionRoot
     {
         services.AddSingleton<ModpackExportService>();
         services.AddSingleton<ModpackImportService>();
+    }
+
+    // Adoption des installations VS Launcher (docs/research/vslauncher-et-distribution.md, section
+    // f) : comme AddModpacks, aucun adaptateur propre à ce domaine, seulement une composition de ce
+    // qu'AddGameVersions/AddInstances ont déjà enregistré plus haut.
+    private static void AddMigration(IServiceCollection services)
+    {
+        services.AddSingleton<VslDetector>();
+        services.AddSingleton<VslAdoptionService>();
     }
 
     // Miroir d'AddGameVersions pour le lancement (docs/architecture.md, section « 3. Lancement ») :

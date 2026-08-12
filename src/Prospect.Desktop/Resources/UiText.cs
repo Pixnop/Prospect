@@ -471,4 +471,82 @@ internal static class UiText
             _ => $"{installedCount}/{totalCount} mods installés, voir le rapport pour le reste.",
         };
     }
+
+    /// <summary>
+    /// Textes de l'adoption des installations VS Launcher (chantier « migration »,
+    /// docs/research/vslauncher-et-distribution.md). Voix produit pour le rapport final, même
+    /// principe que <see cref="Modpacks"/> : jamais de trace technique quand une raison courte
+    /// suffit.
+    /// </summary>
+    internal static class Migration
+    {
+        internal const string Starting = "Préparation…";
+
+        internal const string CompletedToastTitle = "Adoption terminée";
+
+        internal static string ModCount(int count) => count switch
+        {
+            0 => "aucun mod",
+            1 => "1 mod",
+            _ => $"{count} mods",
+        };
+
+        internal static string DetectionSummary(int installationCount, int gameVersionCount)
+        {
+            var installations = installationCount switch
+            {
+                0 => "aucune installation",
+                1 => "1 installation",
+                _ => $"{installationCount} installations",
+            };
+
+            var engines = gameVersionCount switch
+            {
+                0 => "aucun moteur",
+                1 => "1 moteur",
+                _ => $"{gameVersionCount} moteurs",
+            };
+
+            return $"{installations} et {engines} détectés";
+        }
+
+        internal static string AdoptingInstallationsPhase(int completedItems, int totalItems, string? currentItemLabel)
+            => string.IsNullOrEmpty(currentItemLabel)
+                ? $"Installations {completedItems}/{totalItems}"
+                : $"Installations {completedItems}/{totalItems} · {currentItemLabel}";
+
+        internal static string AdoptingEnginesPhase(int completedItems, int totalItems, string? currentItemLabel)
+            => string.IsNullOrEmpty(currentItemLabel)
+                ? $"Moteurs {completedItems}/{totalItems}"
+                : $"Moteurs {completedItems}/{totalItems} · {currentItemLabel}";
+
+        internal static string FilesCopied(int filesCopied, int totalFiles) => $"{filesCopied}/{totalFiles} fichiers";
+
+        internal static string CompletedToastDescription(int adoptedInstallations, int adoptedEngines) => (adoptedInstallations, adoptedEngines) switch
+        {
+            (0, 0) => "Rien n'a été adopté, voir le rapport.",
+            (_, 0) => adoptedInstallations == 1 ? "1 instance créée." : $"{adoptedInstallations} instances créées.",
+            (0, _) => adoptedEngines == 1 ? "1 moteur adopté." : $"{adoptedEngines} moteurs adoptés.",
+            _ => $"{adoptedInstallations} instance(s) créée(s), {adoptedEngines} moteur(s) adopté(s).",
+        };
+
+        internal static string InstallationsAdoptedGroupTitle(int count) => count == 1 ? "1 instance créée" : $"{count} instances créées";
+
+        internal static string InstallationsSkippedGroupTitle(int count) => count == 1 ? "1 installation ignorée" : $"{count} installations ignorées";
+
+        internal static string InstallationsFailedGroupTitle(int count) => count == 1 ? "1 installation en échec" : $"{count} installations en échec";
+
+        internal static string EnginesAdoptedGroupTitle(int count) => count == 1 ? "1 moteur adopté" : $"{count} moteurs adoptés";
+
+        internal static string EnginesSkippedGroupTitle(int count) => count == 1 ? "1 moteur ignoré" : $"{count} moteurs ignorés";
+
+        internal static string EnginesFailedGroupTitle(int count) => count == 1 ? "1 moteur en échec" : $"{count} moteurs en échec";
+    }
+
+    /// <summary>Textes de l'écran Réglages.</summary>
+    internal static class Settings
+    {
+        internal const string PickFolderTitle = "Dossier de VS Launcher";
+        internal const string VslNotDetected = "Rien d'exploitable n'a été trouvé à cet emplacement.";
+    }
 }
