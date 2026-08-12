@@ -119,15 +119,26 @@ public sealed class ModReleaseRowViewModel
         DateText = UiText.Mods.ReleaseDate(release.CreatedUtc);
 
         var isCompatible = targetGameVersion is { } version && release.CompatibleGameVersions.Contains(version);
+
+        // Le badge porte le VERDICT (la version de jeu visée), pas la liste des versions
+        // compatibles. Sur les fiches réelles, cette liste monte à 23 versions pour une seule
+        // release (docs/research/moddb-api.md, et vérifié par l'étage live sur configlib) : un
+        // badge de cette largeur sortait de la boîte du dialogue. Même sémantique que le badge
+        // d'une carte du navigateur, qui affiche déjà la version visée et rien d'autre.
+        BadgeText = targetGameVersion?.ToString() ?? string.Empty;
         BadgeTone = targetGameVersion is null ? string.Empty : isCompatible ? "stable" : "incompatible";
         ShowBadge = targetGameVersion is not null;
     }
 
     public string VersionText { get; }
 
+    /// <summary>Versions de jeu déclarées compatibles, déjà résumées quand elles sont nombreuses.</summary>
     public string GameVersionsText { get; }
 
     public string DateText { get; }
+
+    /// <summary>Version de jeu de l'instance cible, ou chaîne vide quand il n'y a rien à affirmer.</summary>
+    public string BadgeText { get; }
 
     public string BadgeTone { get; }
 
