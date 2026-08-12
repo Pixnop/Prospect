@@ -128,7 +128,10 @@ public sealed class FileSystemInstanceRepository : IInstanceRepository
         var metadata = upToDate.Deserialize(InstanceJsonContext.Default.InstanceMetadata)
             ?? throw new CorruptedFileException(metadataPath, new JsonException($"'{metadataPath}' s'est désérialisé en une instance nulle."));
 
-        var record = new InstanceRecord(slug, metadata);
+        // Voir InstanceMetadata.Normalized() : sans ce filet, un instance.json partiel désérialise
+        // Icon/Launch/Notes à null malgré leurs défauts documentés (piège de System.Text.Json avec
+        // les membres required, même mécanisme que SettingsService.LoadAsync).
+        var record = new InstanceRecord(slug, metadata.Normalized());
 
         if (schemaVersion != InstanceMetadata.CurrentSchemaVersion)
         {
