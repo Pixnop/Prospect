@@ -96,6 +96,7 @@
                   Stroke="{DynamicResource Text2}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
             <Button.Flyout>
               <MenuFlyout Placement="Bottom">
+                <MenuItem Header="{StaticResource Instance_CheckInstance}" Command="{Binding CheckInstanceCommand}" />
                 <MenuItem Header="{StaticResource Instance_Rename}" Command="{Binding RenameCommand}" />
                 <MenuItem Header="{StaticResource Instance_Duplicate}" Command="{Binding DuplicateCommand}" />
                 <MenuItem Header="{StaticResource Instance_Delete}" Command="{Binding DeleteCommand}" />

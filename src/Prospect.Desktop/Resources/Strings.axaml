@@ -140,10 +140,16 @@
   <x:String x:Key="Instance_Playing">En cours</x:String>
   <x:String x:Key="Instance_MoreActions">Plus d'actions</x:String>
   <x:String x:Key="Instance_Export">Exporter</x:String>
+  <x:String x:Key="Instance_CheckInstance">Vérifier l'instance</x:String>
   <x:String x:Key="Instance_Rename">Renommer</x:String>
   <x:String x:Key="Instance_Duplicate">Dupliquer</x:String>
   <x:String x:Key="Instance_Delete">Supprimer</x:String>
   <x:String x:Key="Instance_InstallAction">Installer</x:String>
+
+  <!-- ── Docteur d'instance (diagnostic local hors ligne) ───────────────────────────── -->
+  <x:String x:Key="InstanceDoctor_Title">Diagnostic de l'instance</x:String>
+  <x:String x:Key="InstanceDoctor_Subtitle">Diagnostic local : aucune donnée téléchargée, aucun appel réseau.</x:String>
+  <x:String x:Key="InstanceDoctor_Close">Fermer</x:String>
 
   <x:String x:Key="Tab_Mods">Mods</x:String>
   <x:String x:Key="Tab_Worlds">Mondes</x:String>
