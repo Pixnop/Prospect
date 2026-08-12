@@ -1,5 +1,7 @@
 using System.IO.Abstractions;
 
+using Avalonia;
+
 using Microsoft.Extensions.DependencyInjection;
 
 using Prospect.Core.Common;
@@ -12,6 +14,8 @@ using Prospect.Core.Migration;
 using Prospect.Core.ModDb;
 using Prospect.Core.Modpacks;
 using Prospect.Core.Runtime;
+using Prospect.Core.Settings;
+using Prospect.Core.Settings.Migrations;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.ViewModels.Downloads;
@@ -72,6 +76,7 @@ public static class CompositionRoot
         services.AddSingleton<IInstanceRepository, FileSystemInstanceRepository>();
         services.AddSingleton<InstanceService>();
 
+        AddSettings(services);
         AddGameVersions(services, httpMessageHandler);
         AddLaunching(services);
         AddModDb(services, httpMessageHandler);
@@ -83,6 +88,12 @@ public static class CompositionRoot
         services.AddSingleton<IToastService, ToastService>();
         services.AddSingleton<IUiDispatcher, AvaloniaUiDispatcher>();
         services.AddSingleton<IModUpdateCheckCache, ModUpdateCheckCache>();
+
+        // L'Application Avalonia elle-même : déjà construite et courante avant que ce conteneur ne
+        // soit peuplé (App.Initialize / TestAppBuilder pour les tests headless), résolue telle
+        // quelle plutôt que redemandée à un Current statique depuis ThemeService.
+        services.AddSingleton(_ => Application.Current!);
+        services.AddSingleton<ThemeService>();
 
         // Cache des logos du navigateur de mods : un délai plus court que celui du catalogue, une
         // vignette décorative ne justifie pas d'attendre aussi longtemps qu'un appel API (voir
@@ -163,6 +174,17 @@ public static class CompositionRoot
         services.AddSingleton<MainWindow>();
     }
 
+    // Réglages globaux (prospect.json, docs/architecture.md). Comme pour Instances, aucune
+    // ISettingsMigration n'est enregistrée : le schéma v1 est le premier. SettingsService expose
+    // des valeurs par défaut saines dès sa construction (voir sa docstring) ; c'est
+    // App.OnFrameworkInitializationCompleted qui appelle LoadAsync explicitement, tôt, avant de
+    // construire la première fenêtre.
+    private static void AddSettings(IServiceCollection services)
+    {
+        services.AddSingleton<SettingsMigrationPipeline>();
+        services.AddSingleton<SettingsService>();
+    }
+
     // Les deux clients HTTP sont construits ici, et pas résolus par type, parce qu'ils n'ont pas le
     // même contrat de temps. Celui du catalogue a un délai de requête normal ; celui des
     // téléchargements n'en a aucun, sans quoi un client de 600 Mo serait coupé en plein transfert
@@ -176,11 +198,27 @@ public static class CompositionRoot
             provider.GetRequiredService<AppPaths>(),
             provider.GetRequiredService<IClock>()));
 
-        services.AddSingleton<IDownloadManager>(provider => new DownloadManager(
-            CreateHttpClient(httpMessageHandler, Timeout.InfiniteTimeSpan),
-            provider.GetRequiredService<IFileSystem>(),
-            provider.GetRequiredService<AppPaths>(),
-            provider.GetRequiredService<IClock>()));
+        // DownloadManager est un singleton construit une seule fois, paresseusement, à la première
+        // résolution : le parallélisme choisi par l'utilisateur (Réglages, section Réseau) doit
+        // donc déjà être chargé à cet instant. C'est le cas en production (LoadAsync tourne avant
+        // la première fenêtre, voir App) comme dans la quasi-totalité des tests (aucun ne touche
+        // SettingsService, donc DownloadOptions.Default.MaxParallelDownloads == la valeur par
+        // défaut de ProspectSettings, comportement inchangé). Un changement du réglage APRÈS que ce
+        // manager existe déjà s'applique à la prochaine ouverture de l'app : le sémaphore interne
+        // de DownloadManager est dimensionné une fois à la construction, le redimensionner à chaud
+        // est un chantier à part que rien ne demande encore.
+        services.AddSingleton<IDownloadManager>(provider =>
+        {
+            var maxParallelDownloads = provider.GetRequiredService<SettingsService>().Current.Downloads.MaxParallelDownloads;
+            var options = DownloadOptions.Default with { MaxParallelDownloads = maxParallelDownloads };
+
+            return new DownloadManager(
+                CreateHttpClient(httpMessageHandler, Timeout.InfiniteTimeSpan),
+                provider.GetRequiredService<IFileSystem>(),
+                provider.GetRequiredService<AppPaths>(),
+                provider.GetRequiredService<IClock>(),
+                options: options);
+        });
 
         services.AddSingleton<IInstalledGameVersionRepository, FileSystemInstalledGameVersionRepository>();
 
