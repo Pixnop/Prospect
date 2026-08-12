@@ -1,0 +1,252 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Valider le pipeline (build, packaging, artifacts) sans créer de tag ni de release"
+        type: boolean
+        default: true
+
+# Minimales par défaut ; le job release seul les élève à contents: write pour créer le brouillon
+# de release (voir plus bas).
+permissions:
+  contents: read
+
+jobs:
+  package-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Installation du SDK .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      # v0.1.0 → 0.1.0 sur un push de tag. En workflow_dispatch (dry-run manuel, pas de tag), un
+      # numéro qui ne collisionnera jamais avec une vraie version publiée.
+      - name: Résolution de la version
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="0.0.0-dry.$GITHUB_RUN_NUMBER"
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "STAGE=prospect-$VERSION-linux-x64" >> "$GITHUB_ENV"
+
+      # Autonome (--self-contained) et non single-file : Avalonia et le lancement du processus du
+      # jeu se comportent mieux avec un dossier de publication complet qu'avec un exécutable qui
+      # s'extrait en temporaire à chaque démarrage.
+      - name: Publication (linux-x64, autonome)
+        run: >
+          dotnet publish src/Prospect.Desktop
+          -c Release
+          -r linux-x64
+          --self-contained
+          -p:Version=$VERSION
+          -o "$STAGE"
+
+      # dotnet publish nomme l'exécutable d'après le projet (Prospect.Desktop). Renommer ce seul
+      # fichier est sans risque : l'apphost retrouve ses .dll par un nom gravé au publish, pas
+      # par son propre nom de fichier (vérifié localement avant ouverture de la PR).
+      - name: Préparation du dossier de distribution
+        run: |
+          mv "$STAGE/Prospect.Desktop" "$STAGE/Prospect"
+          chmod 755 "$STAGE/Prospect"
+          cat > "$STAGE/README.txt" <<EOF
+          Prospect $VERSION (linux-x64)
+          ==================================================
+
+          A launcher for Vintage Story: isolated instances, side-by-side game
+          versions, and a client for the official ModDB.
+
+          This build is self-contained. It ships its own .NET runtime, so you
+          do not need .NET installed separately. It does need a graphical
+          session with an X server; on Wayland desktops that means XWayland,
+          which is on by default almost everywhere.
+
+          To run it:
+
+              ./Prospect
+
+          Keep it in this folder. The other files here are the runtime and
+          managed assemblies it loads at startup.
+
+          This is an early release with no auto-update. Check the Releases
+          page on GitHub for new versions.
+          EOF
+
+      # Deux ajouts par rapport au --sort=name --owner=0 --group=0 de base, dans le même esprit
+      # (le projet compile déjà en <Deterministic>true</Deterministic>, autant que l'archive
+      # suive) : --numeric-owner, sinon tar résout et écrit le nom associé à l'UID 0 sur la
+      # machine de build (root, ou autre chose selon l'image) ; --mtime, sinon chaque fichier
+      # garde l'horodatage de sa copie par ce run de publish, jamais le même d'un run à l'autre.
+      # Vérifié localement : deux publish + tar successifs produisent le même sha256.
+      - name: Archive reproductible (tar.gz)
+        run: >
+          tar --sort=name --owner=0 --group=0 --numeric-owner --mtime="UTC 2020-01-01"
+          -czf "$STAGE.tar.gz" "$STAGE"
+
+      - name: Publication de l'artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: prospect-linux-x64
+          path: ${{ env.STAGE }}.tar.gz
+          if-no-files-found: error
+
+  package-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Installation du SDK .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Résolution de la version
+        run: |
+          if ($env:GITHUB_EVENT_NAME -eq "push") {
+            $version = $env:GITHUB_REF_NAME -replace '^v', ''
+          } else {
+            $version = "0.0.0-dry.$env:GITHUB_RUN_NUMBER"
+          }
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "STAGE=prospect-$version-win-x64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Publication (win-x64, autonome)
+        run: >
+          dotnet publish src/Prospect.Desktop
+          -c Release
+          -r win-x64
+          --self-contained
+          -p:Version=$env:VERSION
+          -o "$env:STAGE"
+
+      # Même renommage que côté linux, et pour la même raison : l'apphost Windows retrouve sa
+      # .dll par un nom gravé au publish, pas par le nom de fichier de l'exe. L'icône (embarquée
+      # via ApplicationIcon dans le .csproj) suit le fichier quel que soit son nom.
+      - name: Préparation du dossier de distribution
+        run: |
+          Rename-Item "$env:STAGE/Prospect.Desktop.exe" "Prospect.exe"
+          @"
+          Prospect $env:VERSION (win-x64)
+          ==================================================
+
+          A launcher for Vintage Story: isolated instances, side-by-side game
+          versions, and a client for the official ModDB.
+
+          This build is self-contained. It ships its own .NET runtime, so you
+          do not need .NET installed separately.
+
+          To run it, double-click Prospect.exe (or run it from a terminal).
+          Keep it in this folder together with the other files, which hold
+          the runtime and managed assemblies it loads at startup.
+
+          This is an early release with no auto-update. Check the Releases
+          page on GitHub for new versions.
+          "@ | Out-File -FilePath "$env:STAGE/README.txt" -Encoding utf8
+
+      - name: Archive (zip)
+        run: Compress-Archive -Path "$env:STAGE" -DestinationPath "$env:STAGE.zip" -Force
+
+      - name: Publication de l'artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: prospect-windows-x64
+          path: ${{ env.STAGE }}.zip
+          if-no-files-found: error
+
+  # package-macos : volontairement absent. GameLauncher (docs/architecture.md, section
+  # Lancement) ne sait construire une commande de lancement que pour Linux et Windows ; macOS
+  # télécharge et installe déjà les builds mac-arm64/mac-x64 côté domaine Versions, mais le
+  # bouton « Jouer » n'a jamais tourné sur une vraie machine faute d'accès à du matériel Apple.
+  # Publier un binaire qui ne sait pas lancer le jeu n'aurait aucune valeur. À réactiver quand le
+  # lancement macOS sera implémenté et testé, sur le même modèle que package-linux/windows avec
+  # -r osx-arm64 (et osx-x64 si les deux architectures restent pertinentes à ce moment-là).
+
+  release:
+    needs: [package-linux, package-windows]
+    # Seul déclencheur qui produit une vraie release : un push de tag. workflow_dispatch (donc
+    # tout dry-run) ne rentre jamais dans cette condition, quelle que soit la valeur de l'input
+    # dry_run : c'est le déclencheur lui-même qui garantit l'absence de publication involontaire.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Téléchargement de l'artifact Linux
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: prospect-linux-x64
+          path: dist
+
+      - name: Téléchargement de l'artifact Windows
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: prospect-windows-x64
+          path: dist
+
+      - name: Sommes de contrôle SHA-256
+        working-directory: dist
+        run: sha256sum * > sha256sums.txt
+
+      - name: Préparation de la note d'honnêteté
+        run: |
+          cat > release-notes.md <<'EOF'
+          This is the first published build of Prospect. Expect rough edges: some
+          flows are unpolished and error messages are still a work in progress.
+
+          A few things worth knowing before you download:
+
+          - No auto-update. Come back to this page by hand to check for new
+            releases.
+          - macOS is not covered by this release. Prospect can already download
+            and install the game on macOS, but launching it has never been
+            tested on real hardware, so the Play button stays Linux/Windows
+            only for now.
+
+          Both archives below are self-contained (no separate .NET install
+          needed) and listed with their SHA-256 checksums.
+          EOF
+
+      # --draft : la publication finale reste un geste humain, jamais automatique. GH_REPO est
+      # nécessaire : ce job ne fait pas de checkout (inutile pour attacher des artefacts déjà
+      # construits), donc gh n'a pas de dépôt git local d'où déduire la cible.
+      - name: Création de la release (brouillon)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --draft \
+            --verify-tag \
+            --generate-notes \
+            --notes-file release-notes.md \
+            --title "Prospect $GITHUB_REF_NAME" \
+            dist/prospect-*-linux-x64.tar.gz \
+            dist/prospect-*-win-x64.zip \
+            dist/sha256sums.txt
