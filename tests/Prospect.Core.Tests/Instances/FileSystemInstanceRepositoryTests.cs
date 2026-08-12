@@ -211,6 +211,62 @@ public class FileSystemInstanceRepositoryTests
     }
 
     [Fact]
+    public async Task LoadAsync_PartialJsonMissingOptionalFields_RestoresDocumentedDefaults()
+    {
+        // Reproduit le piège de désérialisation découvert sur ProspectSettings (voir la docstring
+        // de ProspectSettings.Normalized() et d'InstanceMetadata.Normalized()) : un instance.json
+        // partiel, ici sans icon/launch/notes (fichier édité à la main, ou écrit par une version
+        // antérieure de Prospect qui n'avait pas encore ces champs), ne doit pas laisser ces
+        // propriétés à null en aval de LoadAsync.
+        var fileSystem = new MockFileSystem();
+        var repository = CreateRepository(fileSystem);
+        var path = fileSystem.Path.Combine(repository.GetInstanceDirectory("partial"), "instance.json");
+        fileSystem.AddFile(path, new MockFileData("""
+        {
+          "schemaVersion": 1,
+          "id": "0c9c1f57-8b2e-4f2a-9c41-3d8a12f7b6e0",
+          "name": "Homestead 1.21",
+          "gameVersion": "1.21.3",
+          "createdUtc": "2026-08-10T14:00:00+00:00"
+        }
+        """));
+
+        var loaded = await repository.LoadAsync("partial", CancellationToken.None);
+
+        loaded.Metadata.Icon.ShouldBe(InstanceMetadata.DefaultIcon);
+        loaded.Metadata.Launch.ShouldBe(InstanceLaunchSettings.Empty);
+        loaded.Metadata.Notes.ShouldBe(string.Empty);
+    }
+
+    [Fact]
+    public async Task ScanAsync_PartialJsonMissingOptionalFields_RestoresDocumentedDefaults()
+    {
+        // Même piège, en passant par ScanAsync plutôt que LoadAsync directement : c'est le chemin
+        // réellement emprunté au démarrage de l'application (HomeViewModel.RefreshAsync), il ne
+        // doit pas non plus faire remonter d'instance cassée par null de référence.
+        var fileSystem = new MockFileSystem();
+        var repository = CreateRepository(fileSystem);
+        var path = fileSystem.Path.Combine(repository.GetInstanceDirectory("partial"), "instance.json");
+        fileSystem.AddFile(path, new MockFileData("""
+        {
+          "schemaVersion": 1,
+          "id": "0c9c1f57-8b2e-4f2a-9c41-3d8a12f7b6e0",
+          "name": "Homestead 1.21",
+          "gameVersion": "1.21.3",
+          "createdUtc": "2026-08-10T14:00:00+00:00"
+        }
+        """));
+
+        var result = await repository.ScanAsync(CancellationToken.None);
+
+        result.BrokenInstances.ShouldBeEmpty();
+        var instance = result.Instances.ShouldHaveSingleItem();
+        instance.Metadata.Icon.ShouldBe(InstanceMetadata.DefaultIcon);
+        instance.Metadata.Launch.ShouldBe(InstanceLaunchSettings.Empty);
+        instance.Metadata.Notes.ShouldBe(string.Empty);
+    }
+
+    [Fact]
     public async Task LoadAsync_OlderSchemaWithMigrationRegistered_MigratesAndPersistsUpgradedFile()
     {
         var fileSystem = new MockFileSystem();

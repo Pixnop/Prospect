@@ -46,6 +46,17 @@ public sealed record ProspectSettings
     /// <summary>Préférences de téléchargement (parallélisme).</summary>
     public DownloadPreferences Downloads { get; init; } = DownloadPreferences.Default;
 
+    /// <summary>
+    /// Vrai une fois l'écran de premier lancement vu (bouton « Commencer »/« Passer », ou toute
+    /// action de sa checklist, voir <c>Prospect.Desktop.ViewModels.FirstRun.FirstRunScreenViewModel</c>).
+    /// Un <c>bool</c> plutôt qu'un ajout au pipeline de migrations : <see langword="false"/> est à la
+    /// fois le défaut CLR ET le défaut voulu (« jamais vu » pour une installation neuve), donc le
+    /// piège de <see cref="Normalized"/> ne s'applique pas ici (rien à distinguer entre « absent du
+    /// JSON » et « explicitement false », les deux étant la même valeur exploitable) — voir le point
+    /// ouvert traité dans la PR qui a introduit ce champ.
+    /// </summary>
+    public bool HasSeenFirstRun { get; init; }
+
     /// <summary>Réglages par défaut d'une installation neuve (fichier absent au premier lancement).</summary>
     public static ProspectSettings CreateDefault() => new() { SchemaVersion = CurrentSchemaVersion };
 

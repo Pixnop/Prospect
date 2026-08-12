@@ -18,6 +18,7 @@ namespace Prospect.Desktop.ViewModels.Settings;
 public sealed partial class SettingsAboutViewModel : ObservableObject
 {
     private const string GitHubRepositoryUrl = "https://github.com/Pixnop/Prospect";
+    private const string WebsiteUrl = "https://leonfvt.fr/prospect-web/";
 
     private readonly IExternalUrlOpener _urlOpener;
 
@@ -45,4 +46,8 @@ public sealed partial class SettingsAboutViewModel : ObservableObject
 
     [RelayCommand]
     private Task<bool> OpenGitHubAsync() => _urlOpener.OpenAsync(new Uri(GitHubRepositoryUrl));
+
+    /// <summary>Site de présentation (dépôt séparé prospect-web, docs/architecture.md), en ligne.</summary>
+    [RelayCommand]
+    private Task<bool> OpenWebsiteAsync() => _urlOpener.OpenAsync(new Uri(WebsiteUrl));
 }

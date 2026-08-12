@@ -50,4 +50,16 @@ public sealed class SettingsAboutViewModelTests
         urlOpener.Opened.ShouldHaveSingleItem();
         urlOpener.Opened[0].ShouldBe(new Uri("https://github.com/Pixnop/Prospect"));
     }
+
+    [Fact]
+    public async Task OpenWebsiteAsync_OpensTheProspectWebUrl()
+    {
+        var urlOpener = new FakeExternalUrlOpener();
+        var viewModel = new SettingsAboutViewModel(urlOpener);
+
+        await viewModel.OpenWebsiteCommand.ExecuteAsync(null);
+
+        urlOpener.Opened.ShouldHaveSingleItem();
+        urlOpener.Opened[0].ShouldBe(new Uri("https://leonfvt.fr/prospect-web/"));
+    }
 }

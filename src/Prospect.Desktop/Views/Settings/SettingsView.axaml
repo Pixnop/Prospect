@@ -113,6 +113,16 @@
               </StackPanel>
             </Border>
           </StackPanel>
+
+          <!-- ── Premier lancement : passage possible, retour possible ──────────── -->
+          <StackPanel Spacing="12">
+            <TextBlock Text="{StaticResource Settings_FirstRunSectionTitle}" FontSize="{StaticResource FsCaption}"
+                       FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+            <Border Classes="card" Padding="20">
+              <Button Classes="secondary" HorizontalAlignment="Left" Command="{Binding ReplayFirstRunCommand}"
+                      Content="{StaticResource Settings_ReplayFirstRun}" />
+            </Border>
+          </StackPanel>
         </StackPanel>
 
         <!-- ── Jeu ───────────────────────────────────────────────────────────────── -->
@@ -219,13 +229,22 @@
                              FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
                 </StackPanel>
 
-                <Button Classes="secondary sm" HorizontalAlignment="Left" Command="{Binding OpenGitHubCommand}">
-                  <StackPanel Orientation="Horizontal" Spacing="6">
-                    <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.external-link}"
-                          Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
-                    <TextBlock Text="{StaticResource Settings_AboutRepository}" />
-                  </StackPanel>
-                </Button>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Classes="secondary sm" HorizontalAlignment="Left" Command="{Binding OpenWebsiteCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.external-link}"
+                            Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                      <TextBlock Text="{StaticResource Settings_AboutWebsite}" />
+                    </StackPanel>
+                  </Button>
+                  <Button Classes="secondary sm" HorizontalAlignment="Left" Command="{Binding OpenGitHubCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.external-link}"
+                            Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                      <TextBlock Text="{StaticResource Settings_AboutRepository}" />
+                    </StackPanel>
+                  </Button>
+                </StackPanel>
               </StackPanel>
             </Border>
           </StackPanel>

@@ -295,9 +295,22 @@
   <x:String x:Key="Settings_AboutDescription">Launcher indépendant pour Vintage Story. Instances isolées, gestion multi-versions et navigateur ModDB intégré. Sans affiliation avec Anego Studios.</x:String>
   <x:String x:Key="Settings_AboutLicenseLabel">Licence</x:String>
   <x:String x:Key="Settings_AboutRepository">Dépôt GitHub</x:String>
+  <x:String x:Key="Settings_AboutWebsite">Site officiel</x:String>
 
   <!-- ── Rappel de premier lancement (Accueil, état vide) ───────────────────────── -->
   <x:String x:Key="FirstRun_VslCardTitle">Tu utilisais VS Launcher ?</x:String>
   <x:String x:Key="FirstRun_VslOpenAdoption">Adopter tes installations VS Launcher</x:String>
+
+  <!-- ── Écran de premier lancement (design/ui_kits/launcher/screen-firstrun.jsx) ──
+       Titres/sous-titres/libellés d'action des lignes de checklist NE SONT PAS ici : ils sont
+       calculés par FirstRunScreenViewModel (état réel des services), donc dans Resources/UiText.cs
+       comme le reste des textes produits par du code C# plutôt que liés en XAML direct. -->
+  <x:String x:Key="FirstRun_Description">Avant de créer ta première instance, vérifions que tout est prêt : le dossier de données et une version du jeu installée.</x:String>
+  <x:String x:Key="FirstRun_StartButton">Commencer</x:String>
+  <x:String x:Key="FirstRun_SkipButton">Passer</x:String>
+
+  <!-- ── Réglages, section Général : revoir le premier lancement ─────────────────── -->
+  <x:String x:Key="Settings_FirstRunSectionTitle">Premier lancement</x:String>
+  <x:String x:Key="Settings_ReplayFirstRun">Revoir le premier lancement</x:String>
 
 </ResourceDictionary>

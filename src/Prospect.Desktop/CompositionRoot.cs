@@ -136,6 +136,7 @@ public static class CompositionRoot
         // résolution elle-même (résolue paresseusement, pas à l'enregistrement).
         services.AddSingleton<HomeViewModel>();
         services.AddSingleton<FirstRunViewModel>();
+        services.AddSingleton<FirstRunScreenViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<VersionsViewModel>();
         services.AddSingleton<ModBrowserViewModel>();

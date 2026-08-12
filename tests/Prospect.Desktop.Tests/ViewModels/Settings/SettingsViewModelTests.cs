@@ -43,6 +43,7 @@ public sealed class SettingsViewModelTests
         RecordingOverlayService Overlay,
         FakeFilePickerService FilePicker,
         HomeViewModel Home,
+        FirstRunScreenViewModel FirstRunScreen,
         VslAdoptionService AdoptionService,
         VslDetector Detector,
         SettingsService Settings,
@@ -81,8 +82,9 @@ public sealed class SettingsViewModelTests
             () => throw new InvalidOperationException("Non exercé par ces tests."),
             _ => throw new InvalidOperationException("Non exercé par ces tests."),
             firstRun);
+        var firstRunScreen = new FirstRunScreenViewModel(settings, gameVersions, Paths, detector, firstRunAdoptFactory, overlay);
 
-        return new Fixture(fileSystem, environment, overlay, filePicker, home, adoptionService, detector, settings, urlOpener);
+        return new Fixture(fileSystem, environment, overlay, filePicker, home, firstRunScreen, adoptionService, detector, settings, urlOpener);
     }
 
     private static Func<VslDetectionResult, AdoptVslViewModel> MakeAdoptFactory(
@@ -122,6 +124,7 @@ public sealed class SettingsViewModelTests
             fixture.Overlay,
             fixture.FilePicker,
             fixture.Home,
+            fixture.FirstRunScreen,
             fixture.Settings,
             Paths,
             fixture.UrlOpener);
@@ -143,14 +146,15 @@ public sealed class SettingsViewModelTests
         var fixture = CreateServices();
         Func<VslDetectionResult, AdoptVslViewModel> adoptFactory = _ => null!;
 
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(null!, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.Settings, Paths, fixture.UrlOpener));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, null!, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.Settings, Paths, fixture.UrlOpener));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, null!, fixture.FilePicker, fixture.Home, fixture.Settings, Paths, fixture.UrlOpener));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, null!, fixture.Home, fixture.Settings, Paths, fixture.UrlOpener));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, null!, fixture.Settings, Paths, fixture.UrlOpener));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, null!, Paths, fixture.UrlOpener));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.Settings, null!, fixture.UrlOpener));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.Settings, Paths, null!));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(null!, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, fixture.Settings, Paths, fixture.UrlOpener));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, null!, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, fixture.Settings, Paths, fixture.UrlOpener));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, null!, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, fixture.Settings, Paths, fixture.UrlOpener));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, null!, fixture.Home, fixture.FirstRunScreen, fixture.Settings, Paths, fixture.UrlOpener));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, null!, fixture.FirstRunScreen, fixture.Settings, Paths, fixture.UrlOpener));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, null!, fixture.Settings, Paths, fixture.UrlOpener));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, null!, Paths, fixture.UrlOpener));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, fixture.Settings, null!, fixture.UrlOpener));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.FirstRunScreen, fixture.Settings, Paths, null!));
     }
 
     [Fact]
@@ -164,6 +168,7 @@ public sealed class SettingsViewModelTests
         viewModel.Game.ShouldNotBeNull();
         viewModel.Network.ShouldNotBeNull();
         viewModel.About.ShouldNotBeNull();
+        viewModel.FirstRun.ShouldNotBeNull();
         viewModel.SelectedTab.ShouldBe(SettingsTab.General);
     }
 
@@ -270,6 +275,19 @@ public sealed class SettingsViewModelTests
 
         viewModel.VslDetected.ShouldBeFalse();
         viewModel.VslStatusText.ShouldNotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task ReplayFirstRunAsync_ShowsTheSameFirstRunScreenInstanceOnTheOverlay()
+    {
+        // Même instance singleton que celle affichée automatiquement au tout premier démarrage
+        // (voir ShellViewModelTests) : « Revoir le premier lancement » n'en crée pas une nouvelle.
+        var fixture = CreateServices();
+        var viewModel = CreateViewModel(fixture);
+
+        await viewModel.ReplayFirstRunCommand.ExecuteAsync(null);
+
+        fixture.Overlay.Active.ShouldBeSameAs(viewModel.FirstRun);
     }
 
     [Fact]

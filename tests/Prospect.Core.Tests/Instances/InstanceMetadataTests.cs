@@ -116,4 +116,61 @@ public class InstanceMetadataTests
 
         Should.Throw<JsonException>(() => JsonSerializer.Deserialize(json, InstanceJsonContext.Default.InstanceMetadata));
     }
+
+    [Fact]
+    public void Deserialize_JsonMissingOptionalFields_LeavesThemNull()
+    {
+        // Caractérise le piège avant tout correctif applicatif (voir InstanceMetadata.Normalized()) :
+        // ce type porte des membres required (SchemaVersion/Id/Name/GameVersion), donc
+        // System.Text.Json construit l'objet sans passer par son constructeur implicite et ne
+        // rejoue jamais les initialiseurs `= DefaultIcon`/`= InstanceLaunchSettings.Empty`/
+        // `= string.Empty` quand le champ JSON correspondant est absent. Un instance.json partiel
+        // (édité à la main, ou écrit par un schéma antérieur) désérialise donc ces trois champs à
+        // null malgré leurs défauts documentés. FileSystemInstanceRepository.LoadAsync est le seul
+        // rempart (voir son test dédié) : ce test-ci fixe le comportement brut de la désérialisation
+        // elle-même, qui reste inchangé par construction (Normalized() n'est pas appelé ici).
+        var json = """
+        {
+          "schemaVersion": 1,
+          "id": "0c9c1f57-8b2e-4f2a-9c41-3d8a12f7b6e0",
+          "name": "Homestead 1.21",
+          "gameVersion": "1.21.3",
+          "createdUtc": "2026-08-10T14:00:00+00:00"
+        }
+        """;
+
+        var metadata = JsonSerializer.Deserialize(json, InstanceJsonContext.Default.InstanceMetadata);
+
+        metadata.ShouldNotBeNull();
+        metadata.Icon.ShouldBeNull();
+        metadata.Launch.ShouldBeNull();
+        metadata.Notes.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Normalized_NullReferenceFields_RestoresDocumentedDefaults()
+    {
+        // null! parce que le compilateur refuserait autrement cette construction (Icon/Launch/Notes
+        // sont non-nullables par contrat) : exactement le contrat qu'un instance.json partiel viole
+        // silencieusement via System.Text.Json (voir le test ci-dessus), simulé ici sans dépendre du
+        // détail de sérialisation pour tester Normalized() isolément.
+        var metadata = CreateSample() with { Icon = null!, Launch = null!, Notes = null! };
+
+        var normalized = metadata.Normalized();
+
+        normalized.Icon.ShouldBe(InstanceMetadata.DefaultIcon);
+        normalized.Launch.ShouldBe(InstanceLaunchSettings.Empty);
+        normalized.Notes.ShouldBe(string.Empty);
+    }
+
+    [Fact]
+    public void Normalized_ValuesAlreadySet_LeavesThemUnchanged()
+    {
+        var metadata = CreateSample() with { Icon = "file:custom.png", Notes = "Une note." };
+
+        var normalized = metadata.Normalized();
+
+        normalized.Icon.ShouldBe("file:custom.png");
+        normalized.Notes.ShouldBe("Une note.");
+    }
 }

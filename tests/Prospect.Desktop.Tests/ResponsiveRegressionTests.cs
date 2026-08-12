@@ -8,6 +8,7 @@ using Prospect.Core.Modpacks;
 using Prospect.Core.Storage;
 
 using Prospect.Desktop.Tests.Support;
+using Prospect.Desktop.ViewModels.FirstRun;
 using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Instance;
 using Prospect.Desktop.ViewModels.Migration;
@@ -478,6 +479,62 @@ public sealed class ResponsiveRegressionTests
         adopt.Step.ShouldBe(AdoptVslStep.Report);
 
         window.ShouldHoldLayoutInvariantsAtEverySize("Dialogue d'adoption VS Launcher, rapport");
+
+        window.Close();
+    }
+
+    // ── Écran de premier lancement ───────────────────────────────────────────────────────────
+
+    [AvaloniaFact]
+    public void FirstRun_NothingInstalledOrDetected_HoldsItsBoxes()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out _, out _);
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.ShowFirstRunIfNeeded();
+        window.Settle();
+        shell.Overlay.Active.ShouldBeOfType<FirstRunScreenViewModel>();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Premier lancement, aucune version ni VS Launcher");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void FirstRun_VersionInstalledAndVslDetected_HoldsItsBoxes()
+    {
+        // Le scénario le plus chargé de l'écran (trois lignes plutôt que deux) : celui qui tend le
+        // plus la boîte de la carte à la hauteur plancher de la fenêtre (960x600).
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        provider.SeedInstalledVersion(fileSystem, "1.20.4");
+        provider.SeedVslInstallation(fileSystem, "/vsl/installations/" + ResponsiveScenario.LongInstanceName, "1.20.4");
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.ShowFirstRunIfNeeded();
+        window.Settle();
+        var firstRun = shell.Overlay.Active.ShouldBeOfType<FirstRunScreenViewModel>();
+        firstRun.Steps.Count.ShouldBe(3);
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Premier lancement, version installée et VS Launcher détecté");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void FirstRun_HoldsItsBoxesInTheLightTheme()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        provider.SeedVslInstallation(fileSystem, "/vsl/installations/" + ResponsiveScenario.LongInstanceName, "1.20.4");
+        var window = ResponsiveScenario.ShowWindow(provider, ThemeVariant.Light);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.ShowFirstRunIfNeeded();
+        window.Settle();
+        shell.Overlay.Active.ShouldBeOfType<FirstRunScreenViewModel>();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Premier lancement, thème clair");
 
         window.Close();
     }

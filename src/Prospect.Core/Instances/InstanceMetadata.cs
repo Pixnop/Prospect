@@ -61,4 +61,30 @@ public sealed record InstanceMetadata
 
     /// <summary>Notes libres de l'utilisateur.</summary>
     public string Notes { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Copie avec ses champs de référence sans initialiseur ramenés à leur défaut documenté quand
+    /// ils sont absents plutôt que laissés à <see langword="null"/>.
+    /// </summary>
+    /// <remarks>
+    /// Même piège que <see cref="Settings.ProspectSettings.Normalized"/> (voir sa docstring pour le
+    /// mécanisme complet), retrouvé ici en auditant les modèles persistés du Core après le chantier
+    /// Réglages : ce type porte des membres <c>required</c> (<see cref="SchemaVersion"/>,
+    /// <see cref="Id"/>, <see cref="Name"/>, <see cref="GameVersion"/>), ce qui fait que
+    /// <c>System.Text.Json</c> construit l'objet SANS passer par son constructeur implicite et donc
+    /// SANS rejouer les initialiseurs <c>= DefaultIcon</c>/<c>= InstanceLaunchSettings.Empty</c>/
+    /// <c>= string.Empty</c> ci-dessus quand le champ JSON correspondant est absent. Un
+    /// <c>instance.json</c> partiel (édité à la main, ou écrit par un schéma antérieur qui ne
+    /// portait pas encore ce champ) désérialise donc <see cref="Icon"/>, <see cref="Launch"/> ou
+    /// <see cref="Notes"/> à <see langword="null"/> malgré leurs défauts affichés juste au-dessus,
+    /// avec un risque de <see cref="NullReferenceException"/> en aval (par exemple
+    /// <c>Launch.ExtraArgs</c> à la construction de la ligne de commande). Appelée après toute
+    /// lecture disque par <see cref="FileSystemInstanceRepository.LoadAsync"/>.
+    /// </remarks>
+    public InstanceMetadata Normalized() => this with
+    {
+        Icon = Icon ?? DefaultIcon,
+        Launch = Launch ?? InstanceLaunchSettings.Empty,
+        Notes = Notes ?? string.Empty,
+    };
 }

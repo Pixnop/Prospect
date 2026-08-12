@@ -553,4 +553,28 @@ internal static class UiText
         internal static string ConcurrencyChoiceLabel(int count)
             => count == 1 ? "1 téléchargement à la fois" : $"{count} téléchargements simultanés";
     }
+
+    /// <summary>
+    /// Textes des lignes de la checklist de l'écran de premier lancement
+    /// (design/ui_kits/launcher/screen-firstrun.jsx, <see cref="Prospect.Desktop.ViewModels.FirstRun.FirstRunScreenViewModel"/>).
+    /// Les libellés statiques (titre, description, boutons Commencer/Passer) restent dans
+    /// Strings.axaml comme le reste de l'app ; ceux-ci sont calculés à partir de l'état réel des
+    /// services, donc du code C#, pas d'un binding XAML direct.
+    /// </summary>
+    internal static class FirstRun
+    {
+        internal const string DataFolderTitle = "Dossier de données";
+        internal const string GameVersionTitle = "Version du jeu";
+        internal const string VslDetectedTitle = "Installations VS Launcher détectées";
+        internal const string InstallVersionAction = "Installer";
+        internal const string AdoptAction = "Adopter";
+        internal const string NoVersionInstalled = "aucune installée";
+
+        /// <summary>Sous-titre de la ligne « Version du jeu » une fois au moins une version installée.</summary>
+        internal static string InstalledVersionsSummary(int count, string mostRecentVersion) => count switch
+        {
+            1 => $"{mostRecentVersion} installée",
+            _ => $"{count} versions installées, dont {mostRecentVersion}",
+        };
+    }
 }

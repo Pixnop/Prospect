@@ -81,6 +81,21 @@ public class SettingsServiceTests
     }
 
     [Fact]
+    public async Task LoadAsync_ThenUpdateAsync_ThenFreshServiceLoadAsync_RoundTripsHasSeenFirstRun()
+    {
+        var fileSystem = new MockFileSystem();
+        var writer = Create(fileSystem);
+        await writer.LoadAsync();
+
+        await writer.UpdateAsync(current => current with { HasSeenFirstRun = true });
+
+        var reader = Create(fileSystem);
+        await reader.LoadAsync();
+
+        reader.Current.HasSeenFirstRun.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task LoadAsync_WritesToTheDocumentedSettingsFilePath()
     {
         var fileSystem = new MockFileSystem();
@@ -146,6 +161,23 @@ public class SettingsServiceTests
         await service.LoadAsync();
 
         service.Current.Downloads.MaxParallelDownloads.ShouldBe(DownloadPreferences.MaxParallelDownloadsCeiling);
+    }
+
+    [Fact]
+    public async Task LoadAsync_SchemaV1FileWithoutHasSeenFirstRunField_DefaultsToFalse()
+    {
+        // Un prospect.json écrit par une version de Prospect antérieure à ce champ (même schéma v1,
+        // pas de migration : voir la docstring de ProspectSettings.HasSeenFirstRun) ne doit pas
+        // planter, et retombe sur false (bool : c'est à la fois le défaut CLR et le défaut voulu).
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddFile(Paths.SettingsFilePath, new MockFileData("""
+        { "schemaVersion": 1, "theme": "Dark", "language": "fr" }
+        """));
+        var service = Create(fileSystem);
+
+        await service.LoadAsync();
+
+        service.Current.HasSeenFirstRun.ShouldBeFalse();
     }
 
     [Fact]

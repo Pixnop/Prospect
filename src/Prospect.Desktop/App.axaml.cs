@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Prospect.Core.Settings;
 using Prospect.Desktop.Services;
+using Prospect.Desktop.ViewModels.Shell;
 
 namespace Prospect.Desktop;
 
@@ -48,6 +49,13 @@ public partial class App : Application
             _serviceProvider.GetRequiredService<ThemeService>().ApplyStartupTheme();
 
             desktop.MainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+
+            // Après la fenêtre : l'écran de premier lancement s'affiche sur le panneau modal du
+            // shell, qui a besoin d'exister. Jamais un effet de bord du constructeur de
+            // ShellViewModel (voir sa docstring) : les tests headless qui résolvent ce ViewModel
+            // sans passer par ce chemin ne l'appellent jamais.
+            _serviceProvider.GetRequiredService<ShellViewModel>().ShowFirstRunIfNeeded();
+
             desktop.ShutdownRequested += (_, _) => _serviceProvider?.Dispose();
         }
 
