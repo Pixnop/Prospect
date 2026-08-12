@@ -331,6 +331,23 @@ public sealed class ModDbClientTests
         index.Freshness.ShouldBe(ModDbFreshness.Stale);
     }
 
+    [Fact]
+    public async Task GetCompatibilityIndexAsync_ApiErrorStatusCodeOnV1_DegradesToAnEmptyIndexRatherThanThrowing()
+    {
+        // Écart de contrat aligné sur GetInstallInformationAsync_HttpErrorOnV2 : un statuscode v1
+        // différent de "200" (piège habituel de cette API, voir GetModAsync_StatusCode404InsideAnHttp200)
+        // dégradait jusqu'ici en ModDbApiException non rattrapée au lieu de suivre la même règle que
+        // le reste de cette méthode — un badge de compatibilité manquant plutôt qu'un écran de
+        // recherche qui plante.
+        using var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Text(ModDbSamples.NotFound));
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+
+        var index = await client.GetCompatibilityIndexAsync(GameVersion.Parse("1.21.3"), cancellationToken: CancellationToken.None);
+
+        index.ModIds.ShouldBeEmpty();
+        index.Freshness.ShouldBe(ModDbFreshness.Stale);
+    }
+
     // ── install-information (v2, vrais codes HTTP) ───────────────────────────────────
 
     [Fact]

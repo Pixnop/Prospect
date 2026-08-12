@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Prospect.Core.Auth;
 using Prospect.Core.Backups;
 using Prospect.Core.Common;
+using Prospect.Core.Diagnostics;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Http;
 using Prospect.Core.Instances;
@@ -92,6 +93,11 @@ public static class CompositionRoot
         AddModpacks(services);
         AddMigration(services);
 
+        // Docteur d'instance (diagnostic local hors ligne) : composition pure de ce qu'AddGameVersions/
+        // AddLaunching/AddModDb ont déjà enregistré plus haut, aucun adaptateur propre à ce domaine —
+        // et surtout, aucun client HTTP dans son graphe de dépendances.
+        services.AddSingleton<InstanceDoctor>();
+
         // Services Desktop transverses.
         services.AddSingleton<IOverlayService, OverlayService>();
         services.AddSingleton<IToastService, ToastService>();
@@ -172,6 +178,7 @@ public static class CompositionRoot
             provider.GetRequiredService<ModInstallService>(),
             provider.GetRequiredService<ModUpdateChecker>(),
             provider.GetRequiredService<IModUpdateCheckCache>(),
+            provider.GetRequiredService<InstanceDoctor>(),
             provider.GetRequiredService<IAppEnvironment>(),
             provider.GetRequiredService<IFileSystem>(),
             provider.GetRequiredService<IOverlayService>(),

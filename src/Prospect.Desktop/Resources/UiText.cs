@@ -1,9 +1,11 @@
 using System.Globalization;
 
+using Prospect.Core.Diagnostics;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
 using Prospect.Core.ModDb;
 using Prospect.Core.Modpacks;
+using Prospect.Core.Runtime;
 
 namespace Prospect.Desktop.Resources;
 
@@ -196,6 +198,98 @@ internal static class UiText
 
             internal static string AutoBackupProgress(int filesProcessed, int totalFiles)
                 => totalFiles == 0 ? "Sauvegarde automatique…" : $"Sauvegarde automatique ({filesProcessed}/{totalFiles})…";
+        }
+
+        /// <summary>
+        /// Textes du docteur d'instance (diagnostic local hors ligne, voir
+        /// <see cref="Prospect.Core.Diagnostics.InstanceDoctor"/>). Un message par vérification EN
+        /// DÉFAUT seulement : un verdict sain ne produit jamais de ligne, le rapport ne liste que ce
+        /// qui mérite l'attention (voir <c>ViewModels.Dialogs.InstanceDoctorDialogViewModel</c>).
+        /// </summary>
+        internal static class Doctor
+        {
+            internal const string InstallAction = "Installer";
+            internal const string ReinstallAction = "Réinstaller";
+            internal const string OpenModsAction = "Voir les mods";
+
+            internal const string AllClearTitle = "Tout est en ordre";
+            internal const string AllClearDescription = "Aucun problème détecté sur les cinq vérifications locales.";
+
+            internal const string CompatibilityUnknown =
+                "Compatibilité de version de jeu inconnue : lance une vérification des mises à jour pour en savoir plus.";
+
+            internal const string RuntimeIndeterminate =
+                "Le runtime requis par cette version n'a pas pu être déterminé. Le lancement le confirmera si besoin.";
+
+            internal static string ErrorsGroupTitle(int count) => count == 1 ? "1 point à corriger" : $"{count} points à corriger";
+
+            internal static string WarningsGroupTitle(int count) => count == 1 ? "1 point à surveiller" : $"{count} points à surveiller";
+
+            /// <summary>Vérification 1 : chaîne vide pour <see cref="GameVersionDoctorStatus.Installed"/>, jamais affichée (verdict sain).</summary>
+            internal static string GameVersionMessage(GameVersionDoctorResult result) => result.Status switch
+            {
+                GameVersionDoctorStatus.Missing => $"La version {result.Version} n'est pas installée.",
+                GameVersionDoctorStatus.Incomplete
+                    => $"L'installation de la version {result.Version} est incomplète, probablement interrompue en cours de route.",
+                _ => string.Empty,
+            };
+
+            /// <summary>Vérification 2 : chaîne vide pour <see cref="RuntimeAvailability.Present"/>, jamais affichée (verdict sain).</summary>
+            internal static string RuntimeMessage(RuntimeCheckResult runtime) => runtime.Availability switch
+            {
+                RuntimeAvailability.Missing
+                    => $"Le runtime .NET {runtime.Requirement.FrameworkName} {runtime.Requirement.Version} est requis mais n'est pas installé.",
+                RuntimeAvailability.Indeterminate => RuntimeIndeterminate,
+                _ => string.Empty,
+            };
+
+            /// <summary>Vérification 3 : une ligne par <see cref="ModDoctorIssue"/>, dépendance non satisfaite ou mod non identifié.</summary>
+            internal static string ModIssueMessage(ModDoctorIssue issue) => issue.Kind switch
+            {
+                ModDoctorIssueKind.Unidentified => $"« {issue.ModDisplayName} » n'a pas pu être identifié ({Mods.UnidentifiedReason(issue.Problem)}).",
+                _ when issue.Dependency is { } dependency => DependencyIssueMessage(issue.ModDisplayName, dependency),
+                _ => string.Empty,
+            };
+
+            // Contrairement à Mods.DependencyReason (qui laisse le cas Disabled à un bloc à part,
+            // DisabledDependencies), ce docteur rend une seule ligne par dépendance quel que soit le
+            // statut : les trois cas de ModDependencyStatus qui restent une fois Satisfied écarté par
+            // ModDependencyResolver.FindUnsatisfied.
+            private static string DependencyIssueMessage(string modDisplayName, ModDependencyIssue dependency) => dependency.Status switch
+            {
+                ModDependencyStatus.Missing => $"« {modDisplayName} » a besoin de {dependency.ModIdString}, absent de l'instance.",
+                ModDependencyStatus.Disabled => $"« {modDisplayName} » a besoin de {dependency.ModIdString}, présent mais désactivé.",
+                ModDependencyStatus.TooOld
+                    => $"« {modDisplayName} » a besoin de {dependency.ModIdString} {dependency.Requirement} au minimum, version installée trop ancienne.",
+                _ => $"« {modDisplayName} » a besoin de {dependency.ModIdString}.",
+            };
+
+            /// <summary>
+            /// Vérification 4 : le cas spécial « rien de local ne permet de juger » d'abord (jamais
+            /// inventé), sinon le décompte de ce qui reste incertain (rapprochement approximatif ou
+            /// entièrement inconnu). Chaîne vide pour un verdict sain.
+            /// </summary>
+            internal static string CompatibilityMessage(ModCompatibilityDoctorResult compatibility, string gameVersionText)
+            {
+                if (compatibility.Severity != InstanceDoctorSeverity.Warning)
+                {
+                    return string.Empty;
+                }
+
+                if (compatibility.IsWhollyUnknown)
+                {
+                    return CompatibilityUnknown;
+                }
+
+                var uncertain = compatibility.ApproximateCount + compatibility.UnknownCount;
+
+                return uncertain == 1
+                    ? $"1 mod dont la compatibilité avec {gameVersionText} n'est pas confirmée. Lance une vérification des mises à jour pour en savoir plus."
+                    : $"{uncertain} mods dont la compatibilité avec {gameVersionText} n'est pas confirmée. Lance une vérification des mises à jour pour en savoir plus.";
+            }
+
+            /// <summary>Vérification 5 : <paramref name="availableText"/> déjà mis en forme (voir <c>ByteSizeFormatter</c>, Core n'en a pas la charge).</summary>
+            internal static string DiskSpaceLow(string availableText) => $"Espace disque faible : {availableText} restants sur le volume de Prospect.";
         }
     }
 

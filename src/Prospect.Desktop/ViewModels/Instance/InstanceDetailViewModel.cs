@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using Prospect.Core.Backups;
 using Prospect.Core.Common;
+using Prospect.Core.Diagnostics;
 using Prospect.Core.Instances;
 using Prospect.Core.Launching;
 using Prospect.Core.ModDb;
@@ -37,6 +38,8 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     private readonly GameLauncher _launcher;
     private readonly RunningInstanceTracker _tracker;
     private readonly InstanceBackupService _backupService;
+    private readonly IModUpdateCheckCache _updateCache;
+    private readonly InstanceDoctor _doctor;
     private readonly IAppEnvironment _appEnvironment;
     private readonly IFileSystem _fileSystem;
     private readonly IOverlayService _overlay;
@@ -57,6 +60,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         ModInstallService modInstallService,
         ModUpdateChecker updateChecker,
         IModUpdateCheckCache updateCache,
+        InstanceDoctor doctor,
         IAppEnvironment appEnvironment,
         IFileSystem fileSystem,
         IOverlayService overlay,
@@ -76,6 +80,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         ArgumentNullException.ThrowIfNull(modInstallService);
         ArgumentNullException.ThrowIfNull(updateChecker);
         ArgumentNullException.ThrowIfNull(updateCache);
+        ArgumentNullException.ThrowIfNull(doctor);
         ArgumentNullException.ThrowIfNull(appEnvironment);
         ArgumentNullException.ThrowIfNull(fileSystem);
         ArgumentNullException.ThrowIfNull(overlay);
@@ -91,6 +96,8 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         _launcher = launcher;
         _tracker = tracker;
         _backupService = backupService;
+        _updateCache = updateCache;
+        _doctor = doctor;
         _appEnvironment = appEnvironment;
         _fileSystem = fileSystem;
         _overlay = overlay;
@@ -294,6 +301,33 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     [RelayCommand(CanExecute = nameof(IsRunning))]
     private void RequestStop()
         => _overlay.Show(new StopInstanceDialogViewModel(Name, () => _tracker.RequestStop(_slug), _overlay));
+
+    /// <summary>
+    /// « Vérifier l'instance » (menu du header) : diagnostic local hors ligne, voir
+    /// <see cref="InstanceDoctor"/>. Le dernier résultat de vérification de mises à jour connu pour
+    /// cette session (s'il y en a un) alimente la vérification 4 sans jamais interroger le ModDB
+    /// ici — la lecture du cache est locale, seule la vérification qui l'a rempli l'était moins.
+    /// </summary>
+    [RelayCommand]
+    private async Task CheckInstanceAsync(CancellationToken cancellationToken = default)
+    {
+        var lastUpdateCheck = _updateCache.TryGet(_slug);
+        var report = await _doctor.DiagnoseAsync(_slug, lastUpdateCheck, cancellationToken).ConfigureAwait(true);
+
+        _overlay.Show(new InstanceDoctorDialogViewModel(
+            report,
+            navigateToVersions: () =>
+            {
+                _overlay.Close();
+                GoToVersions();
+            },
+            openModsTab: () =>
+            {
+                _overlay.Close();
+                SelectTab(InstanceDetailTab.Mods);
+            },
+            _overlay));
+    }
 
     [RelayCommand]
     private void Rename() => _overlay.Show(new RenameDialogViewModel(_slug, Name, _instanceService, _overlay, ReloadHeaderAsync));

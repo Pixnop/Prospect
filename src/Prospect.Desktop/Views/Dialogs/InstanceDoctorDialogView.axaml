@@ -1,0 +1,94 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Prospect.Desktop.ViewModels.Dialogs"
+             mc:Ignorable="d" d:DesignWidth="480"
+             x:Class="Prospect.Desktop.Views.Dialogs.InstanceDoctorDialogView"
+             x:DataType="vm:InstanceDoctorDialogViewModel">
+
+  <!-- Docteur d'instance : diagnostic local hors ligne (design : panneau modal groupé par
+       sévérité, erreurs d'abord — voir InstanceDoctorDialogViewModel.Groups). État « tout va
+       bien » gratifiant mais sobre quand les cinq vérifications sont saines ; sinon un groupe par
+       sévérité, chaque ligne portant l'action qu'elle propose quand il y en a une (naviguer vers
+       Versions, ouvrir l'onglet Mods). Le sous-titre rappelle le caractère local du diagnostic :
+       aucune donnée de ce panneau ne vient d'un appel réseau. -->
+
+  <Border Width="480" MaxHeight="640" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
+          Background="{DynamicResource BgSurface}" BorderBrush="{DynamicResource BorderDefault}"
+          BorderThickness="1" BoxShadow="{DynamicResource Elev3}">
+    <DockPanel>
+      <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="22,18">
+        <StackPanel Spacing="4">
+          <TextBlock Text="{StaticResource InstanceDoctor_Title}" TextWrapping="Wrap"
+                     FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                     FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+          <TextBlock Text="{StaticResource InstanceDoctor_Subtitle}" TextWrapping="Wrap"
+                     FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+        </StackPanel>
+      </Border>
+
+      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}" Background="{DynamicResource BgSurfaceRaised}">
+        <Grid ColumnDefinitions="*,Auto" Margin="22,16">
+          <Button Grid.Column="1" Command="{Binding CloseCommand}" Content="{StaticResource InstanceDoctor_Close}" />
+        </Grid>
+      </Border>
+
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="22" Spacing="14">
+
+          <!-- ── Tout va bien : gratifiant mais sobre, aucune liste en dessous ────────── -->
+          <StackPanel HorizontalAlignment="Center" Spacing="10" Margin="0,20" IsVisible="{Binding IsAllClear}">
+            <Path Width="34" Height="34" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.check-circle}"
+                  Stroke="{DynamicResource SuccessText}" StrokeThickness="1.5" StrokeLineCap="Round" StrokeJoin="Round" />
+            <TextBlock Text="{StaticResource InstanceDoctor_AllClearTitle}" HorizontalAlignment="Center"
+                       FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsSubheading}"
+                       FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+            <TextBlock Text="{StaticResource InstanceDoctor_AllClearDescription}" HorizontalAlignment="Center" TextAlignment="Center"
+                       TextWrapping="Wrap" MaxWidth="360" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text3}" />
+          </StackPanel>
+
+          <!-- ── Groupes par sévérité, erreurs d'abord (voir BuildGroups) ─────────────── -->
+          <ItemsControl ItemsSource="{Binding Groups}" IsVisible="{Binding !IsAllClear}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:InstanceDoctorGroupViewModel">
+                <StackPanel Spacing="8" Margin="0,0,0,14">
+                  <TextBlock Text="{Binding Title}" FontSize="{StaticResource FsCaption}"
+                             FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+                  <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Spacing="8" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:InstanceDoctorRowViewModel">
+                        <Border Classes="alert" Classes.danger="{Binding IsError}" Classes.warning="{Binding !IsError}">
+                          <Grid ColumnDefinitions="Auto,*">
+                            <Path Grid.Column="0" Width="15" Height="15" Margin="0,1,10,0" Stretch="Uniform" VerticalAlignment="Top"
+                                  Data="{StaticResource Icon.alert}" Stroke="{DynamicResource DangerText}"
+                                  StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" IsVisible="{Binding IsError}" />
+                            <Path Grid.Column="0" Width="15" Height="15" Margin="0,1,10,0" Stretch="Uniform" VerticalAlignment="Top"
+                                  Data="{StaticResource Icon.alert}" Stroke="{DynamicResource WarningText}"
+                                  StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" IsVisible="{Binding !IsError}" />
+                            <StackPanel Grid.Column="1" Spacing="8">
+                              <TextBlock Text="{Binding Message}" TextWrapping="Wrap" LineHeight="18"
+                                         FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
+                              <Button Classes="sm secondary" Content="{Binding ActionLabel}" Command="{Binding ActionCommand}"
+                                      HorizontalAlignment="Left" IsVisible="{Binding HasAction}" />
+                            </StackPanel>
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+        </StackPanel>
+      </ScrollViewer>
+    </DockPanel>
+  </Border>
+</UserControl>

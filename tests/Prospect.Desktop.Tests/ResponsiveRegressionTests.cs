@@ -5,8 +5,12 @@ using Avalonia.Styling;
 using Microsoft.Extensions.DependencyInjection;
 
 using Prospect.Core.Backups;
+using Prospect.Core.Common;
+using Prospect.Core.Diagnostics;
 using Prospect.Core.GameVersions;
+using Prospect.Core.ModDb;
 using Prospect.Core.Modpacks;
+using Prospect.Core.Runtime;
 using Prospect.Core.Storage;
 
 using Prospect.Desktop.Tests.Support;
@@ -98,6 +102,28 @@ public sealed class ResponsiveRegressionTests
     }
 
     [AvaloniaFact]
+    public async Task Home_NewInstanceTile_HoldsItsBoxes()
+    {
+        // Cas dédié pour la tuile « Nouvelle instance » (dernier élément de GridItems dès qu'une
+        // instance existe, voir HomeViewModel.ApplyFilterAndSort) : Home_Populated_HoldsItsBoxes
+        // la mesure déjà en passant, celui-ci la nomme explicitement pour que le libellé qui
+        // touchait le cadre en pointillés à certaines tailles reste un cas de non-régression lisible.
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        provider.SeedInstalledVersion(fileSystem, "1.20.4");
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var home = provider.GetRequiredService<HomeViewModel>();
+
+        await ResponsiveScenario.CreateInstanceAsync(shell, home, ResponsiveScenario.ShortInstanceName, "1.20.4");
+        window.Settle();
+        home.GridItems.ShouldContain(item => item is NewInstanceTileViewModel);
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Accueil, tuile Nouvelle instance");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public async Task Home_Populated_HoldsItsBoxesInTheLightTheme()
     {
         using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
@@ -142,6 +168,39 @@ public sealed class ResponsiveRegressionTests
             window.Settle();
             window.ShouldHoldLayoutInvariantsAtEverySize($"Détail d'instance, onglet {tab}");
         }
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task InstanceDetail_ModsTabWithALongModName_HoldsItsBoxes()
+    {
+        // La garde générique (InstanceDetail_EveryTab_HoldsItsBoxes) ne pousse jamais le NOM d'un
+        // mod : celui-ci était trimmé en apparence (TextTrimming posé) mais réellement inerte, la
+        // ligne nom+badge vivant dans un StackPanel horizontal qui mesure ses enfants sans
+        // contrainte de largeur — exactement le piège déjà documenté juste en dessous pour la
+        // ligne auteur/fichier. Régression pour la conversion en Grid des deux lignes.
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        provider.SeedInstalledVersion(fileSystem, "1.20.4");
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var home = provider.GetRequiredService<HomeViewModel>();
+
+        var record = await ResponsiveScenario.CreateInstanceAsync(shell, home, ResponsiveScenario.LongInstanceName, "1.20.4");
+        var mods = provider.GetRequiredService<IInstalledModRepository>();
+        ModDbDoubles.SeedMod(
+            fileSystem,
+            mods.GetModsDirectory(record.Slug),
+            "cartomap-1.0.0.zip",
+            ModDbDoubles.ModInfo("cartomap", "Extension de cartographie détaillée pour la région nord du monde"));
+
+        shell.ShowInstanceDetail(record.Slug);
+        var detail = shell.CurrentPage.ShouldBeOfType<InstanceDetailViewModel>();
+        await detail.InitializeCommand.ExecuteAsync(null);
+        window.Settle();
+        detail.ModsTab.Mods.ShouldHaveSingleItem().Name.ShouldContain("cartographie");
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Détail d'instance, onglet Mods, nom de mod long");
 
         window.Close();
     }
@@ -223,6 +282,80 @@ public sealed class ResponsiveRegressionTests
         detail.OptionsTab.Backups.Backups.Count.ShouldBe(2);
 
         window.ShouldHoldLayoutInvariantsAtEverySize("Détail d'instance, Options, sauvegardes peuplées");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task InstanceDoctorDialog_AllClear_HoldsItsBoxes()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        provider.SeedInstalledVersion(fileSystem, "1.20.4");
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var home = provider.GetRequiredService<HomeViewModel>();
+
+        var record = await ResponsiveScenario.CreateInstanceAsync(shell, home, ResponsiveScenario.LongInstanceName, "1.20.4");
+        shell.ShowInstanceDetail(record.Slug);
+        var detail = shell.CurrentPage.ShouldBeOfType<InstanceDetailViewModel>();
+        await detail.InitializeCommand.ExecuteAsync(null);
+
+        // État « tout va bien » construit directement : l'obtenir en environnement de test
+        // demanderait un vrai runtimeconfig.json (donc un vrai `dotnet --list-runtimes`) et un
+        // volume factice configuré, deux détails de diagnostic déjà couverts côté Core
+        // (InstanceDoctorTests) qui n'ont rien à apporter à une garde de mise en page.
+        var report = new InstanceDoctorReport(
+            new GameVersionDoctorResult(GameVersionDoctorStatus.Installed, GameVersion.Parse("1.20.4")),
+            RuntimeCheckResult.Present(GameRuntimeRequirement.Known("Microsoft.NETCore.App", new Version(8, 0, 10))),
+            [],
+            new ModCompatibilityDoctorResult(0, 0, 0, 0),
+            new DiskSpaceDoctorResult(100L * 1024 * 1024 * 1024, InstanceDoctor.LowDiskSpaceThresholdBytes));
+        shell.Overlay.Show(new InstanceDoctorDialogViewModel(report, () => { }, () => { }, shell.Overlay));
+        window.Settle();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Dialogue du docteur d'instance, tout va bien");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task InstanceDoctorDialog_WithFindings_HoldsItsBoxes()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        provider.SeedInstalledVersion(fileSystem, "1.20.4");
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var home = provider.GetRequiredService<HomeViewModel>();
+
+        var record = await ResponsiveScenario.CreateInstanceAsync(shell, home, ResponsiveScenario.LongInstanceName, "1.20.4");
+        var mods = provider.GetRequiredService<IInstalledModRepository>();
+        // Identifiant de dépendance volontairement long (visible uniquement dans la ligne du
+        // docteur, pas dans la liste de l'onglet Mods) : c'est ce genre de valeur, pas
+        // « vsimgui », qui pousse une ligne de rapport contre le bord du dialogue.
+        ModDbDoubles.SeedMod(
+            fileSystem,
+            mods.GetModsDirectory(record.Slug),
+            "cartomap-1.0.0.zip",
+            ModDbDoubles.ModInfo(
+                "cartomap",
+                "Cartographie détaillée",
+                dependency: "un-mod-de-base-manquant-au-nom-particulierement-long"));
+        // Sentinelle retirée après coup (même technique qu'InstanceDetail_LaunchErrorBanner_HoldsItsBoxes) :
+        // simule une installation interrompue sans passer par un vrai téléchargement.
+        fileSystem.RemoveFile(fileSystem.Path.Combine(
+            provider.GetRequiredService<AppPaths>().VersionsDirectory,
+            "1.20.4",
+            FileSystemInstalledGameVersionRepository.CompletionMarkerFileName));
+
+        shell.ShowInstanceDetail(record.Slug);
+        var detail = shell.CurrentPage.ShouldBeOfType<InstanceDetailViewModel>();
+        await detail.InitializeCommand.ExecuteAsync(null);
+        await detail.CheckInstanceCommand.ExecuteAsync(null);
+        window.Settle();
+        var dialog = shell.Overlay.Active.ShouldBeOfType<InstanceDoctorDialogViewModel>();
+        dialog.IsAllClear.ShouldBeFalse();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Dialogue du docteur d'instance, constats");
 
         window.Close();
     }
