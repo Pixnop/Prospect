@@ -77,23 +77,28 @@ public sealed class InstanceDoctorTests
         fileSystem.AddDirectory(fileSystem.Path.Combine(Paths.InstancesDirectory, Slug, "data", "Mods"));
     }
 
-    private static string VersionDirectory => Paths.VersionsDirectory + "/" + GameVersionText;
+    // Chemin recombiné via l'IFileSystem abstrait plutôt qu'une concaténation littérale avec "/" :
+    // Paths.VersionsDirectory est déjà séparé à la convention de l'OS courant (AppPaths), une
+    // concaténation en dur cassait donc sous Windows (\ et / mélangés) tout en passant inaperçue
+    // sous Linux/macOS, où "/" est déjà le séparateur natif.
+    private static string VersionDirectory(Harness harness) => harness.FileSystem.Path.Combine(Paths.VersionsDirectory, GameVersionText);
 
     private static void SeedGameVersionInstalled(Harness harness)
     {
-        harness.FileSystem.AddFile(harness.FileSystem.Path.Combine(VersionDirectory, "Vintagestory"), new MockFileData("binaire"));
+        var directory = VersionDirectory(harness);
+        harness.FileSystem.AddFile(harness.FileSystem.Path.Combine(directory, "Vintagestory"), new MockFileData("binaire"));
         harness.FileSystem.AddFile(
-            harness.FileSystem.Path.Combine(VersionDirectory, FileSystemInstalledGameVersionRepository.CompletionMarkerFileName),
+            harness.FileSystem.Path.Combine(directory, FileSystemInstalledGameVersionRepository.CompletionMarkerFileName),
             new MockFileData(GameVersionText));
     }
 
     private static void SeedGameVersionIncomplete(Harness harness)
-        => harness.FileSystem.AddFile(harness.FileSystem.Path.Combine(VersionDirectory, "Vintagestory"), new MockFileData("binaire"));
+        => harness.FileSystem.AddFile(harness.FileSystem.Path.Combine(VersionDirectory(harness), "Vintagestory"), new MockFileData("binaire"));
 
     private static void WriteRuntimeConfig(Harness harness, string frameworkName, string version)
     {
         var json = $$"""{ "runtimeOptions": { "framework": { "name": "{{frameworkName}}", "version": "{{version}}" } } }""";
-        harness.FileSystem.AddFile(harness.FileSystem.Path.Combine(VersionDirectory, "Vintagestory.runtimeconfig.json"), new MockFileData(json));
+        harness.FileSystem.AddFile(harness.FileSystem.Path.Combine(VersionDirectory(harness), "Vintagestory.runtimeconfig.json"), new MockFileData(json));
     }
 
     private static string ModInfoJson(string modId, string name, string version, params (string Id, string Requirement)[] dependencies)
