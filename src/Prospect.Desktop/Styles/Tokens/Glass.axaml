@@ -1,0 +1,132 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Port de design/tokens/glass.css — le système de surfaces translucides.
+
+    ══ Ce qui change par rapport au CSS source, et pourquoi ═══════════════════════════
+
+    Le CSS pose chaque vitre sur un `backdrop-filter: blur(...)` : le fond est reflouté
+    sous CHAQUE panneau, avec une force propre à sa profondeur (4 / 8 / 16px). L'équivalent
+    Avalonia serait un ExperimentalAcrylicBorder par vitre, donc un vrai matériau acrylique
+    recomposé à chaque image, plus TransparencyLevelHint sur la fenêtre.
+
+    Décision d'architecture : composition INTERNE, pas d'acrylique OS. La fenêtre empile une
+    image de fond DÉJÀ FLOUTÉE hors ligne (voir MainWindow.axaml), un voile lié au thème,
+    puis des vitres qui ne sont que des SolidColorBrush rgba. Rien n'est reflouté par image ;
+    le coût de rendu du verre est celui d'aplats semi-transparents.
+
+    Conséquence assumée : les forces de flou par vitre (glass-blur-xs/sm/md) n'ont PAS
+    d'équivalent ici et disparaissent. C'est l'alpha de chaque profondeur qui porte seul la
+    hiérarchie, au-dessus d'un fond déjà flou. Les valeurs d'alpha, elles, sont celles du CSS
+    au point près, dans les deux variantes.
+
+    ══ Les quatre profondeurs ════════════════════════════════════════════════════════
+
+      GlassChrome  30 %  sidebar, barre de titre
+      GlassPane    15 %  conteneurs de page, enveloppes
+      GlassItem    50 %  cartes, rangées, champs, boutons secondaires
+      GlassMenu    72 %  menus déroulants, popovers, dialogues, toasts, infobulles
+
+    Le liseré n'est jamais sombre : GlassEdge est une arête CLAIRE (cuivre à 10 %) qui
+    attrape la lumière sur le haut de la vitre. C'est le détail porteur : une bordure sombre
+    referait de la vitre une boîte pleine.
+
+    Le « sheen » (arête spéculaire) est un BoxShadow inset, qu'Avalonia rend nativement. Les
+    ressources GlassElev* composent l'ombre portée et le sheen en une seule valeur, faute de
+    pouvoir référencer une BoxShadows depuis une autre.
+  -->
+
+  <ResourceDictionary.ThemeDictionaries>
+
+    <!-- ── Sombre — thème par défaut de l'application ───────────────────────────── -->
+    <ResourceDictionary x:Key="Dark">
+
+      <!-- Voile posé sur l'image de fond. Reste une COUCHE SÉPARÉE parce que lui seul change
+           avec le thème : seul le flou est pré-composé dans l'asset.
+
+           Monté de 62 % (valeur du CSS) à 72 %. Le handoff design donne lui-même ce réglage comme
+           celui qu'on retouche quand l'image change : « a darker capture needs less veil, a
+           brighter one more ». La capture livrée est claire et très contrastée localement (un plan
+           d'eau turquoise en plein milieu), et les vitres n'ont plus leur flou propre pour
+           l'écraser — le voile reprend donc le travail que faisait le backdrop-filter de chaque
+           panneau. -->
+      <SolidColorBrush x:Key="GlassVeil" Color="#B814100D" />
+
+      <SolidColorBrush x:Key="GlassChrome" Color="#4D111010" />
+      <SolidColorBrush x:Key="GlassPane" Color="#26111010" />
+      <SolidColorBrush x:Key="GlassItem" Color="#80111010" />
+      <SolidColorBrush x:Key="GlassMenu" Color="#B8111010" />
+
+      <SolidColorBrush x:Key="GlassEdge" Color="#1AD5A275" />
+      <SolidColorBrush x:Key="GlassEdgeStrong" Color="#38D5A275" />
+
+      <!-- Bandes de rangées : une liste translucide alterne ses lignes au lieu de tirer des
+           séparateurs. Posées PAR-DESSUS la vitre qui les porte, elles s'y composent. -->
+      <SolidColorBrush x:Key="GlassRowOdd" Color="#4D2B2724" />
+      <SolidColorBrush x:Key="GlassRowEven" Color="#4D111010" />
+
+      <BoxShadows x:Key="GlassShadow">0 1 3 #80090808</BoxShadows>
+      <BoxShadows x:Key="GlassShadowLg">0 8 32 #8C090808</BoxShadows>
+      <BoxShadows x:Key="GlassSheen">inset 0 1 0 #12FFFFFF</BoxShadows>
+      <!-- Paire haute/basse : la lumière tombe d'en haut, le bas de la vitre passe dans
+           l'ombre. C'est ce couple qui donne son épaisseur au panneau. -->
+      <BoxShadows x:Key="GlassSheenStrong">inset 0 1 0 #1FFFFFFF, inset 0 -1 0 #38000000</BoxShadows>
+
+      <BoxShadows x:Key="GlassElevItem">0 1 3 #80090808, inset 0 1 0 #12FFFFFF</BoxShadows>
+      <BoxShadows x:Key="GlassElevMenu">0 8 32 #8C090808, inset 0 1 0 #12FFFFFF</BoxShadows>
+
+      <!-- Protection de texte (glass-text-shadow), appliquée par TextBlock.onGlass. Sur
+           fond sombre, l'encre est claire : c'est une ombre noire qui la détache. -->
+      <DropShadowEffect x:Key="GlassTextShadow" BlurRadius="2" OffsetX="0" OffsetY="1"
+                        Color="#090808" Opacity="0.55" />
+    </ResourceDictionary>
+
+    <!-- ── Clair — variante secondaire, système de verre complet ────────────────── -->
+    <ResourceDictionary x:Key="Light">
+
+      <!-- ÉCART VOULU au CSS de référence, décision produit : glass.css pose la variante claire
+           à voile .72 / pane .42 / chrome .55 / item .62 / menu .86, ce qui noie le fond sous le
+           lin — en clair on ne voyait plus qu'il y a du verre. Les alphas descendent donc d'un
+           cran ici pour que le fond se lise à travers les vitres comme il le fait en sombre. Le
+           menu descend moins que les autres : il porte du contenu (dialogues, dropdowns,
+           infobulles) et sa lisibilité passe avant l'effet.
+
+           Corollaire à tenir : cette baisse ne doit jamais se rattraper en remontant un alpha
+           global si un texte souffre. La réponse est locale (protection de texte, liseré) — voir
+           TextBlock.onGlass dans Styles/Controls/GlassSurface.axaml. -->
+      <SolidColorBrush x:Key="GlassVeil" Color="#8AF0E9E0" />
+
+      <SolidColorBrush x:Key="GlassChrome" Color="#70F7F2EB" />
+      <SolidColorBrush x:Key="GlassPane" Color="#4FF7F2EB" />
+      <SolidColorBrush x:Key="GlassItem" Color="#7AFFFFFF" />
+      <SolidColorBrush x:Key="GlassMenu" Color="#C7FCF9F4" />
+
+      <SolidColorBrush x:Key="GlassEdge" Color="#247E5230" />
+      <SolidColorBrush x:Key="GlassEdgeStrong" Color="#477E5230" />
+
+      <SolidColorBrush x:Key="GlassRowOdd" Color="#52FFFFFF" />
+      <SolidColorBrush x:Key="GlassRowEven" Color="#3DF7F2EB" />
+
+      <BoxShadows x:Key="GlassShadow">0 1 3 #24382A1E</BoxShadows>
+      <BoxShadows x:Key="GlassShadowLg">0 8 32 #2E382A1E</BoxShadows>
+      <BoxShadows x:Key="GlassSheen">inset 0 1 0 #BFFFFFFF</BoxShadows>
+      <!-- glass.css ne redéfinit pas glass-sheen-strong sous .theme-light : la variante
+           claire hérite donc de la paire de :root. Port littéral, et le résultat tient —
+           blanc léger en haut, noir léger en bas donnent la même épaisseur sur fond pâle. -->
+      <BoxShadows x:Key="GlassSheenStrong">inset 0 1 0 #1FFFFFFF, inset 0 -1 0 #38000000</BoxShadows>
+
+      <BoxShadows x:Key="GlassElevItem">0 1 3 #24382A1E, inset 0 1 0 #BFFFFFFF</BoxShadows>
+      <BoxShadows x:Key="GlassElevMenu">0 8 32 #2E382A1E, inset 0 1 0 #BFFFFFFF</BoxShadows>
+
+      <!-- glass.css garde ici l'ombre sombre de :root, mais en clair l'encre est SOMBRE : une
+           ombre noire sous du texte noir ne détache rien, elle épaissit. Le halo passe donc en
+           lin, ce qui rend le même service (séparer le titre d'une tache foncée du fond qui
+           transparaît sous une vitre à 15 %) dans le sens qui convient à la variante. -->
+      <DropShadowEffect x:Key="GlassTextShadow" BlurRadius="3" OffsetX="0" OffsetY="0"
+                        Color="#F7F2EB" Opacity="0.7" />
+    </ResourceDictionary>
+
+  </ResourceDictionary.ThemeDictionaries>
+
+</ResourceDictionary>

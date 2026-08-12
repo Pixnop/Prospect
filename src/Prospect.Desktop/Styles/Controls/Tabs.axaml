@@ -10,7 +10,7 @@
 
   <Style Selector="Border.tabsBar">
     <Setter Property="BorderThickness" Value="0,0,0,1" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassEdge}" />
   </Style>
 
 </Styles>

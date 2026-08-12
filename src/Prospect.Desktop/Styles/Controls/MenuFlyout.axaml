@@ -8,6 +8,16 @@
     de MenuItem (police, couleurs) sont retouchées, sans recouvrir tout son ControlTheme.
   -->
 
+  <!-- La surface du menu, elle, est bien du système : c'est la profondeur MENU (72 %), comme un
+       dropdown ou un dialogue (.pr-ctxmenu). Seul le presentateur du flyout est reteinté ; le
+       gabarit natif reste en place. -->
+  <Style Selector="MenuFlyoutPresenter">
+    <Setter Property="Background" Value="{DynamicResource GlassMenu}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassEdge}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+  </Style>
+
   <Style Selector="MenuItem">
     <Setter Property="FontFamily" Value="{DynamicResource FontSans}" />
     <Setter Property="FontSize" Value="{StaticResource FsBodySm}" />

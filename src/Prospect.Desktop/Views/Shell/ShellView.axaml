@@ -25,12 +25,11 @@
 
       <Grid Grid.Row="1" ColumnDefinitions="216,*">
 
-        <!-- Sidebar -->
-        <Border Grid.Column="0" Background="{DynamicResource BgSidebar}"
-                BorderThickness="0,0,1,0" BorderBrush="{DynamicResource BorderSubtle}">
+        <!-- Sidebar — profondeur « chrome » (30 %), la plus opaque des deux vitres de structure. -->
+        <Border Grid.Column="0" Classes="glass chrome" BorderThickness="0,0,1,0">
           <DockPanel>
             <StackPanel DockPanel.Dock="Bottom" Margin="10,10,10,12" Spacing="2">
-              <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}" Margin="4,0,4,8" />
+              <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}" Margin="4,0,4,8" />
               <Button Classes="ghost navitem" Classes.active="{Binding IsDownloadsPopoverOpen}" Command="{Binding ToggleDownloadsPopoverCommand}">
                 <Grid ColumnDefinitions="Auto,*,Auto">
                   <Path Grid.Column="0" Width="16" Height="16" Margin="0,0,10,0" Stretch="Uniform" Data="{StaticResource Icon.download}"
@@ -76,8 +75,12 @@
           </DockPanel>
         </Border>
 
-        <!-- Zone de contenu : la page courante se résout via le ViewLocator global. -->
-        <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+        <!-- Zone de contenu : la page courante se résout via le ViewLocator global. La vitre la
+             plus fine du système (glass-pane, 15 %) l'enveloppe : elle pose un plancher de
+             contraste sous les pages, qui n'ont elles-mêmes aucun fond propre. -->
+        <Border Grid.Column="1" Background="{DynamicResource GlassPane}">
+          <ContentControl Content="{Binding CurrentPage}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+        </Border>
       </Grid>
     </Grid>
 
@@ -91,8 +94,7 @@
     <Border IsVisible="{Binding IsDownloadsPopoverOpen}" Width="400" layout:LayoutContract.AllowsOverlap="True"
             HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,44,20,0"
             CornerRadius="{StaticResource RadiusMd}" ClipToBounds="True"
-            Background="{DynamicResource BgSurfaceRaised}" BorderBrush="{DynamicResource BorderDefault}"
-            BorderThickness="1" BoxShadow="{DynamicResource Elev3}">
+            Classes="glass menu">
       <StackPanel>
         <Grid ColumnDefinitions="*,Auto" Margin="16,12">
           <TextBlock Grid.Column="0" Text="{StaticResource Downloads_Title}" VerticalAlignment="Center"
@@ -104,7 +106,7 @@
           </Button>
         </Grid>
 
-        <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}"
+        <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}"
                 IsVisible="{Binding Downloads.HasDownloads}">
           <StackPanel>
             <ItemsControl ItemsSource="{Binding Downloads.Items}" MaxHeight="320">
@@ -140,14 +142,14 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}" Padding="16,10">
+            <Border Classes="glassBand" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}" Padding="16,10">
               <TextBlock Text="{Binding Downloads.SummaryText}"
                          FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
             </Border>
           </StackPanel>
         </Border>
 
-        <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}"
+        <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}"
                 IsVisible="{Binding !Downloads.HasDownloads}">
           <StackPanel HorizontalAlignment="Center" Spacing="10" Margin="24,32">
             <Path Width="32" Height="32" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.download}"

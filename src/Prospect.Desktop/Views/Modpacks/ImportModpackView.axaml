@@ -13,10 +13,10 @@
        final groupé par catégorie, ou échec. -->
 
   <Border Width="480" MaxHeight="640" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
-          Background="{DynamicResource BgSurface}" BorderBrush="{DynamicResource BorderDefault}"
-          BorderThickness="1" BoxShadow="{DynamicResource Elev3}">
+          Background="{DynamicResource GlassMenu}" BorderBrush="{DynamicResource GlassEdge}"
+          BorderThickness="1" BoxShadow="{DynamicResource GlassElevMenu}">
     <DockPanel>
-      <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="22,18">
+      <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="22,18">
         <StackPanel>
           <TextBlock Text="{StaticResource Dialog_Import_PreviewTitle}" TextWrapping="Wrap"
                      FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
@@ -42,8 +42,8 @@
       </Border>
 
       <!-- ── Pied : aperçu ────────────────────────────────────────────────────────── -->
-      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}"
-              Background="{DynamicResource BgSurfaceRaised}"
+      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}"
+              Background="{DynamicResource GlassRowOdd}"
               IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Preview}">
         <Grid ColumnDefinitions="*,Auto,Auto" Margin="22,16">
           <Button Grid.Column="0" Classes="ghost" HorizontalAlignment="Left" Command="{Binding CancelPreviewCommand}"
@@ -53,8 +53,8 @@
       </Border>
 
       <!-- ── Pied : progression ───────────────────────────────────────────────────── -->
-      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}"
-              Background="{DynamicResource BgSurfaceRaised}"
+      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}"
+              Background="{DynamicResource GlassRowOdd}"
               IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Importing}">
         <Grid ColumnDefinitions="*,Auto" Margin="22,16">
           <Button Grid.Column="1" Classes="ghost" Command="{Binding CancelImportCommand}" Content="{StaticResource Dialog_Import_CancelImport}" />
@@ -62,8 +62,8 @@
       </Border>
 
       <!-- ── Pied : rapport ───────────────────────────────────────────────────────── -->
-      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}"
-              Background="{DynamicResource BgSurfaceRaised}"
+      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}"
+              Background="{DynamicResource GlassRowOdd}"
               IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Report}">
         <Grid ColumnDefinitions="*,Auto" Margin="22,16">
           <Button Grid.Column="1" Command="{Binding CloseReportCommand}" Content="{StaticResource Dialog_Import_Close}" />
@@ -71,8 +71,8 @@
       </Border>
 
       <!-- ── Pied : échec ─────────────────────────────────────────────────────────── -->
-      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}"
-              Background="{DynamicResource BgSurfaceRaised}"
+      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}"
+              Background="{DynamicResource GlassRowOdd}"
               IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Failed}">
         <Grid ColumnDefinitions="*,Auto" Margin="22,16">
           <Button Grid.Column="1" Command="{Binding CloseFailedCommand}" Content="{StaticResource Dialog_Import_Close}" />
@@ -141,7 +141,7 @@
                       <ItemsControl ItemsSource="{Binding Rows}">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate x:DataType="vm:ImportReportRowViewModel">
-                            <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="14,10">
+                            <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="14,10">
                               <Grid ColumnDefinitions="*,Auto">
                                 <TextBlock Grid.Column="0" Text="{Binding ModId}" TextTrimming="CharacterEllipsis"
                                            FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}"

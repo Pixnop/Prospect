@@ -23,7 +23,7 @@
     <Setter Property="Padding" Value="8,0" />
     <Setter Property="HorizontalAlignment" Value="Left" />
     <Setter Property="Background" Value="{DynamicResource NeutralQuiet}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassEdge}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Foreground" Value="{DynamicResource Text2}" />
     <Setter Property="Template">
@@ -108,8 +108,8 @@
     <Setter Property="Padding" Value="12,0" />
     <Setter Property="HorizontalAlignment" Value="Left" />
     <Setter Property="Cursor" Value="Hand" />
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="Background" Value="{DynamicResource GlassItem}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassEdge}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Foreground" Value="{DynamicResource Text2}" />
     <Setter Property="Template">
@@ -136,7 +136,7 @@
     </Setter>
   </Style>
   <Style Selector="ContentControl.tag:pointerover /template/ Border#PART_Border">
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassEdgeStrong}" />
   </Style>
   <Style Selector="ContentControl.tag:pointerover">
     <Setter Property="Foreground" Value="{DynamicResource Text1}" />

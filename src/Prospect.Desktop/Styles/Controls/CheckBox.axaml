@@ -17,8 +17,8 @@
                   Grid.Column="0"
                   Width="16" Height="16"
                   VerticalAlignment="Center"
-                  Background="{DynamicResource BgInput}"
-                  BorderBrush="{DynamicResource BorderStrong}"
+                  Background="{DynamicResource GlassItem}"
+                  BorderBrush="{DynamicResource GlassEdgeStrong}"
                   BorderThickness="1"
                   CornerRadius="{StaticResource RadiusXs}">
             <Border.Transitions>
@@ -73,8 +73,8 @@
       <Setter Property="Foreground" Value="{DynamicResource Text4}" />
     </Style>
     <Style Selector="^:disabled /template/ Border#PART_Box">
-      <Setter Property="Background" Value="{DynamicResource BgSurface}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+      <Setter Property="Background" Value="{DynamicResource GlassPane}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource GlassEdge}" />
     </Style>
   </ControlTheme>
 

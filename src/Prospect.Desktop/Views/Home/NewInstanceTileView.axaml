@@ -30,7 +30,7 @@
       <!-- Cadre en pointillés dessiné DERRIÈRE le contenu de la tuile : il couvre la même cellule
            que lui, c'est le principe même d'une bordure. -->
       <Rectangle Name="DashedBorder" RadiusX="10" RadiusY="10" StrokeThickness="1" StrokeDashArray="4,3"
-                 Stroke="{DynamicResource BorderStrong}" layout:LayoutContract.AllowsOverlap="True" />
+                 Stroke="{DynamicResource GlassEdgeStrong}" layout:LayoutContract.AllowsOverlap="True" />
       <!-- Margin horizontal de 16px : même gouttière que le contenu d'InstanceCardView (voisine
            directe dans la grille), pour que le libellé respire au lieu de toucher le cadre en
            pointillés. TextWrapping+TextAlignment en défense supplémentaire : sans eux, un libellé

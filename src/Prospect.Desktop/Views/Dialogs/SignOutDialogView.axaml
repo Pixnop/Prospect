@@ -12,10 +12,10 @@
        détruit ni monde ni fichier de jeu, ça efface une session qu'on peut reprendre. -->
 
   <Border Width="420" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
-          Background="{DynamicResource BgSurface}" BorderBrush="{DynamicResource BorderDefault}"
-          BorderThickness="1" BoxShadow="{DynamicResource Elev3}">
+          Background="{DynamicResource GlassMenu}" BorderBrush="{DynamicResource GlassEdge}"
+          BorderThickness="1" BoxShadow="{DynamicResource GlassElevMenu}">
     <StackPanel>
-      <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="22,18">
+      <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="22,18">
         <TextBlock Text="{Binding Title}" TextWrapping="Wrap"
                    FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
                    FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
@@ -26,7 +26,7 @@
                    FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text2}" />
       </StackPanel>
 
-      <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}" Background="{DynamicResource BgSurfaceRaised}">
+      <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}" Background="{DynamicResource GlassRowOdd}">
         <Grid ColumnDefinitions="*,Auto,Auto" Margin="22,16">
           <Button Grid.Column="0" Classes="ghost" Content="{StaticResource Dialog_Cancel}" Command="{Binding CancelCommand}" HorizontalAlignment="Left" />
           <Button Grid.Column="2" Content="{StaticResource Dialog_SignOut_Confirm}" Command="{Binding ConfirmCommand}" />

@@ -19,6 +19,9 @@
                 <!-- Tokens d'abord : les ControlThemes qui suivent les consomment en
                      DynamicResource. -->
                 <ResourceInclude Source="avares://Prospect.Desktop/Styles/Tokens/Colors.axaml" />
+                <!-- Le verre vient juste après les couleurs : ses vitres sont des alias de
+                     surface au même titre que bg-*, mais avec un alpha (voir Glass.axaml). -->
+                <ResourceInclude Source="avares://Prospect.Desktop/Styles/Tokens/Glass.axaml" />
                 <ResourceInclude Source="avares://Prospect.Desktop/Styles/Tokens/Spacing.axaml" />
                 <ResourceInclude Source="avares://Prospect.Desktop/Styles/Tokens/Radii.axaml" />
                 <ResourceInclude Source="avares://Prospect.Desktop/Styles/Tokens/Elevation.axaml" />
@@ -50,6 +53,7 @@
              Button, MenuItem) via classes plutôt qu'un ControlTheme dédié : ce sont des Style par
              sélecteur, pas des ressources nommées, donc ils vivent dans Application.Styles et non
              dans Application.Resources. -->
+        <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/GlassSurface.axaml" />
         <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/Badge.axaml" />
         <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/Card.axaml" />
         <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/NavItem.axaml" />

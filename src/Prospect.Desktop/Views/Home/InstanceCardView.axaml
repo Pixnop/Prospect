@@ -38,7 +38,7 @@
             </Panel.Background>
             <!-- Ce Border ne peint qu'un filet en bas de la bande, mais occupe toute sa surface :
                  il passe donc sous l'icône et sous le badge, par construction. -->
-            <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}"
+            <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}"
                     layout:LayoutContract.AllowsOverlap="True" />
             <Path Width="26" Height="26" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
                   Data="{Binding IconKey, Converter={x:Static conv:IconKeyToGeometryConverter.Instance}}"

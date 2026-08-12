@@ -83,10 +83,10 @@
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:InstalledModRowViewModel">
             <Border Classes="modRow" Classes.off="{Binding !IsEnabled}" Padding="16,12"
-                    BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}">
+                    BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}">
               <Grid ColumnDefinitions="Auto,*,Auto">
                 <Border Grid.Column="0" Width="30" Height="30" CornerRadius="{StaticResource RadiusSm}"
-                        Background="{DynamicResource Stone800}" BorderBrush="{DynamicResource BorderSubtle}" BorderThickness="1">
+                        Background="{DynamicResource Stone800}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1">
                   <Path Width="15" Height="15" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
                         Data="{StaticResource Icon.package}" Stroke="{DynamicResource Text3}"
                         StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
@@ -160,8 +160,8 @@
       </ItemsControl>
     </Border>
 
-    <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="Transparent"
-            BorderBrush="{DynamicResource BorderDefault}" IsVisible="{Binding !HasMods}">
+    <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="{DynamicResource GlassPane}"
+            BorderBrush="{DynamicResource GlassEdgeStrong}" IsVisible="{Binding !HasMods}">
       <StackPanel HorizontalAlignment="Center" Spacing="12" Margin="32,48" MaxWidth="420">
         <Path Width="40" Height="40" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.package}"
               Stroke="{DynamicResource Text4}" StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round" />
@@ -175,7 +175,7 @@
       </StackPanel>
     </Border>
 
-    <TextBlock Text="{Binding ModsDirectoryText}" TextTrimming="CharacterEllipsis" FontFamily="{DynamicResource FontMono}"
+    <TextBlock Text="{Binding ModsDirectoryText}" Classes="onGlass" TextTrimming="CharacterEllipsis" FontFamily="{DynamicResource FontMono}"
                FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
   </StackPanel>
 </UserControl>
