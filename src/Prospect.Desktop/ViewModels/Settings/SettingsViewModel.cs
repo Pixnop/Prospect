@@ -1,7 +1,10 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Prospect.Core.Common;
 using Prospect.Core.Migration;
+using Prospect.Core.Settings;
+using Prospect.Core.Storage;
 using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.ViewModels.Home;
@@ -10,12 +13,13 @@ using Prospect.Desktop.ViewModels.Migration;
 namespace Prospect.Desktop.ViewModels.Settings;
 
 /// <summary>
-/// Écran Réglages (docs/architecture.md liste plusieurs sections futures — Jeu, Réseau, Comptes,
-/// À propos — non construites ici : seule la section Général existe, avec l'action d'adoption VS
-/// Launcher accessible en permanence). Même flux que <see cref="Home.HomeViewModel.FirstRun"/>
-/// (même dialogue <see cref="AdoptVslViewModel"/>, même service de détection) mais TOUJOURS
-/// disponible ici, avec un choix de dossier manuel si la détection automatique ne trouve rien à
-/// l'emplacement par défaut de l'OS.
+/// Écran Réglages (design/ui_kits/launcher/screen-settings.jsx) : cinq sections en onglets —
+/// Général (thème, langue, et l'action d'adoption VS Launcher, toujours accessible ici), Jeu
+/// (emplacement des données), Réseau (téléchargements simultanés), Comptes (état vide, le
+/// chantier compte est le prochain) et À propos (version, licence, dépôt). Même flux d'adoption
+/// que <see cref="Home.HomeViewModel.FirstRun"/> (même dialogue <see cref="AdoptVslViewModel"/>,
+/// même service de détection) mais TOUJOURS disponible ici, avec un choix de dossier manuel si la
+/// détection automatique ne trouve rien à l'emplacement par défaut de l'OS.
 /// </summary>
 public sealed partial class SettingsViewModel : ObservableObject
 {
@@ -32,20 +36,51 @@ public sealed partial class SettingsViewModel : ObservableObject
         Func<VslDetectionResult, AdoptVslViewModel> adoptFactory,
         IOverlayService overlay,
         IFilePickerService filePicker,
-        HomeViewModel home)
+        HomeViewModel home,
+        SettingsService settings,
+        AppPaths appPaths,
+        IExternalUrlOpener urlOpener)
     {
         ArgumentNullException.ThrowIfNull(detector);
         ArgumentNullException.ThrowIfNull(adoptFactory);
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(filePicker);
         ArgumentNullException.ThrowIfNull(home);
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(appPaths);
+        ArgumentNullException.ThrowIfNull(urlOpener);
 
         _detector = detector;
         _adoptFactory = adoptFactory;
         _overlay = overlay;
         _filePicker = filePicker;
         _home = home;
+
+        General = new SettingsGeneralViewModel(settings);
+        Game = new SettingsGameViewModel(appPaths, urlOpener);
+        Network = new SettingsNetworkViewModel(settings);
+        About = new SettingsAboutViewModel(urlOpener);
     }
+
+    /// <summary>Section Général : thème, langue, carte d'adoption VS Launcher (état porté par ce ViewModel-ci).</summary>
+    public SettingsGeneralViewModel General { get; }
+
+    /// <summary>Section Jeu : emplacement des données.</summary>
+    public SettingsGameViewModel Game { get; }
+
+    /// <summary>Section Réseau : téléchargements simultanés.</summary>
+    public SettingsNetworkViewModel Network { get; }
+
+    /// <summary>Section À propos : version, licence, dépôt.</summary>
+    public SettingsAboutViewModel About { get; }
+
+    // Général en premier, comme la maquette (useState('Général')) : ordre et sélection par défaut
+    // alignés sur design/ui_kits/launcher/screen-settings.jsx.
+    [ObservableProperty]
+    private SettingsTab _selectedTab = SettingsTab.General;
+
+    [RelayCommand]
+    private void SelectTab(SettingsTab tab) => SelectedTab = tab;
 
     [ObservableProperty]
     private bool _isDetecting;
