@@ -1,0 +1,100 @@
+name: conformance
+
+# Volontairement PAS de pull_request ni de push : cet étage boote un vrai serveur Vintage Story
+# (voir tests/Prospect.GameConformance.Tests/README.md) et n'a donc rien à faire dans la gate
+# d'une pull request, qui doit rester rapide. Déclenchement manuel ou hebdomadaire seulement.
+on:
+  workflow_dispatch:
+  schedule:
+    # Dimanche 03:00 UTC : creux d'activité, une régression détectée là peut attendre le lundi
+    # matin sans bloquer personne.
+    - cron: "0 3 * * 0"
+
+env:
+  PROSPECT_CONFORMANCE: "1"
+  # Dernière version testée en local pour cette PR (voir le rapport) ; alignée sur la ligne
+  # "Compatible" la plus récente de la table de compatibilité du README d'Atlas.
+  VS_VERSION: "1.22.3"
+
+jobs:
+  conformance:
+    name: Game conformance suite (VS ${{ env.VS_VERSION }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Installation du SDK .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      # Atlas n'installe rien lui-même : il attend une installation Vintage Story déjà présente et
+      # lit son chemin dans VINTAGE_STORY (voir le README du projet de tests). Ce téléchargement EST
+      # donc « ce qu'Atlas télécharge » à mettre en cache — le serveur headless officiel, servi tel
+      # quel par cdn.vintagestory.at, exactement comme le fait le propre ci.yml d'Atlas.
+      - name: Cache du serveur Vintage Story
+        id: cache-vs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/vs
+          key: vs-server-linux-x64-${{ env.VS_VERSION }}
+
+      - name: Téléchargement du serveur Vintage Story
+        if: steps.cache-vs.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          curl -sSL --proto '=https' --proto-redir '=https' -o vs_server.tar.gz "https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_${VS_VERSION}.tar.gz"
+          mkdir -p "$HOME/vs"
+          tar -xzf vs_server.tar.gz -C "$HOME/vs"
+
+      - name: Export de VINTAGE_STORY
+        run: |
+          set -e
+          DLL_DIR="$(dirname "$(find "$HOME/vs" -name VintagestoryAPI.dll | head -1)")"
+          echo "VINTAGE_STORY=$DLL_DIR" >> "$GITHUB_ENV"
+          echo "Résolu VINTAGE_STORY=$DLL_DIR"
+
+      - name: Cache NuGet
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-conformance-${{ hashFiles('Directory.Packages.props', 'tests/Prospect.GameConformance.Tests/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-conformance-
+
+      # Uniquement ce projet : la gate normale (ci.yml, jamais modifiée par ce workflow) couvre
+      # déjà toute la solution, en beaucoup plus rapide (sans VINTAGE_STORY, donc sans ces scénarios).
+      - name: Restauration des paquets
+        run: dotnet restore tests/Prospect.GameConformance.Tests
+
+      - name: Build (Release)
+        run: dotnet build tests/Prospect.GameConformance.Tests --no-restore -c Release
+
+      - name: Tests de conformité (Release)
+        run: >
+          dotnet test tests/Prospect.GameConformance.Tests
+          --no-build -c Release
+          --logger "trx;LogFileName=conformance.trx"
+          --results-directory TestResults
+
+      - name: Publication des résultats
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: conformance-trx
+          path: TestResults/*.trx
+          if-no-files-found: warn
+
+      # server-main.log (et tout autre journal du serveur embarqué) : Atlas ne supprime le
+      # répertoire scratch d'une classe QUE si elle finit verte ; un échec le conserve
+      # explicitement comme trace post-mortem (voir le README d'Atlas et son mécanisme
+      # ATLAS_KEEP_SCRATCH). Rien à activer nous-mêmes : il suffit de le publier.
+      - name: Publication des journaux serveur (en cas d'échec)
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: conformance-server-logs
+          path: /tmp/atlas/**/*.log
+          if-no-files-found: warn

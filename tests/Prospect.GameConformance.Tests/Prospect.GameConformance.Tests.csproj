@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- CA1707 cible l'API publique ; la convention Scenario_Condition_Resultat des noms de
+         test est volontaire et largement répandue en xUnit (même exception que Prospect.Core.Tests). -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    Pixnop.Atlas.XUnit compile les scénarios contre les types du vrai jeu (BlockPos,
+    ICoreServerAPI...), qui ne viennent pas d'un paquet NuGet mais d'une installation Vintage
+    Story locale : VINTAGE_STORY doit pointer vers son dossier de binaires. C'est un besoin de
+    COMPILATION, pas seulement d'exécution — sans installation, une <Reference> vers un fichier
+    absent ferait échouer `dotnet build` sur TOUTE la solution, alors que ci.yml (jamais modifié
+    par ce projet) ne définit jamais VINTAGE_STORY. PROSPECT_CONFORMANCE_ENGINE isole donc les
+    scénarios réels derrière #if : présent (poste avec le jeu installé, ou conformance.yml qui le
+    télécharge), ils compilent et s'exécutent sous réserve de l'opt-in décrit dans
+    ConformanceFactAttribute ; absent (CI normale, poste sans le jeu), seul un test sentinelle
+    toujours ignoré compile à la place (EngineUnavailableTests) et le reste de la solution n'est
+    jamais affecté. Voir le README de ce projet pour le détail.
+  -->
+  <PropertyGroup Condition="'$(VINTAGE_STORY)' != ''">
+    <DefineConstants>$(DefineConstants);PROSPECT_CONFORMANCE_ENGINE</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Pixnop.Atlas.XUnit" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(VINTAGE_STORY)' != ''">
+    <!-- Nécessaire pour compiler les types de jeu utilisés dans les corps de scénario ;
+         Private (true par défaut) copie le fichier à côté de l'assembly de test, ce qui laisse
+         le runner résoudre les types de jeu avant qu'Atlas ne prenne la main sur la résolution
+         d'assembly au boot. -->
+    <Reference Include="VintagestoryAPI">
+      <HintPath>$(VINTAGE_STORY)\VintagestoryAPI.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Prospect.Core\Prospect.Core.csproj" />
+  </ItemGroup>
+
+</Project>
