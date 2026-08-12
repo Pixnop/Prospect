@@ -19,13 +19,32 @@ namespace Prospect.Desktop.ViewModels.Mods;
 /// compatibilité, tri, fiche en dialog, et l'état hors ligne de la maquette.
 /// </summary>
 /// <remarks>
+/// <para>
 /// La recherche et le tri se font ENTIÈREMENT en mémoire (<see cref="ModCatalogSearch"/>) : l'API
 /// ne pagine rien, le catalogue entier arrive en un appel et repart à chaque frappe serait à la
 /// fois plus lent et impoli. Seul l'index de compatibilité vient du serveur, qui est le seul à
 /// savoir quelle release est taguée pour quelle version de jeu.
+/// </para>
+/// <para>
+/// Le RENDU, lui, est paresseux. La recherche produit toujours la liste complète des
+/// correspondances (<see cref="MatchCount"/>), mais <see cref="Results"/> n'en expose qu'une
+/// fenêtre, étendue par tranches quand l'utilisateur approche du bas du défilement et remise à
+/// zéro à chaque changement de recherche, de tag, de tri ou d'instance cible. Sans cette fenêtre,
+/// le catalogue réel (8 026 fiches) construisait 8 026 cartes d'un coup, donc autant de
+/// téléchargements et de décodages de logos : mesuré, près de 8 Gio de jeu de travail et une
+/// dizaine de secondes de mise en page par frappe.
+/// </para>
 /// </remarks>
 public sealed partial class ModBrowserViewModel : ObservableObject
 {
+    /// <summary>
+    /// Nombre de cartes rendues d'emblée, et taille de chaque extension. Une trentaine remplit
+    /// largement la plus grande fenêtre prévue par la garde de mise en page (1280x800 montre au
+    /// plus une douzaine de cartes de 300x204), ce qui laisse de quoi défiler avant que
+    /// l'extension suivante ne soit demandée.
+    /// </summary>
+    public const int RenderWindowSize = 30;
+
     private readonly IModDbClient _client;
     private readonly ModInstallService _installService;
     private readonly IInstanceRepository _instances;
@@ -35,6 +54,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     private readonly IModLogoCache _logoCache;
 
     private IReadOnlyList<ModDbModSummary> _catalog = [];
+    private IReadOnlyList<ModDbModSummary> _matches = [];
     private ModDbCompatibilityIndex? _compatibilityIndex;
 
     public ModBrowserViewModel(
@@ -63,7 +83,10 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         _logoCache = logoCache;
     }
 
-    /// <summary>Résultats affichés dans la grille.</summary>
+    /// <summary>
+    /// Fenêtre de cartes réellement construites et rendues. Ce n'est PAS l'ensemble des résultats :
+    /// voir <see cref="MatchCount"/> pour le total et <see cref="ShowMoreCommand"/> pour l'étendre.
+    /// </summary>
     public ObservableCollection<ModCardViewModel> Results { get; } = [];
 
     /// <summary>Catégories proposées en tags sous la barre de recherche.</summary>
@@ -105,6 +128,19 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _showEmptyState;
+
+    /// <summary>Nombre total de mods correspondant à la recherche, cartes rendues ou non.</summary>
+    [ObservableProperty]
+    private int _matchCount;
+
+    /// <summary>Vrai tant que la fenêtre de rendu ne couvre pas tous les résultats.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ShowMoreCommand))]
+    private bool _hasMoreResults;
+
+    /// <summary>Compteur « X sur Y affichés », sous la grille.</summary>
+    [ObservableProperty]
+    private string _shownCountText = string.Empty;
 
     [ObservableProperty]
     private string _emptyStateTitle = UiText.Mods.EmptyResultsTitle;
@@ -201,9 +237,9 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
             var tags = await _client.GetTagsAsync(forceRefresh, cancellationToken).ConfigureAwait(true);
             Tags.Clear();
-            foreach (var tag in tags.OrderBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase))
+            foreach (var tag in OrderByUsefulness(tags))
             {
-                Tags.Add(new ModTagViewModel(tag.Name, string.Equals(tag.Name, ActiveTagName, StringComparison.Ordinal)));
+                Tags.Add(new ModTagViewModel(tag, string.Equals(tag, ActiveTagName, StringComparison.Ordinal)));
             }
         }
         catch (ModDbUnavailableException)
@@ -214,6 +250,32 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             IsOffline = true;
             CacheWarning = null;
         }
+    }
+
+    /// <summary>
+    /// Trie le vocabulaire de catégories par utilité décroissante : d'abord celles qui classent
+    /// réellement le plus de mods du catalogue, puis l'ordre alphabétique à égalité.
+    /// </summary>
+    /// <remarks>
+    /// L'ordre alphabétique seul convenait aux trois tags des doubles ; il ne convient pas aux 223
+    /// du vrai <c>/api/tags</c>, où il met en tête des catégories anecdotiques (« Absolute Cinema »,
+    /// « Added Tags Again Award ») et repousse loin celles qui servent vraiment. La maquette
+    /// (design/ui_kits/launcher/screen-mods.jsx) montre une rangée d'une poignée de catégories
+    /// utiles : c'est ce classement qui rend cette rangée fidèle une fois la vue limitée à une
+    /// seule ligne défilante.
+    /// </remarks>
+    private IEnumerable<string> OrderByUsefulness(IEnumerable<ModDbTag> tags)
+    {
+        var usage = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var tag in _catalog.SelectMany(mod => mod.Tags))
+        {
+            usage[tag] = usage.GetValueOrDefault(tag) + 1;
+        }
+
+        return tags
+            .Select(tag => tag.Name)
+            .OrderByDescending(name => usage.GetValueOrDefault(name))
+            .ThenBy(name => name, StringComparer.OrdinalIgnoreCase);
     }
 
     private async Task LoadCompatibilityAsync(CancellationToken cancellationToken)
@@ -239,6 +301,15 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         Rebuild();
     }
 
+    /// <summary>
+    /// Étend la fenêtre de rendu d'une tranche. Appelée automatiquement quand le défilement
+    /// approche du bas (ModBrowserView.axaml.cs) et par le bouton de repli sous la grille.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(HasMoreResults))]
+    private void ShowMore() => ExtendWindow();
+
+    // La recherche, elle, porte toujours sur le catalogue COMPLET : seule la matérialisation des
+    // cartes est fenêtrée.
     private void Rebuild()
     {
         var query = new ModCatalogQuery(
@@ -247,7 +318,8 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             (ModCatalogSort)SortIndex,
             SelectedInstance?.GameVersion is null ? ModCompatibilityFilter.All : ModCompatibilityFilter.CompatibleOnly);
 
-        var matches = ModCatalogSearch.Apply(_catalog, query, _compatibilityIndex);
+        _matches = ModCatalogSearch.Apply(_catalog, query, _compatibilityIndex);
+        MatchCount = _matches.Count;
 
         // Chaque carte peut avoir un chargement de logo en vol (IModLogoCache) : sans ce Dispose,
         // reconstruire Results à chaque frappe de recherche laisserait une traînée de
@@ -259,17 +331,27 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         }
 
         Results.Clear();
-        foreach (var summary in matches)
-        {
-            Results.Add(new ModCardViewModel(summary, BuildBadge(summary), OpenAsync, StartInstallAsync, _logoCache));
-        }
+        ExtendWindow();
 
         SubtitleText = UiText.Mods.Subtitle(_catalog.Count);
-        ShowEmptyState = !IsLoading && Results.Count == 0;
+        ShowEmptyState = !IsLoading && _matches.Count == 0;
         EmptyStateTitle = IsOffline ? UiText.Mods.OfflineEmptyTitle : UiText.Mods.EmptyResultsTitle;
         EmptyStateDescription = IsOffline
             ? UiText.Mods.OfflineEmptyDescription
             : UiText.Mods.EmptyResultsDescription(SearchText);
+    }
+
+    private void ExtendWindow()
+    {
+        var target = Math.Min(_matches.Count, Results.Count + RenderWindowSize);
+        for (var index = Results.Count; index < target; index++)
+        {
+            var summary = _matches[index];
+            Results.Add(new ModCardViewModel(summary, BuildBadge(summary), OpenAsync, StartInstallAsync, _logoCache));
+        }
+
+        HasMoreResults = Results.Count < _matches.Count;
+        ShownCountText = UiText.Mods.ShownCount(Results.Count, _matches.Count);
     }
 
     // Sans index (aucune instance cible, ou ModDB muet), aucun badge : mieux vaut ne rien affirmer

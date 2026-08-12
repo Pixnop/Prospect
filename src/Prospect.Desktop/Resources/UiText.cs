@@ -201,6 +201,21 @@ internal static class UiText
             _ => $"ModDB officiel · {indexedCount.ToString("N0", CultureInfo.GetCultureInfo("fr-FR"))} mods indexés",
         };
 
+        /// <summary>
+        /// Compteur sous la grille. La grille ne rend qu'une fenêtre de cartes à la fois (voir
+        /// ModBrowserViewModel) : ce compteur est ce qui rend cette paresse visible plutôt que
+        /// trompeuse, en disant combien de mods correspondent réellement à la recherche.
+        /// </summary>
+        internal static string ShownCount(int shown, int total)
+            => shown >= total
+                ? total switch
+                {
+                    0 => string.Empty,
+                    1 => "1 mod",
+                    _ => $"{FormatCount(total)} mods",
+                }
+                : $"{FormatCount(shown)} sur {FormatCount(total)} mods affichés";
+
         internal static string ByAuthor(string author) => string.IsNullOrWhiteSpace(author) ? "auteur inconnu" : $"par {author}";
 
         internal static string FormatCount(int value) => value.ToString("N0", CultureInfo.GetCultureInfo("fr-FR"));
