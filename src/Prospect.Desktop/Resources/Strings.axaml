@@ -259,6 +259,43 @@
   <x:String x:Key="Settings_VslOpenAdoption">Adopter tes installations VS Launcher</x:String>
   <x:String x:Key="Settings_VslDetecting">Détection en cours…</x:String>
 
+  <!-- Onglets -->
+  <x:String x:Key="Settings_Tab_General">Général</x:String>
+  <x:String x:Key="Settings_Tab_Game">Jeu</x:String>
+  <x:String x:Key="Settings_Tab_Network">Réseau</x:String>
+  <x:String x:Key="Settings_Tab_Accounts">Comptes</x:String>
+  <x:String x:Key="Settings_Tab_About">À propos</x:String>
+
+  <!-- Général : apparence -->
+  <x:String x:Key="Settings_AppearanceSectionTitle">Apparence</x:String>
+  <x:String x:Key="Settings_ThemeLabel">Thème</x:String>
+  <x:String x:Key="Settings_ThemeDark">Sombre</x:String>
+  <x:String x:Key="Settings_ThemeLight">Clair</x:String>
+  <x:String x:Key="Settings_ThemeSystem">Suivre le système</x:String>
+  <x:String x:Key="Settings_LanguageLabel">Langue</x:String>
+  <x:String x:Key="Settings_LanguageLockedHint">L'anglais arrivera avec la traduction de l'app.</x:String>
+
+  <!-- Jeu -->
+  <x:String x:Key="Settings_GameSectionTitle">Emplacement des données</x:String>
+  <x:String x:Key="Settings_GameDataPathLabel">Dossier de données</x:String>
+  <x:String x:Key="Settings_GameOpenFolder">Ouvrir le dossier</x:String>
+  <x:String x:Key="Settings_GameRelocateHint">Instances, versions du jeu et cache vivent tous sous ce dossier. Le déplacer n'est pas encore possible.</x:String>
+
+  <!-- Réseau -->
+  <x:String x:Key="Settings_NetworkSectionTitle">Téléchargements</x:String>
+  <x:String x:Key="Settings_NetworkConcurrencyLabel">Téléchargements simultanés</x:String>
+  <x:String x:Key="Settings_NetworkConcurrencyHint">Utilisé pour les versions du jeu et les mods.</x:String>
+
+  <!-- Comptes -->
+  <x:String x:Key="Settings_AccountsSectionTitle">Comptes</x:String>
+  <x:String x:Key="Settings_AccountsEmptyTitle">Pas encore de compte</x:String>
+  <x:String x:Key="Settings_AccountsEmptyDescription">Arrive avec la connexion au compte Vintage Story.</x:String>
+
+  <!-- À propos -->
+  <x:String x:Key="Settings_AboutDescription">Launcher indépendant pour Vintage Story. Instances isolées, gestion multi-versions et navigateur ModDB intégré. Sans affiliation avec Anego Studios.</x:String>
+  <x:String x:Key="Settings_AboutLicenseLabel">Licence</x:String>
+  <x:String x:Key="Settings_AboutRepository">Dépôt GitHub</x:String>
+
   <!-- ── Rappel de premier lancement (Accueil, état vide) ───────────────────────── -->
   <x:String x:Key="FirstRun_VslCardTitle">Tu utilisais VS Launcher ?</x:String>
   <x:String x:Key="FirstRun_VslOpenAdoption">Adopter tes installations VS Launcher</x:String>

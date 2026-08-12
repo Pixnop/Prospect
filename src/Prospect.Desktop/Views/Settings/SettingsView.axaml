@@ -3,49 +3,234 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Prospect.Desktop.ViewModels.Settings"
-             mc:Ignorable="d" d:DesignWidth="944" d:DesignHeight="700"
+             xmlns:settings="using:Prospect.Core.Settings"
+             xmlns:conv="using:Prospect.Desktop.Converters"
+             mc:Ignorable="d" d:DesignWidth="944" d:DesignHeight="760"
              x:Class="Prospect.Desktop.Views.Settings.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
-  <!-- Seule la section Général existe (voir la docstring de SettingsViewModel) : les autres
-       sections listées par docs/architecture.md (Jeu, Réseau, Comptes, À propos) attendront que
-       les chantiers correspondants aient quelque chose à y montrer. -->
+  <!--
+    Port de design/ui_kits/launcher/screen-settings.jsx : titre, onglets (même Border
+    Classes="tabsBar" + Button Classes="tab" qu'InstanceDetailView), cinq sections. La carte
+    d'adoption VS Launcher de la #31 (Général) est reprise telle quelle, sans toucher à ses
+    bindings : elle reste liée au SettingsViewModel racine, pas au sous-DataContext General
+    utilisé par le thème et la langue juste au-dessus d'elle.
+  -->
 
   <DockPanel>
     <StackPanel DockPanel.Dock="Top" Margin="28,24,28,0" Spacing="4">
       <TextBlock Text="{StaticResource Settings_Title}"
                  FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsTitle}"
                  FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+
+      <Border Classes="tabsBar" Margin="0,16,0,0">
+        <StackPanel Orientation="Horizontal" Spacing="20">
+          <Button Classes="tab" Content="{StaticResource Settings_Tab_General}" Command="{Binding SelectTabCommand}"
+                  CommandParameter="{x:Static vm:SettingsTab.General}"
+                  Classes.on="{Binding SelectedTab, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=General}" />
+          <Button Classes="tab" Content="{StaticResource Settings_Tab_Game}" Command="{Binding SelectTabCommand}"
+                  CommandParameter="{x:Static vm:SettingsTab.Game}"
+                  Classes.on="{Binding SelectedTab, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Game}" />
+          <Button Classes="tab" Content="{StaticResource Settings_Tab_Network}" Command="{Binding SelectTabCommand}"
+                  CommandParameter="{x:Static vm:SettingsTab.Network}"
+                  Classes.on="{Binding SelectedTab, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Network}" />
+          <Button Classes="tab" Content="{StaticResource Settings_Tab_Accounts}" Command="{Binding SelectTabCommand}"
+                  CommandParameter="{x:Static vm:SettingsTab.Accounts}"
+                  Classes.on="{Binding SelectedTab, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Accounts}" />
+          <Button Classes="tab" Content="{StaticResource Settings_Tab_About}" Command="{Binding SelectTabCommand}"
+                  CommandParameter="{x:Static vm:SettingsTab.About}"
+                  Classes.on="{Binding SelectedTab, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=About}" />
+        </StackPanel>
+      </Border>
     </StackPanel>
 
     <ScrollViewer Margin="28,20,28,24" HorizontalScrollBarVisibility="Disabled">
-      <StackPanel Spacing="12" MaxWidth="640" HorizontalAlignment="Left">
-        <TextBlock Text="{StaticResource Settings_GeneralSectionTitle}" FontSize="{StaticResource FsCaption}"
-                   FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+      <Grid>
+        <StackPanel Spacing="24" MaxWidth="640" HorizontalAlignment="Left"
+                    IsVisible="{Binding SelectedTab, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=General}">
 
-        <Border Classes="card" Padding="20">
-          <StackPanel Spacing="14">
-            <Grid ColumnDefinitions="*,Auto">
-              <StackPanel Grid.Column="0" Spacing="3">
-                <TextBlock Text="{StaticResource Settings_VslCardTitle}"
-                           FontSize="{StaticResource FsBodySm}" FontWeight="{StaticResource FwMedium}"
-                           Foreground="{DynamicResource Text1}" />
-                <TextBlock Text="{Binding VslStatusText}" TextWrapping="Wrap" MaxWidth="420"
-                           FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}"
-                           Foreground="{DynamicResource Text3}"
-                           IsVisible="{Binding IsDetecting, Converter={x:Static BoolConverters.Not}}" />
-                <TextBlock Text="{StaticResource Settings_VslDetecting}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}"
-                           IsVisible="{Binding IsDetecting}" />
+          <!-- ── Apparence (thème + langue) ─────────────────────────────────────── -->
+          <StackPanel Spacing="12">
+            <TextBlock Text="{StaticResource Settings_AppearanceSectionTitle}" FontSize="{StaticResource FsCaption}"
+                       FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+            <Border Classes="card" Padding="20">
+              <StackPanel Spacing="18" DataContext="{Binding General}" x:DataType="vm:SettingsGeneralViewModel">
+                <StackPanel Spacing="10">
+                  <TextBlock Text="{StaticResource Settings_ThemeLabel}" FontSize="{StaticResource FsBodySm}"
+                             FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text1}" />
+                  <StackPanel Orientation="Horizontal" Spacing="20">
+                    <RadioButton GroupName="settingsTheme" Content="{StaticResource Settings_ThemeDark}"
+                                 Command="{Binding SelectThemeCommand}" CommandParameter="{x:Static settings:ThemePreference.Dark}"
+                                 IsChecked="{Binding ThemeChoice, Mode=OneWay, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Dark}" />
+                    <RadioButton GroupName="settingsTheme" Content="{StaticResource Settings_ThemeLight}"
+                                 Command="{Binding SelectThemeCommand}" CommandParameter="{x:Static settings:ThemePreference.Light}"
+                                 IsChecked="{Binding ThemeChoice, Mode=OneWay, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Light}" />
+                    <RadioButton GroupName="settingsTheme" Content="{StaticResource Settings_ThemeSystem}"
+                                 Command="{Binding SelectThemeCommand}" CommandParameter="{x:Static settings:ThemePreference.System}"
+                                 IsChecked="{Binding ThemeChoice, Mode=OneWay, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=System}" />
+                  </StackPanel>
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                  <TextBlock Text="{StaticResource Settings_LanguageLabel}" FontSize="{StaticResource FsBodySm}"
+                             FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text1}" />
+                  <ComboBox Width="200" HorizontalAlignment="Left" IsEnabled="{Binding IsLanguageEditable}"
+                            SelectedIndex="0">
+                    <ComboBoxItem Content="{Binding SelectedLanguageLabel}" />
+                  </ComboBox>
+                  <TextBlock Text="{StaticResource Settings_LanguageLockedHint}" FontSize="{StaticResource FsMicro}"
+                             Foreground="{DynamicResource Text4}" />
+                </StackPanel>
               </StackPanel>
-              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <Button Classes="secondary" Command="{Binding PickFolderCommand}" Content="{StaticResource Settings_VslPickFolder}" />
-                <Button Command="{Binding OpenAdoptionCommand}" Content="{StaticResource Settings_VslOpenAdoption}"
-                        IsVisible="{Binding VslDetected}" />
-              </StackPanel>
-            </Grid>
+            </Border>
           </StackPanel>
-        </Border>
-      </StackPanel>
+
+          <!-- ── VS Launcher (carte de la #31, inchangée) ───────────────────────── -->
+          <StackPanel Spacing="12">
+            <TextBlock Text="{StaticResource Settings_GeneralSectionTitle}" FontSize="{StaticResource FsCaption}"
+                       FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+
+            <Border Classes="card" Padding="20">
+              <StackPanel Spacing="14">
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Spacing="3">
+                    <TextBlock Text="{StaticResource Settings_VslCardTitle}"
+                               FontSize="{StaticResource FsBodySm}" FontWeight="{StaticResource FwMedium}"
+                               Foreground="{DynamicResource Text1}" />
+                    <TextBlock Text="{Binding VslStatusText}" TextWrapping="Wrap" MaxWidth="420"
+                               FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}"
+                               Foreground="{DynamicResource Text3}"
+                               IsVisible="{Binding IsDetecting, Converter={x:Static BoolConverters.Not}}" />
+                    <TextBlock Text="{StaticResource Settings_VslDetecting}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}"
+                               IsVisible="{Binding IsDetecting}" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Button Classes="secondary" Command="{Binding PickFolderCommand}" Content="{StaticResource Settings_VslPickFolder}" />
+                    <Button Command="{Binding OpenAdoptionCommand}" Content="{StaticResource Settings_VslOpenAdoption}"
+                            IsVisible="{Binding VslDetected}" />
+                  </StackPanel>
+                </Grid>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- ── Jeu ───────────────────────────────────────────────────────────────── -->
+        <StackPanel Spacing="12" MaxWidth="640" HorizontalAlignment="Left"
+                    IsVisible="{Binding SelectedTab, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Game}">
+          <StackPanel Spacing="12" DataContext="{Binding Game}" x:DataType="vm:SettingsGameViewModel">
+            <TextBlock Text="{StaticResource Settings_GameSectionTitle}" FontSize="{StaticResource FsCaption}"
+                       FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+            <Border Classes="card" Padding="20">
+              <StackPanel Spacing="12">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="{StaticResource Settings_GameDataPathLabel}" FontSize="{StaticResource FsBodySm}"
+                             FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text1}" />
+                  <Border Background="{DynamicResource BgInput}" BorderBrush="{DynamicResource BorderDefault}"
+                          BorderThickness="1" CornerRadius="{StaticResource RadiusSm}" Padding="12,8">
+                    <SelectableTextBlock Text="{Binding DataPath}" FontFamily="{DynamicResource FontMono}"
+                                         FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}"
+                                         TextWrapping="Wrap" />
+                  </Border>
+                </StackPanel>
+                <Button Classes="secondary sm" HorizontalAlignment="Left" Command="{Binding OpenDataFolderCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.folder}"
+                          Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                    <TextBlock Text="{StaticResource Settings_GameOpenFolder}" />
+                  </StackPanel>
+                </Button>
+                <TextBlock Text="{StaticResource Settings_GameRelocateHint}" TextWrapping="Wrap"
+                           FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- ── Réseau ────────────────────────────────────────────────────────────── -->
+        <StackPanel Spacing="12" MaxWidth="640" HorizontalAlignment="Left"
+                    IsVisible="{Binding SelectedTab, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Network}">
+          <StackPanel Spacing="12" DataContext="{Binding Network}" x:DataType="vm:SettingsNetworkViewModel">
+            <TextBlock Text="{StaticResource Settings_NetworkSectionTitle}" FontSize="{StaticResource FsCaption}"
+                       FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+            <Border Classes="card" Padding="20">
+              <StackPanel Spacing="6">
+                <TextBlock Text="{StaticResource Settings_NetworkConcurrencyLabel}" FontSize="{StaticResource FsBodySm}"
+                           FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text1}" />
+                <ComboBox Width="240" HorizontalAlignment="Left"
+                          ItemsSource="{Binding AvailableConcurrencyChoices}"
+                          SelectedItem="{Binding MaxParallelDownloads, Mode=TwoWay}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="x:Int32">
+                      <TextBlock Text="{Binding Converter={x:Static conv:DownloadConcurrencyLabelConverter.Instance}}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Text="{StaticResource Settings_NetworkConcurrencyHint}" FontSize="{StaticResource FsMicro}"
+                           Foreground="{DynamicResource Text4}" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- ── Comptes ───────────────────────────────────────────────────────────── -->
+        <StackPanel Spacing="12" MaxWidth="640" HorizontalAlignment="Left"
+                    IsVisible="{Binding SelectedTab, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Accounts}">
+          <TextBlock Text="{StaticResource Settings_AccountsSectionTitle}" FontSize="{StaticResource FsCaption}"
+                     FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+          <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="Transparent"
+                  BorderBrush="{DynamicResource BorderDefault}">
+            <StackPanel HorizontalAlignment="Center" Spacing="12" Margin="32,48" MaxWidth="400">
+              <Path Width="40" Height="40" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.user}"
+                    Stroke="{DynamicResource Text4}" StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round" />
+              <TextBlock Text="{StaticResource Settings_AccountsEmptyTitle}" HorizontalAlignment="Center"
+                         FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                         FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+              <TextBlock Text="{StaticResource Settings_AccountsEmptyDescription}" HorizontalAlignment="Center" TextAlignment="Center"
+                         TextWrapping="Wrap" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text3}" LineHeight="20" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <!-- ── À propos ──────────────────────────────────────────────────────────── -->
+        <StackPanel Spacing="12" MaxWidth="640" HorizontalAlignment="Left"
+                    IsVisible="{Binding SelectedTab, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=About}">
+          <StackPanel Spacing="12" DataContext="{Binding About}" x:DataType="vm:SettingsAboutViewModel">
+            <Border Classes="card" Padding="20">
+              <StackPanel Spacing="16">
+                <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                  <Border Width="48" Height="48" CornerRadius="{StaticResource RadiusMd}" Background="{DynamicResource Accent}" />
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="{StaticResource App_Title}" FontFamily="{DynamicResource FontDisplay}"
+                               FontSize="{StaticResource FsHeading}" FontWeight="{StaticResource FwBold}"
+                               Foreground="{DynamicResource Text1}" />
+                    <TextBlock Text="{Binding AppVersion}" FontFamily="{DynamicResource FontMono}"
+                               FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+                  </StackPanel>
+                </StackPanel>
+
+                <TextBlock Text="{StaticResource Settings_AboutDescription}" TextWrapping="Wrap"
+                           FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text2}" LineHeight="21" />
+
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="{StaticResource Settings_AboutLicenseLabel}" FontSize="{StaticResource FsCaption}"
+                             Foreground="{DynamicResource Text4}" />
+                  <TextBlock Text="{Binding License}" FontFamily="{DynamicResource FontMono}"
+                             FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+                </StackPanel>
+
+                <Button Classes="secondary sm" HorizontalAlignment="Left" Command="{Binding OpenGitHubCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.external-link}"
+                          Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                    <TextBlock Text="{StaticResource Settings_AboutRepository}" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </StackPanel>
+      </Grid>
     </ScrollViewer>
   </DockPanel>
 </UserControl>
