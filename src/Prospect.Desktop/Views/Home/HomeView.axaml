@@ -61,8 +61,20 @@
       </StackPanel>
     </StackPanel>
 
-    <ScrollViewer Padding="28,20,28,28">
-      <StackPanel Spacing="28">
+    <!--
+      Deux réglages qui décident, à eux seuls, si la grille de cartes tient dans une fenêtre
+      étroite.
+
+      HorizontalScrollBarVisibility="Disabled" : sans lui, le présentateur mesure son contenu sous
+      une largeur infinie, le WrapPanel ne retourne jamais à la ligne et les dernières cartes
+      sortent de la zone visible au lieu de passer au rang suivant.
+
+      Marge sur le contenu plutôt que Padding sur le ScrollViewer : le Padding n'est retiré qu'à
+      l'arrangement, pas à la mesure. Le contenu était donc mesuré 56px plus large que la place
+      qu'on lui donnait ensuite, ce qui suffisait à faire tenir une carte de trop par rang.
+    -->
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="28" Margin="28,20,28,28">
 
         <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="Transparent"
                 BorderBrush="{DynamicResource BorderDefault}" IsVisible="{Binding HasNoInstancesAtAll}">

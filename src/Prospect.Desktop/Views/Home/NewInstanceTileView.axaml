@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Prospect.Desktop.ViewModels.Home"
+             xmlns:layout="using:Prospect.Desktop.Layout"
              mc:Ignorable="d" d:DesignWidth="212"
              x:Class="Prospect.Desktop.Views.Home.NewInstanceTileView"
              x:DataType="vm:NewInstanceTileViewModel">
@@ -26,8 +27,10 @@
           Width="212" MinHeight="220" Margin="0,0,20,20" Padding="0" BorderThickness="0"
           CornerRadius="{StaticResource RadiusMd}" Cursor="Hand">
     <Grid>
+      <!-- Cadre en pointillés dessiné DERRIÈRE le contenu de la tuile : il couvre la même cellule
+           que lui, c'est le principe même d'une bordure. -->
       <Rectangle Name="DashedBorder" RadiusX="10" RadiusY="10" StrokeThickness="1" StrokeDashArray="4,3"
-                 Stroke="{DynamicResource BorderStrong}" />
+                 Stroke="{DynamicResource BorderStrong}" layout:LayoutContract.AllowsOverlap="True" />
       <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
         <Path Width="26" Height="26" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.plus}"
               Stroke="{DynamicResource Text3}" StrokeThickness="1.4" StrokeLineCap="Round" StrokeJoin="Round" />
