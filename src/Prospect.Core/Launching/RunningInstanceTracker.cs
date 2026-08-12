@@ -59,7 +59,17 @@ public sealed class RunningInstanceTracker
         _clock = clock;
     }
 
-    /// <summary>Levé quand l'état suivi d'une instance change (démarrage ou arrêt).</summary>
+    /// <summary>
+    /// Levé quand l'état suivi d'une instance change (démarrage ou arrêt).
+    /// </summary>
+    /// <remarks>
+    /// Contrat d'ordonnancement pour <see cref="RunningInstanceState.Stopped"/> : cette
+    /// publication est strictement la DERNIÈRE étape du traitement de sortie, après la
+    /// persistance du playtime et la disposition du <c>IRunningProcess</c> suivi (voir
+    /// <see cref="ObserveExitAsync"/>). Un abonné qui reçoit Stopped peut donc considérer la
+    /// session comme intégralement libérée : les statistiques sont écrites et le processus est
+    /// disposé, sans course possible avec ce traitement de sortie.
+    /// </remarks>
     public event EventHandler<RunningInstanceStatus>? StatusChanged;
 
     /// <summary>Vrai si un processus est actuellement suivi comme démarré pour ce slug.</summary>
@@ -140,14 +150,20 @@ public sealed class RunningInstanceTracker
         var elapsedSeconds = Math.Max(0L, (long)(stoppedUtc - startedUtc).TotalSeconds);
         var status = new RunningInstanceStatus(slug, RunningInstanceState.Stopped, process.Id, startedUtc, exitCode, stoppedUtc);
 
+        // Ordre strict exigé par le contrat de StatusChanged (voir sa docstring) : (1) playtime
+        // persisté, (2) processus disposé, (3) évènement publié en dernier. Sans ça, un abonné
+        // qui réagit à Stopped (relecture de l'entête de la page de détail, par exemple) peut
+        // gagner la course contre cette méthode et observer un playtime pas encore à jour, ou un
+        // test attendre Stopped puis vérifier IsDisposed avant que Dispose() ait eu lieu.
+        await _instanceService.AddPlaytimeAsync(slug, elapsedSeconds, CancellationToken.None).ConfigureAwait(false);
+        process.Dispose();
+
         lock (_gate)
         {
             _tracked[slug] = new TrackedProcess(process, status);
         }
 
         StatusChanged?.Invoke(this, status);
-        await _instanceService.AddPlaytimeAsync(slug, elapsedSeconds, CancellationToken.None).ConfigureAwait(false);
-        process.Dispose();
     }
 
     private sealed record TrackedProcess(IRunningProcess Process, RunningInstanceStatus Status);

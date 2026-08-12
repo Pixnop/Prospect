@@ -109,10 +109,22 @@ public sealed class ModDbClient : IModDbClient, IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(modIdOrIdentifier);
 
         var endpoint = $"mod/{Uri.EscapeDataString(modIdOrIdentifier)}";
-        var response = await ReadV1Async(endpoint, ModDbJsonContext.Default.ModDbModDetailResponseDto, cancellationToken).ConfigureAwait(false);
 
-        return ModDbMapper.ToDetail(response.Mod)
-            ?? throw ModDbApiException.FromV1StatusCode(endpoint, "404");
+        try
+        {
+            var response = await ReadV1Async(endpoint, ModDbJsonContext.Default.ModDbModDetailResponseDto, cancellationToken).ConfigureAwait(false);
+
+            return ModDbMapper.ToDetail(response.Mod)
+                ?? throw ModDbApiException.FromV1StatusCode(endpoint, "404");
+        }
+        catch (Exception exception) when (IsNetworkFailure(exception, cancellationToken))
+        {
+            // Sans ce filtre, une HttpRequestException (statut HTTP) ou une TaskCanceledException
+            // (délai dépassé côté HttpClient) remontait brute jusqu'à l'appelant, alors que le
+            // contrat documenté sur IModDbClient.GetModAsync promet ModDbUnavailableException :
+            // même mécanique que GetUpdatesAsync.
+            throw ModDbUnavailableException.FromNetworkFailure(exception);
+        }
     }
 
     /// <inheritdoc />
@@ -144,7 +156,7 @@ public sealed class ModDbClient : IModDbClient, IDisposable
 
             return index;
         }
-        catch (Exception exception) when (IsNetworkFailure(exception))
+        catch (Exception exception) when (IsNetworkFailure(exception, cancellationToken))
         {
             // Sans index, l'écran de recherche montre les mods sans badge de compatibilité, ce qui
             // vaut infiniment mieux qu'un écran vide ou qu'un badge inventé.
@@ -181,7 +193,7 @@ public sealed class ModDbClient : IModDbClient, IDisposable
 
             return BuildInstallInformation(response);
         }
-        catch (Exception exception) when (IsNetworkFailure(exception) || exception is ModDbApiException)
+        catch (Exception exception) when (IsNetworkFailure(exception, cancellationToken) || exception is ModDbApiException)
         {
             // Ce croisement est un complément : la vérification locale du modinfo.json téléchargé
             // suffit à produire un plan de dépendances correct sans lui.
@@ -214,7 +226,7 @@ public sealed class ModDbClient : IModDbClient, IDisposable
 
             return ModDbMapper.ToUpdates(response.Updates);
         }
-        catch (Exception exception) when (IsNetworkFailure(exception))
+        catch (Exception exception) when (IsNetworkFailure(exception, cancellationToken))
         {
             // Contrairement au reste de l'API v1, /api/updates PEUT renvoyer un vrai code HTTP (400
             // sur une entrée malformée, docs/research/moddb-api.md) : EnsureSuccessStatusCode() le
@@ -239,7 +251,7 @@ public sealed class ModDbClient : IModDbClient, IDisposable
 
             return response.IsSuccessStatusCode ? response.Content.Headers.ContentLength : null;
         }
-        catch (Exception exception) when (IsNetworkFailure(exception))
+        catch (Exception exception) when (IsNetworkFailure(exception, cancellationToken))
         {
             return null;
         }
@@ -300,7 +312,7 @@ public sealed class ModDbClient : IModDbClient, IDisposable
             {
                 return (await FetchCatalogAsync(cancellationToken).ConfigureAwait(false), ModDbFreshness.Live);
             }
-            catch (Exception exception) when (IsNetworkFailure(exception))
+            catch (Exception exception) when (IsNetworkFailure(exception, cancellationToken))
             {
                 var stale = onDisk ?? _memoryCache;
 
@@ -411,8 +423,26 @@ public sealed class ModDbClient : IModDbClient, IDisposable
         return message;
     }
 
-    private static bool IsNetworkFailure(Exception exception)
-        => exception is HttpRequestException or IOException or TimeoutException or JsonException or ModDbUnavailableException;
+    /// <summary>
+    /// Vrai pour tout ce que les méthodes publiques de ce client doivent traduire en
+    /// <see cref="ModDbUnavailableException"/> plutôt que laisser fuir tel quel : pannes de
+    /// transport (<see cref="HttpRequestException"/>, <see cref="IOException"/>), payload illisible
+    /// (<see cref="JsonException"/>), et délai dépassé. Ce dernier cas est le piège : le
+    /// <see cref="HttpClient"/> lève la même <see cref="TaskCanceledException"/> qu'une annulation
+    /// demandée par l'appelant. La seule façon fiable de les distinguer à cet endroit est de
+    /// vérifier l'état du <see cref="CancellationToken"/> reçu par la méthode publique
+    /// (<paramref name="callerToken"/>) : s'il est déclenché, c'est l'appelant qui a annulé — une
+    /// décision, pas une panne — et l'exception doit ressortir intacte, jamais traduite. S'il ne
+    /// l'est pas, la TaskCanceledException ne peut venir que d'un délai interne au HttpClient
+    /// (<c>HttpClient.Timeout</c>) : c'est une panne réseau comme une autre.
+    /// </summary>
+    private static bool IsNetworkFailure(Exception exception, CancellationToken callerToken)
+        => exception switch
+        {
+            OperationCanceledException => !callerToken.IsCancellationRequested,
+            HttpRequestException or IOException or TimeoutException or JsonException or ModDbUnavailableException => true,
+            _ => false,
+        };
 
     private static string ResolveVersion()
     {

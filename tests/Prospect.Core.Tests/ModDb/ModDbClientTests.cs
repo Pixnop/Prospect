@@ -485,4 +485,122 @@ public sealed class ModDbClientTests
 
         size.ShouldBeNull();
     }
+
+    // ── Traduction uniforme des pannes de transport (audit PR #22) ───────────────────
+    //
+    // HttpClient lève la même TaskCanceledException pour un timeout interne (HttpClient.Timeout)
+    // et pour une annulation demandée par l'appelant : IsNetworkFailure ne les distinguait pas et
+    // GetModAsync n'avait même aucun bloc catch, laissant fuir HttpRequestException et
+    // TaskCanceledException brutes en violation du contrat documenté sur IModDbClient. Un test par
+    // méthode publique ci-dessous prouve la traduction en ModDbUnavailableException (ou le repli
+    // documenté de la méthode) sur un timeout non demandé par l'appelant, et deux tests séparés
+    // prouvent qu'une authentique annulation utilisateur, elle, n'est jamais traduite.
+
+    [Fact]
+    public async Task GetCatalogAsync_NoCacheAndTransportTimeout_ThrowsModDbUnavailableException()
+    {
+        using var handler = new FakeHttpMessageHandler(_ => throw new TaskCanceledException("délai dépassé"));
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+
+        await Should.ThrowAsync<ModDbUnavailableException>(
+            () => client.GetCatalogAsync(cancellationToken: CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetTagsAsync_NoCacheAndTransportTimeout_ThrowsModDbUnavailableException()
+    {
+        using var handler = new FakeHttpMessageHandler(_ => throw new TaskCanceledException("délai dépassé"));
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+
+        await Should.ThrowAsync<ModDbUnavailableException>(
+            () => client.GetTagsAsync(cancellationToken: CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetModAsync_TransportTimeout_ThrowsModDbUnavailableExceptionInsteadOfLeakingIt()
+    {
+        // Le cœur du correctif : avant lui, GetModAsync n'avait aucun bloc catch autour de
+        // ReadV1Async, donc rien ne traduisait cette TaskCanceledException.
+        using var handler = new FakeHttpMessageHandler(_ => throw new TaskCanceledException("délai dépassé"));
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+
+        var exception = await Should.ThrowAsync<ModDbUnavailableException>(
+            () => client.GetModAsync("configlib", CancellationToken.None));
+
+        exception.InnerException.ShouldBeOfType<TaskCanceledException>();
+    }
+
+    [Fact]
+    public async Task GetCompatibilityIndexAsync_TransportTimeout_DegradesToAnEmptyIndexRatherThanLeakingTheException()
+    {
+        using var handler = new FakeHttpMessageHandler(_ => throw new TaskCanceledException("délai dépassé"));
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+
+        var index = await client.GetCompatibilityIndexAsync(GameVersion.Parse("1.21.3"), cancellationToken: CancellationToken.None);
+
+        index.ModIds.ShouldBeEmpty();
+        index.Freshness.ShouldBe(ModDbFreshness.Stale);
+    }
+
+    [Fact]
+    public async Task GetInstallInformationAsync_TransportTimeout_DegradesToAnEmptyMapRatherThanLeakingTheException()
+    {
+        using var handler = new FakeHttpMessageHandler(_ => throw new TaskCanceledException("délai dépassé"));
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+
+        var information = await client.GetInstallInformationAsync(["configlib"], GameVersion.Parse("1.22.0"), CancellationToken.None);
+
+        information.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task GetUpdatesAsync_TransportTimeout_ThrowsModDbUnavailableException()
+    {
+        using var handler = new FakeHttpMessageHandler(_ => throw new TaskCanceledException("délai dépassé"));
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+
+        await Should.ThrowAsync<ModDbUnavailableException>(() => client.GetUpdatesAsync(
+            new Dictionary<string, ModVersion> { ["configlib"] = ModVersion.Parse("1.0.0") },
+            CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetFileSizeAsync_TransportTimeout_ReturnsNullRatherThanLeakingTheException()
+    {
+        using var handler = new FakeHttpMessageHandler(_ => throw new TaskCanceledException("délai dépassé"));
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+
+        var size = await client.GetFileSizeAsync(new Uri("https://moddbcdn.vintagestory.at/x.zip"), CancellationToken.None);
+
+        size.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetModAsync_CallerCancelled_PropagatesOperationCanceledExceptionWithoutTranslating()
+    {
+        // Une authentique annulation demandée par l'appelant est une décision, pas une panne réseau :
+        // à la différence du timeout testé plus haut, elle doit ressortir intacte plutôt que de se
+        // faire traduire en ModDbUnavailableException.
+        using var handler = CatalogHandler();
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Should.ThrowAsync<OperationCanceledException>(() => client.GetModAsync("configlib", cts.Token));
+    }
+
+    [Fact]
+    public async Task GetFileSizeAsync_CallerCancelled_PropagatesOperationCanceledExceptionRatherThanReturningNull()
+    {
+        // Complète le test précédent sur une méthode qui se replie normalement sur une valeur par
+        // défaut (null) au lieu de lever : une annulation authentique ne doit pas se lire pareil,
+        // ce serait la masquer complètement plutôt que la laisser remonter à l'appelant.
+        using var handler = CatalogHandler();
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Should.ThrowAsync<OperationCanceledException>(
+            () => client.GetFileSizeAsync(new Uri("https://moddbcdn.vintagestory.at/x.zip"), cts.Token));
+    }
 }
