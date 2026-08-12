@@ -284,8 +284,11 @@ Generated_Code/
 # Backup & report files from converting an old project file
 # to a newer Visual Studio version. Backup files are not needed,
 # because we have git ;-)
+# Anchored to the repo root (unlike upstream's unanchored "Backup*/"): the VS upgrade backup
+# folder only ever appears next to the .sln, and an unanchored pattern silently swallowed the
+# legitimate src/Prospect.Core/Backups/ and tests/Prospect.Core.Tests/Backups/ domain folders.
 _UpgradeReport_Files/
-Backup*/
+/Backup*/
 UpgradeLog*.XML
 UpgradeLog*.htm
 ServiceFabricBackup/

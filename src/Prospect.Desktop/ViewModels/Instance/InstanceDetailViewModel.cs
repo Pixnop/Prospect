@@ -4,6 +4,7 @@ using System.IO.Abstractions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Prospect.Core.Backups;
 using Prospect.Core.Common;
 using Prospect.Core.Instances;
 using Prospect.Core.Launching;
@@ -35,6 +36,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     private readonly IInstanceRepository _repository;
     private readonly GameLauncher _launcher;
     private readonly RunningInstanceTracker _tracker;
+    private readonly InstanceBackupService _backupService;
     private readonly IAppEnvironment _appEnvironment;
     private readonly IFileSystem _fileSystem;
     private readonly IOverlayService _overlay;
@@ -50,6 +52,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         IInstanceRepository repository,
         GameLauncher launcher,
         RunningInstanceTracker tracker,
+        InstanceBackupService backupService,
         IInstalledModRepository mods,
         ModInstallService modInstallService,
         ModUpdateChecker updateChecker,
@@ -68,6 +71,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(launcher);
         ArgumentNullException.ThrowIfNull(tracker);
+        ArgumentNullException.ThrowIfNull(backupService);
         ArgumentNullException.ThrowIfNull(mods);
         ArgumentNullException.ThrowIfNull(modInstallService);
         ArgumentNullException.ThrowIfNull(updateChecker);
@@ -86,6 +90,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         _repository = repository;
         _launcher = launcher;
         _tracker = tracker;
+        _backupService = backupService;
         _appEnvironment = appEnvironment;
         _fileSystem = fileSystem;
         _overlay = overlay;
@@ -108,7 +113,9 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         _iconKey = "layers";
         _playtimeText = PlaytimeFormatter.Format(0);
         _lastPlayedText = string.Empty;
-        _optionsTab = new InstanceOptionsTabViewModel(slug, InstanceLaunchSettings.Empty, instanceService, appEnvironment, toasts);
+        _optionsTab = new InstanceOptionsTabViewModel(
+            slug, slug, InstanceLaunchSettings.Empty, InstanceBackupSettings.Default,
+            instanceService, backupService, appEnvironment, overlay, clock, toasts);
         _isRunning = tracker.IsRunning(slug);
 
         ModsTab = new InstanceModsTabViewModel(slug, mods, modInstallService, updateChecker, updateCache, clock, overlay, toasts);
@@ -196,6 +203,10 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     [ObservableProperty]
     private bool _showInstallAction;
 
+    /// <summary>« Sauvegarde en cours (3/12)… », rempli seulement pendant la sauvegarde automatique de pré-lancement (voir <see cref="PlayAsync"/>), vide sinon.</summary>
+    [ObservableProperty]
+    private string _autoBackupProgressText = string.Empty;
+
     public bool ShowLaunchError => LaunchErrorMessage is not null;
 
     [RelayCommand]
@@ -206,7 +217,10 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         {
             var record = await _repository.LoadAsync(_slug, cancellationToken).ConfigureAwait(true);
             ApplyRecord(record);
-            OptionsTab = new InstanceOptionsTabViewModel(_slug, record.Metadata.Launch, _instanceService, _appEnvironment, _toasts);
+            OptionsTab = new InstanceOptionsTabViewModel(
+                _slug, record.Metadata.Name, record.Metadata.Launch, record.Metadata.Backups,
+                _instanceService, _backupService, _appEnvironment, _overlay, _clock, _toasts);
+            await OptionsTab.Backups.RefreshAsync(cancellationToken).ConfigureAwait(true);
 
             var worlds = await _repository.ListWorldsAsync(_slug, cancellationToken).ConfigureAwait(true);
             Worlds.Clear();
@@ -249,9 +263,15 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     {
         IsLaunching = true;
         ClearLaunchError();
+        var backupProgress = new Progress<InstanceBackupProgress>(report
+            => AutoBackupProgressText = UiText.Instance.Backups.AutoBackupProgress(report.FilesProcessed, report.TotalFiles));
         try
         {
-            await _launcher.LaunchAsync(_slug, CancellationToken.None).ConfigureAwait(true);
+            var outcome = await _launcher.LaunchAsync(_slug, backupProgress, CancellationToken.None).ConfigureAwait(true);
+            if (outcome.AutoBackupFailed)
+            {
+                _toasts.Show(ToastTone.Warning, UiText.Toasts.AutoBackupFailedTitle, UiText.Toasts.AutoBackupFailedMessage);
+            }
         }
         catch (Exception ex) when (ex is InstanceNotFoundException or InstanceAlreadyRunningException
                                         or GameVersionNotInstalledException or Core.Runtime.RuntimeNotAvailableException
@@ -264,6 +284,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         }
         finally
         {
+            AutoBackupProgressText = string.Empty;
             IsLaunching = false;
         }
     }

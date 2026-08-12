@@ -7,6 +7,7 @@ using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
 
 using Prospect.Core.Auth;
+using Prospect.Core.Backups;
 using Prospect.Core.Common;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
@@ -200,7 +201,8 @@ public sealed class AccountHeadlessTests
             provider.GetRequiredService<AppPaths>(),
             provider.GetRequiredService<IClock>(),
             provider.GetRequiredService<VsAccountService>(),
-            provider.GetRequiredService<ClientSettingsSessionWriter>());
+            provider.GetRequiredService<ClientSettingsSessionWriter>(),
+            provider.GetRequiredService<InstanceBackupService>());
 
         await launcher.LaunchAsync(slug);
 

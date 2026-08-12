@@ -1,5 +1,6 @@
 using System.IO.Abstractions.TestingHelpers;
 
+using Prospect.Core.Backups;
 using Prospect.Core.Common;
 using Prospect.Core.Instances;
 using Prospect.Core.Instances.Migrations;
@@ -21,13 +22,17 @@ public sealed class InstanceOptionsTabViewModelTests
     {
         var fileSystem = new MockFileSystem();
         var repository = new FileSystemInstanceRepository(fileSystem, Paths, new JsonFileStore(fileSystem), new InstanceMetadataMigrationPipeline([]));
-        var service = new InstanceService(repository, fileSystem, new FakeClock(Now));
+        var clock = new FakeClock(Now);
+        var service = new InstanceService(repository, fileSystem, clock);
+        var backupService = new InstanceBackupService(repository, fileSystem, clock);
         var created = service.CreateAsync("Homestead", GameVersion.Parse("1.21.3")).GetAwaiter().GetResult();
         var environment = new FakeAppEnvironment
         {
             CurrentOperatingSystem = linux ? AppOperatingSystem.Linux : AppOperatingSystem.Windows,
         };
-        var viewModel = new InstanceOptionsTabViewModel(created.Slug, settings ?? InstanceLaunchSettings.Empty, service, environment, new RecordingToastService());
+        var viewModel = new InstanceOptionsTabViewModel(
+            created.Slug, "Homestead", settings ?? InstanceLaunchSettings.Empty, InstanceBackupSettings.Default,
+            service, backupService, environment, new RecordingOverlayService(), clock, new RecordingToastService());
 
         return (viewModel, repository, created.Slug);
     }

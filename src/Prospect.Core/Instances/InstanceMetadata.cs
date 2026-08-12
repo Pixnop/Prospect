@@ -25,8 +25,11 @@ public sealed record InstanceMetadata
     /// Version courante du schéma d'<c>instance.json</c>. Un document au schéma inférieur passe
     /// par le pipeline de migrations au chargement ; un document au schéma supérieur (écrit par
     /// un Prospect plus récent) fait lever <see cref="InstanceSchemaVersionUnsupportedException"/>.
+    /// Passée à 2 par le chantier Sauvegardes (<see cref="Backups"/>) : voir
+    /// <see cref="Migrations.InstanceMetadataV1ToV2Migration"/>, la première vraie migration du
+    /// pipeline.
     /// </summary>
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     /// <summary>Version de schéma à laquelle ce document est conforme.</summary>
     public required int SchemaVersion { get; init; }
@@ -59,6 +62,9 @@ public sealed record InstanceMetadata
     /// <summary>Réglages de lancement propres à cette instance.</summary>
     public InstanceLaunchSettings Launch { get; init; } = InstanceLaunchSettings.Empty;
 
+    /// <summary>Réglages de sauvegarde propres à cette instance (schéma v2, voir <see cref="CurrentSchemaVersion"/>).</summary>
+    public InstanceBackupSettings Backups { get; init; } = InstanceBackupSettings.Default;
+
     /// <summary>Notes libres de l'utilisateur.</summary>
     public string Notes { get; init; } = string.Empty;
 
@@ -75,16 +81,20 @@ public sealed record InstanceMetadata
     /// SANS rejouer les initialiseurs <c>= DefaultIcon</c>/<c>= InstanceLaunchSettings.Empty</c>/
     /// <c>= string.Empty</c> ci-dessus quand le champ JSON correspondant est absent. Un
     /// <c>instance.json</c> partiel (édité à la main, ou écrit par un schéma antérieur qui ne
-    /// portait pas encore ce champ) désérialise donc <see cref="Icon"/>, <see cref="Launch"/> ou
-    /// <see cref="Notes"/> à <see langword="null"/> malgré leurs défauts affichés juste au-dessus,
-    /// avec un risque de <see cref="NullReferenceException"/> en aval (par exemple
-    /// <c>Launch.ExtraArgs</c> à la construction de la ligne de commande). Appelée après toute
-    /// lecture disque par <see cref="FileSystemInstanceRepository.LoadAsync"/>.
+    /// portait pas encore ce champ) désérialise donc <see cref="Icon"/>, <see cref="Launch"/>,
+    /// <see cref="Backups"/> ou <see cref="Notes"/> à <see langword="null"/> malgré leurs défauts
+    /// affichés juste au-dessus, avec un risque de <see cref="NullReferenceException"/> en aval
+    /// (par exemple <c>Launch.ExtraArgs</c> à la construction de la ligne de commande). Appelée
+    /// après toute lecture disque par <see cref="FileSystemInstanceRepository.LoadAsync"/> — y
+    /// compris juste après la migration v1 → v2, en filet derrière
+    /// <see cref="Migrations.InstanceMetadataV1ToV2Migration"/> qui pose déjà <see cref="Backups"/>
+    /// explicitement.
     /// </remarks>
     public InstanceMetadata Normalized() => this with
     {
         Icon = Icon ?? DefaultIcon,
         Launch = Launch ?? InstanceLaunchSettings.Empty,
+        Backups = (Backups ?? InstanceBackupSettings.Default).Clamped(),
         Notes = Notes ?? string.Empty,
     };
 }

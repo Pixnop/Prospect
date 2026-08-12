@@ -25,6 +25,7 @@ public class InstanceMetadataTests
         LastLaunchedUtc = null,
         TotalPlaytimeSeconds = 0,
         Launch = InstanceLaunchSettings.Empty,
+        Backups = InstanceBackupSettings.Default,
         Notes = string.Empty,
     };
 
@@ -52,6 +53,7 @@ public class InstanceMetadataTests
                 ExtraArgs = ["--logident", "homestead"],
                 Env = new Dictionary<string, string> { ["MESA_GLTHREAD"] = "true" },
             },
+            Backups = new InstanceBackupSettings { AutoBeforeLaunch = true, KeepCount = 10 },
         };
 
         var json = JsonSerializer.Serialize(original, InstanceJsonContext.Default.InstanceMetadata);
@@ -75,7 +77,7 @@ public class InstanceMetadataTests
     {
         var json = JsonSerializer.Serialize(CreateSample(), InstanceJsonContext.Default.InstanceMetadata);
 
-        json.ShouldContain("\"schemaVersion\":1");
+        json.ShouldContain($"\"schemaVersion\":{InstanceMetadata.CurrentSchemaVersion}");
         json.ShouldContain("\"id\":");
         json.ShouldContain("\"name\":");
         json.ShouldContain("\"gameVersion\":");
@@ -86,6 +88,9 @@ public class InstanceMetadataTests
         json.ShouldContain("\"launch\":");
         json.ShouldContain("\"extraArgs\":");
         json.ShouldContain("\"env\":");
+        json.ShouldContain("\"backups\":");
+        json.ShouldContain("\"autoBeforeLaunch\":");
+        json.ShouldContain("\"keepCount\":");
         json.ShouldContain("\"notes\":");
     }
 
@@ -144,23 +149,39 @@ public class InstanceMetadataTests
         metadata.ShouldNotBeNull();
         metadata.Icon.ShouldBeNull();
         metadata.Launch.ShouldBeNull();
+        metadata.Backups.ShouldBeNull();
         metadata.Notes.ShouldBeNull();
     }
 
     [Fact]
     public void Normalized_NullReferenceFields_RestoresDocumentedDefaults()
     {
-        // null! parce que le compilateur refuserait autrement cette construction (Icon/Launch/Notes
-        // sont non-nullables par contrat) : exactement le contrat qu'un instance.json partiel viole
-        // silencieusement via System.Text.Json (voir le test ci-dessus), simulé ici sans dépendre du
-        // détail de sérialisation pour tester Normalized() isolément.
-        var metadata = CreateSample() with { Icon = null!, Launch = null!, Notes = null! };
+        // null! parce que le compilateur refuserait autrement cette construction
+        // (Icon/Launch/Backups/Notes sont non-nullables par contrat) : exactement le contrat qu'un
+        // instance.json partiel viole silencieusement via System.Text.Json (voir le test
+        // ci-dessus), simulé ici sans dépendre du détail de sérialisation pour tester Normalized()
+        // isolément.
+        var metadata = CreateSample() with { Icon = null!, Launch = null!, Backups = null!, Notes = null! };
 
         var normalized = metadata.Normalized();
 
         normalized.Icon.ShouldBe(InstanceMetadata.DefaultIcon);
         normalized.Launch.ShouldBe(InstanceLaunchSettings.Empty);
+        normalized.Backups.ShouldBe(InstanceBackupSettings.Default);
         normalized.Notes.ShouldBe(string.Empty);
+    }
+
+    [Fact]
+    public void Normalized_BackupsKeepCountOutOfBounds_Clamps()
+    {
+        // Normalized() ne comble pas seulement un champ absent (voir le test ci-dessus), elle
+        // rattrape aussi un champ PRÉSENT mais hors bornes (instance.json modifié à la main) : même
+        // garde-fou que ProspectSettings.Normalized() pour DownloadPreferences.
+        var metadata = CreateSample() with { Backups = new InstanceBackupSettings { KeepCount = 999 } };
+
+        var normalized = metadata.Normalized();
+
+        normalized.Backups.KeepCount.ShouldBe(InstanceBackupSettings.MaxKeepCount);
     }
 
     [Fact]

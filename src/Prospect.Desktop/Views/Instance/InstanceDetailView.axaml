@@ -105,6 +105,13 @@
         </StackPanel>
       </Grid>
 
+      <!-- Sauvegarde automatique de pré-lancement (voir InstanceDetailViewModel.PlayAsync et
+           GameLauncher.RunAutoBackupBeforeLaunchAsync) : ne s'affiche que le temps de la sauvegarde,
+           avant l'injection de session et le démarrage du processus. -->
+      <TextBlock Margin="0,10,0,0" Text="{Binding AutoBackupProgressText}" FontFamily="{DynamicResource FontMono}"
+                 FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}"
+                 IsVisible="{Binding AutoBackupProgressText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
       <Border Classes="alert danger" Margin="0,16,0,0" IsVisible="{Binding ShowLaunchError}">
         <Grid ColumnDefinitions="Auto,*">
           <Path Grid.Column="0" Width="16" Height="16" Margin="0,1,12,0" Stretch="Uniform" VerticalAlignment="Top"
@@ -227,45 +234,110 @@
         </StackPanel>
 
         <!-- ── Options ───────────────────────────────────────────────────────────── -->
-        <Border Classes="card"
-                IsVisible="{Binding SelectedTab, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Options}">
-          <StackPanel Margin="20" Spacing="16" MaxWidth="560" DataContext="{Binding OptionsTab}" x:DataType="vm:InstanceOptionsTabViewModel">
-            <StackPanel Spacing="4">
-              <TextBlock Text="{StaticResource Instance_Options_Title}" FontSize="{StaticResource FsSubheading}"
-                         FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
-              <TextBlock Text="{StaticResource Instance_Options_Description}" FontSize="{StaticResource FsBodySm}"
-                         Foreground="{DynamicResource Text3}" TextWrapping="Wrap" />
+        <StackPanel Spacing="16"
+                    IsVisible="{Binding SelectedTab, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Options}">
+          <Border Classes="card">
+            <StackPanel Margin="20" Spacing="16" MaxWidth="560" DataContext="{Binding OptionsTab}" x:DataType="vm:InstanceOptionsTabViewModel">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{StaticResource Instance_Options_Title}" FontSize="{StaticResource FsSubheading}"
+                           FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+                <TextBlock Text="{StaticResource Instance_Options_Description}" FontSize="{StaticResource FsBodySm}"
+                           Foreground="{DynamicResource Text3}" TextWrapping="Wrap" />
+              </StackPanel>
+
+              <StackPanel Spacing="6">
+                <TextBlock Text="{StaticResource Instance_Options_ExtraArgsLabel}" FontSize="{StaticResource FsCaption}"
+                           FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+                <TextBox Text="{Binding ExtraArgsText, Mode=TwoWay}" AcceptsReturn="True" Height="88"
+                          FontFamily="{DynamicResource FontMono}" TextWrapping="NoWrap" />
+                <TextBlock Text="{StaticResource Instance_Options_ExtraArgsHint}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+              </StackPanel>
+
+              <StackPanel Spacing="6">
+                <TextBlock Text="{StaticResource Instance_Options_EnvLabel}" FontSize="{StaticResource FsCaption}"
+                           FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+                <TextBox Text="{Binding EnvVarsText, Mode=TwoWay}" AcceptsReturn="True" Height="88"
+                          FontFamily="{DynamicResource FontMono}" TextWrapping="NoWrap" />
+                <TextBlock Text="{StaticResource Instance_Options_EnvHint}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}"
+                           IsVisible="{Binding EnvVarsError, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
+                <TextBlock Text="{Binding EnvVarsError}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource DangerText}"
+                           IsVisible="{Binding EnvVarsError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              </StackPanel>
+
+              <CheckBox Content="{StaticResource Instance_Options_MesaGlThread}" IsChecked="{Binding MesaGlThreadEnabled, Mode=TwoWay}"
+                        IsVisible="{Binding ShowMesaGlThreadToggle}" />
+
+              <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                <TextBlock Grid.Column="0" Text="{StaticResource Instance_Options_ApplyNote}" VerticalAlignment="Center"
+                           FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+                <Button Grid.Column="1" Content="{StaticResource Instance_Options_Save}" Command="{Binding SaveCommand}" />
+              </Grid>
             </StackPanel>
+          </Border>
 
-            <StackPanel Spacing="6">
-              <TextBlock Text="{StaticResource Instance_Options_ExtraArgsLabel}" FontSize="{StaticResource FsCaption}"
-                         FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
-              <TextBox Text="{Binding ExtraArgsText, Mode=TwoWay}" AcceptsReturn="True" Height="88"
-                        FontFamily="{DynamicResource FontMono}" TextWrapping="NoWrap" />
-              <TextBlock Text="{StaticResource Instance_Options_ExtraArgsHint}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+          <!-- Bloc Sauvegardes (chantier Sauvegardes d'instance) : écart assumé par rapport à la
+               maquette, qui n'a pas d'onglet Sauvegardes dédié — Options est la maison des réglages
+               d'instance, exactement comme les arguments de lancement juste au-dessus. -->
+          <Border Classes="card">
+            <StackPanel Margin="20" Spacing="16" MaxWidth="560" DataContext="{Binding OptionsTab.Backups}" x:DataType="vm:InstanceBackupsSectionViewModel">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{StaticResource Instance_Backups_Title}" FontSize="{StaticResource FsSubheading}"
+                           FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+                <TextBlock Text="{StaticResource Instance_Backups_Description}" FontSize="{StaticResource FsBodySm}"
+                           Foreground="{DynamicResource Text3}" TextWrapping="Wrap" />
+              </StackPanel>
+
+              <CheckBox Content="{StaticResource Instance_Backups_AutoToggle}" IsChecked="{Binding AutoBeforeLaunch, Mode=TwoWay}" />
+
+              <StackPanel Spacing="6">
+                <TextBlock Text="{StaticResource Instance_Backups_KeepCountLabel}" FontSize="{StaticResource FsCaption}"
+                           FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+                <ComboBox Width="240" HorizontalAlignment="Left"
+                          ItemsSource="{Binding AllowedKeepCounts}"
+                          SelectedItem="{Binding KeepCount, Mode=TwoWay}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="x:Int32">
+                      <TextBlock Text="{Binding Converter={x:Static conv:BackupKeepCountLabelConverter.Instance}}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </StackPanel>
+
+              <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                <TextBlock Grid.Column="0" Text="{Binding CreateProgressText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+                <Button Grid.Column="1" Content="{StaticResource Instance_Backups_CreateNow}" Command="{Binding CreateNowCommand}" />
+              </Grid>
+
+              <ItemsControl ItemsSource="{Binding Backups}" IsVisible="{Binding HasBackups}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:InstanceBackupRowViewModel">
+                    <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="0,12">
+                      <Grid ColumnDefinitions="*,Auto,Auto">
+                        <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding DateText}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
+                          <TextBlock Text="{Binding SizeText}" FontFamily="{DynamicResource FontMono}"
+                                     FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="secondary sm" Margin="8,0,0,0"
+                                Content="{StaticResource Instance_Backups_Restore}" Command="{Binding RestoreCommand}" />
+                        <Button Grid.Column="2" Classes="ghost sm" Margin="8,0,0,0"
+                                Content="{StaticResource Instance_Backups_Delete}" Command="{Binding DeleteCommand}" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <StackPanel Spacing="4" IsVisible="{Binding !HasBackups}">
+                <TextBlock Text="{StaticResource Instance_Backups_EmptyTitle}"
+                           FontWeight="{StaticResource FwMedium}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text2}" />
+                <TextBlock Text="{StaticResource Instance_Backups_EmptyDescription}" TextWrapping="Wrap"
+                           FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text4}" />
+              </StackPanel>
             </StackPanel>
-
-            <StackPanel Spacing="6">
-              <TextBlock Text="{StaticResource Instance_Options_EnvLabel}" FontSize="{StaticResource FsCaption}"
-                         FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
-              <TextBox Text="{Binding EnvVarsText, Mode=TwoWay}" AcceptsReturn="True" Height="88"
-                        FontFamily="{DynamicResource FontMono}" TextWrapping="NoWrap" />
-              <TextBlock Text="{StaticResource Instance_Options_EnvHint}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}"
-                         IsVisible="{Binding EnvVarsError, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
-              <TextBlock Text="{Binding EnvVarsError}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource DangerText}"
-                         IsVisible="{Binding EnvVarsError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-            </StackPanel>
-
-            <CheckBox Content="{StaticResource Instance_Options_MesaGlThread}" IsChecked="{Binding MesaGlThreadEnabled, Mode=TwoWay}"
-                      IsVisible="{Binding ShowMesaGlThreadToggle}" />
-
-            <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
-              <TextBlock Grid.Column="0" Text="{StaticResource Instance_Options_ApplyNote}" VerticalAlignment="Center"
-                         FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
-              <Button Grid.Column="1" Content="{StaticResource Instance_Options_Save}" Command="{Binding SaveCommand}" />
-            </Grid>
-          </StackPanel>
-        </Border>
+          </Border>
+        </StackPanel>
 
       </Grid>
     </ScrollViewer>

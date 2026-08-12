@@ -1,6 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Prospect.Core.Backups;
+using Prospect.Core.Common;
 using Prospect.Core.Instances;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Resources;
@@ -11,8 +13,11 @@ namespace Prospect.Desktop.ViewModels.Instance;
 
 /// <summary>
 /// Onglet Options de la page de détail : édition des arguments de lancement et des variables
-/// d'environnement propres à une instance, sauvegardés via
-/// <see cref="InstanceService.UpdateLaunchSettingsAsync"/>.
+/// d'environnement propres à une instance (sauvegardés via
+/// <see cref="InstanceService.UpdateLaunchSettingsAsync"/>), plus le bloc Sauvegardes
+/// (<see cref="Backups"/>). Écart assumé par rapport à la maquette : celle-ci n'a pas d'onglet
+/// dédié aux sauvegardes, Options est la maison naturelle des réglages d'instance, exactement
+/// comme les arguments de lancement déjà présents ici.
 /// </summary>
 /// <remarks>
 /// Deux choix d'édition documentés ici. Les arguments supplémentaires (<see cref="ExtraArgsText"/>)
@@ -38,15 +43,25 @@ public sealed partial class InstanceOptionsTabViewModel : ObservableObject
 
     public InstanceOptionsTabViewModel(
         string slug,
-        InstanceLaunchSettings settings,
+        string instanceName,
+        InstanceLaunchSettings launchSettings,
+        InstanceBackupSettings backupSettings,
         InstanceService instanceService,
+        InstanceBackupService backupService,
         IAppEnvironment appEnvironment,
+        IOverlayService overlay,
+        IClock clock,
         IToastService toasts)
     {
         ArgumentException.ThrowIfNullOrEmpty(slug);
-        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentException.ThrowIfNullOrEmpty(instanceName);
+        ArgumentNullException.ThrowIfNull(launchSettings);
+        ArgumentNullException.ThrowIfNull(backupSettings);
         ArgumentNullException.ThrowIfNull(instanceService);
+        ArgumentNullException.ThrowIfNull(backupService);
         ArgumentNullException.ThrowIfNull(appEnvironment);
+        ArgumentNullException.ThrowIfNull(overlay);
+        ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(toasts);
 
         _slug = slug;
@@ -54,18 +69,23 @@ public sealed partial class InstanceOptionsTabViewModel : ObservableObject
         _toasts = toasts;
         ShowMesaGlThreadToggle = appEnvironment.CurrentOperatingSystem == AppOperatingSystem.Linux;
 
-        _extraArgsText = string.Join(Environment.NewLine, settings.ExtraArgs);
+        _extraArgsText = string.Join(Environment.NewLine, launchSettings.ExtraArgs);
         _envVarsText = string.Join(
             Environment.NewLine,
-            settings.Env
+            launchSettings.Env
                 .Where(pair => !string.Equals(pair.Key, MesaGlThreadKey, StringComparison.Ordinal))
                 .Select(pair => $"{pair.Key}={pair.Value}"));
-        _mesaGlThreadEnabled = settings.Env.TryGetValue(MesaGlThreadKey, out var mesaValue)
+        _mesaGlThreadEnabled = launchSettings.Env.TryGetValue(MesaGlThreadKey, out var mesaValue)
             && string.Equals(mesaValue, MesaGlThreadValue, StringComparison.Ordinal);
+
+        Backups = new InstanceBackupsSectionViewModel(slug, instanceName, backupSettings, instanceService, backupService, overlay, clock, toasts);
     }
 
     /// <summary>Vrai uniquement sur Linux : <c>MESA_GLTHREAD</c> n'a d'effet que sur les pilotes Mesa de cette plateforme.</summary>
     public bool ShowMesaGlThreadToggle { get; }
+
+    /// <summary>Bloc Sauvegardes de l'onglet Options : toggle auto-avant-lancement, rétention, liste, création/restauration/suppression.</summary>
+    public InstanceBackupsSectionViewModel Backups { get; }
 
     [ObservableProperty]
     private string _extraArgsText;
