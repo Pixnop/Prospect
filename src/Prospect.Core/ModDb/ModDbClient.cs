@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
@@ -77,9 +76,11 @@ public sealed class ModDbClient : IModDbClient, IDisposable
 
     /// <summary>
     /// En-tête <c>User-Agent</c> envoyé sur chaque requête, du type <c>Prospect/0.1.0-dev</c> :
-    /// un client desktop anonyme doit au minimum se nommer.
+    /// un client desktop anonyme doit au minimum se nommer. La valeur elle-même vit dans
+    /// <see cref="ProspectUserAgent"/> depuis que le client du compte Vintage Story a le même
+    /// besoin, ce nom-ci reste le point d'entrée historique du domaine ModDB.
     /// </summary>
-    public static string UserAgent { get; } = $"Prospect/{ResolveVersion()}";
+    public static string UserAgent => ProspectUserAgent.Value;
 
     /// <summary>Chemin du fichier de cache disque du catalogue et des tags.</summary>
     public string CacheFilePath => Path.Combine(_appPaths.HttpCacheDirectory, CacheFileName);
@@ -443,23 +444,6 @@ public sealed class ModDbClient : IModDbClient, IDisposable
             HttpRequestException or IOException or TimeoutException or JsonException or ModDbUnavailableException => true,
             _ => false,
         };
-
-    private static string ResolveVersion()
-    {
-        var informational = typeof(ModDbClient).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-
-        if (string.IsNullOrWhiteSpace(informational))
-        {
-            return typeof(ModDbClient).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
-        }
-
-        // La version informationnelle porte souvent un « +<sha> » ajouté par le SDK : inutile
-        // dans un User-Agent, et inutilement bavard sur la machine de build.
-        var plus = informational.IndexOf('+', StringComparison.Ordinal);
-
-        return plus < 0 ? informational : informational[..plus];
-    }
 
     private bool IsFresh(DateTimeOffset retrievedUtc)
     {

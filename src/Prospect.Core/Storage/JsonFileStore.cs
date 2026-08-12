@@ -13,7 +13,13 @@ namespace Prospect.Core.Storage;
 /// </summary>
 public sealed class JsonFileStore
 {
-    private const string TempFileSuffix = ".tmp";
+    /// <summary>
+    /// Suffixe du fichier temporaire de l'écriture atomique (voir <see cref="WriteAsync{T}"/>).
+    /// Public parce qu'un appelant qui écrit un secret doit pouvoir restreindre les permissions de
+    /// ce fichier AVANT qu'il ne porte quoi que ce soit (voir <c>Auth.FileSecretStore</c>) : le
+    /// contenu passe par là avant d'exister sous son nom définitif.
+    /// </summary>
+    public const string TempFileSuffix = ".tmp";
 
     private static readonly JsonWriterOptions IndentedWriterOptions = new() { Indented = true };
 
