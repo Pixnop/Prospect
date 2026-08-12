@@ -1,10 +1,17 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-  <!-- Port de .pr-tooltip__bubble. #2B2724 est stone-750 (pas d'alias sémantique dédié). -->
+  <!--
+    Port de .pr-tooltip__bubble. TooltipBg (Styles/Tokens/Colors.axaml) est la bulle : stone-750
+    en sombre, comme le littéral direct de colors.css (pas d'alias sémantique dédié côté CSS),
+    plus une variante claire ajoutée ici. Sans elle, le fond restait figé en stone-750 pendant que
+    Foreground (Text1, ci-dessous) suivait le thème et passait sombre en clair : texte sombre sur
+    bulle sombre, illisible — le bug le plus sévère trouvé au balayage qui a suivi la QA visuelle
+    du thème clair, avant même les pastilles neutres.
+  -->
 
   <ControlTheme x:Key="{x:Type ToolTip}" TargetType="ToolTip">
-    <Setter Property="Background" Value="#2B2724" />
+    <Setter Property="Background" Value="{DynamicResource TooltipBg}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusXs}" />

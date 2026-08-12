@@ -22,8 +22,7 @@
     <Setter Property="Height" Value="20" />
     <Setter Property="Padding" Value="8,0" />
     <Setter Property="HorizontalAlignment" Value="Left" />
-    <Setter Property="Background" Value="#24211E" />
-    <!-- stone-800 -->
+    <Setter Property="Background" Value="{DynamicResource NeutralQuiet}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Foreground" Value="{DynamicResource Text2}" />
@@ -68,6 +67,37 @@
     <Setter Property="Background" Value="{DynamicResource DangerQuiet}" />
     <Setter Property="BorderBrush" Value="#4CC1503B" />
     <Setter Property="Foreground" Value="{DynamicResource DangerText}" />
+  </Style>
+
+  <!--
+    Variante « épinglée » : réservée aux badges posés SUR la bande d'art des cartes (dégradé fixe
+    copper-900 → stone-850, voir l'en-tête d'InstanceCardView.axaml) — jamais aux badges posés sur
+    une surface qui suit le thème. Le fond de cette bande ne bouge jamais, donc le texte du badge
+    ne doit pas bouger non plus : Classes="badge pinned stable" (etc.) fige le Foreground sur la
+    teinte pensée pour le sombre, en StaticResource sur les rampes (jamais recouvertes par
+    ThemeDictionaries, donc stables quel que soit le thème actif), au lieu du DynamicResource
+    *Text habituel qui suivrait le thème et perdrait tout contraste une fois la carte en clair. Le
+    fond reste volontairement en DynamicResource *Quiet : à faible opacité sur une bande toujours
+    sombre, les deux variantes (sombre/claire) du token produisent un rendu quasi identique, donc
+    rien à figer là. Déclarée après les variantes de ton ci-dessus pour les recouvrir sur les
+    badges qui portent les deux classes à la fois. -->
+  <Style Selector="ContentControl.badge.pinned">
+    <Setter Property="Foreground" Value="{StaticResource Stone300}" />
+  </Style>
+  <Style Selector="ContentControl.badge.pinned.accent">
+    <Setter Property="Foreground" Value="{StaticResource Copper300}" />
+  </Style>
+  <Style Selector="ContentControl.badge.pinned.stable">
+    <Setter Property="Foreground" Value="{StaticResource Verdigris400}" />
+  </Style>
+  <Style Selector="ContentControl.badge.pinned.unstable">
+    <Setter Property="Foreground" Value="{StaticResource Ochre400}" />
+  </Style>
+  <Style Selector="ContentControl.badge.pinned.pre">
+    <Setter Property="Foreground" Value="{StaticResource Slate400}" />
+  </Style>
+  <Style Selector="ContentControl.badge.pinned.incompatible">
+    <Setter Property="Foreground" Value="{StaticResource Clay300}" />
   </Style>
 
   <!-- ── Tag : pilule interactive (filtres, chips) ──────────────────────────────── -->
