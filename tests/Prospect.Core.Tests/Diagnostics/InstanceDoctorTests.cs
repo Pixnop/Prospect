@@ -42,7 +42,7 @@ public sealed class InstanceDoctorTests
 
         // Espace disque abondant par défaut : les tests qui ne portent pas sur la vérification 5 ne
         // doivent pas voir un avertissement de disque plein contaminer WorstSeverity/IsAllClear.
-        fileSystem.AddDrive("/", new MockDriveData { AvailableFreeSpace = 100L * 1024 * 1024 * 1024, TotalSize = 500L * 1024 * 1024 * 1024 });
+        SeedDrive(fileSystem, availableFreeSpaceBytes: 100L * 1024 * 1024 * 1024);
 
         var clock = new FakeClock(Noon);
         var store = new JsonFileStore(fileSystem);
@@ -59,6 +59,18 @@ public sealed class InstanceDoctorTests
 
         return new Harness(doctor, fileSystem, mods, runner);
     }
+
+    // Le nom de lecteur enregistré doit correspondre exactement à ce que
+    // MockDriveInfoFactory.New(path) recalcule (fileSystem.Path.GetPathRoot(path), voir sa source) :
+    // "/" sous Linux/macOS, mais autre chose sous Windows, où GetPathRoot d'un chemin sans lettre de
+    // lecteur comme Paths.RootDirectory ("/data/prospect", convention partagée par tout ce fichier
+    // de tests) ne vaut pas "/". Coder "/" en dur passait inaperçu sous Linux/macOS et cassait sous
+    // Windows (« Could not find file » à la lecture d'AvailableFreeSpace) : recalculer la clé de la
+    // même façon que le fera l'appelant réel la rend correcte quel que soit l'OS d'exécution.
+    private static void SeedDrive(MockFileSystem fileSystem, long availableFreeSpaceBytes, long totalSizeBytes = 500L * 1024 * 1024 * 1024)
+        => fileSystem.AddDrive(
+            fileSystem.Path.GetPathRoot(Paths.RootDirectory) ?? Paths.RootDirectory,
+            new MockDriveData { AvailableFreeSpace = availableFreeSpaceBytes, TotalSize = totalSizeBytes });
 
     private static void SeedInstance(MockFileSystem fileSystem)
     {
@@ -484,7 +496,7 @@ public sealed class InstanceDoctorTests
     public async Task DiskSpace_BelowThreshold_IsWarning()
     {
         var fileSystem = new MockFileSystem();
-        fileSystem.AddDrive("/", new MockDriveData { AvailableFreeSpace = 512L * 1024 * 1024, TotalSize = 500L * 1024 * 1024 * 1024 });
+        SeedDrive(fileSystem, availableFreeSpaceBytes: 512L * 1024 * 1024);
         var clock = new FakeClock(Noon);
         var store = new JsonFileStore(fileSystem);
         var instances = new FileSystemInstanceRepository(fileSystem, Paths, store, new InstanceMetadataMigrationPipeline([]));
