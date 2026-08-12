@@ -7,6 +7,7 @@ using Prospect.Core.Settings;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
+using Prospect.Desktop.ViewModels.FirstRun;
 using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Migration;
 
@@ -14,12 +15,13 @@ namespace Prospect.Desktop.ViewModels.Settings;
 
 /// <summary>
 /// Écran Réglages (design/ui_kits/launcher/screen-settings.jsx) : cinq sections en onglets —
-/// Général (thème, langue, et l'action d'adoption VS Launcher, toujours accessible ici), Jeu
-/// (emplacement des données), Réseau (téléchargements simultanés), Comptes (état vide, le
-/// chantier compte est le prochain) et À propos (version, licence, dépôt). Même flux d'adoption
-/// que <see cref="Home.HomeViewModel.FirstRun"/> (même dialogue <see cref="AdoptVslViewModel"/>,
-/// même service de détection) mais TOUJOURS disponible ici, avec un choix de dossier manuel si la
-/// détection automatique ne trouve rien à l'emplacement par défaut de l'OS.
+/// Général (thème, langue, revoir le premier lancement, et l'action d'adoption VS Launcher,
+/// toujours accessible ici), Jeu (emplacement des données), Réseau (téléchargements simultanés),
+/// Comptes (état vide, le chantier compte est le prochain) et À propos (version, licence, dépôt,
+/// site officiel). Même flux d'adoption que <see cref="Home.HomeViewModel.FirstRun"/> (même
+/// dialogue <see cref="AdoptVslViewModel"/>, même service de détection) mais TOUJOURS disponible
+/// ici, avec un choix de dossier manuel si la détection automatique ne trouve rien à l'emplacement
+/// par défaut de l'OS.
 /// </summary>
 public sealed partial class SettingsViewModel : ObservableObject
 {
@@ -37,6 +39,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         IOverlayService overlay,
         IFilePickerService filePicker,
         HomeViewModel home,
+        FirstRunScreenViewModel firstRun,
         SettingsService settings,
         AppPaths appPaths,
         IExternalUrlOpener urlOpener)
@@ -46,6 +49,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(filePicker);
         ArgumentNullException.ThrowIfNull(home);
+        ArgumentNullException.ThrowIfNull(firstRun);
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(appPaths);
         ArgumentNullException.ThrowIfNull(urlOpener);
@@ -55,11 +59,28 @@ public sealed partial class SettingsViewModel : ObservableObject
         _overlay = overlay;
         _filePicker = filePicker;
         _home = home;
+        FirstRun = firstRun;
 
         General = new SettingsGeneralViewModel(settings);
         Game = new SettingsGameViewModel(appPaths, urlOpener);
         Network = new SettingsNetworkViewModel(settings);
         About = new SettingsAboutViewModel(urlOpener);
+    }
+
+    /// <summary>
+    /// Écran de premier lancement (même instance singleton que celle affichée automatiquement au
+    /// tout premier démarrage, voir <see cref="Shell.ShellViewModel.ShowFirstRunIfNeeded"/>) :
+    /// « Revoir le premier lancement » ci-dessous l'ouvre à nouveau, quel que soit
+    /// <see cref="FirstRunScreenViewModel.HasBeenSeen"/>.
+    /// </summary>
+    public FirstRunScreenViewModel FirstRun { get; }
+
+    /// <summary>Rouvre l'écran de premier lancement (section Général, « Revoir le premier lancement »).</summary>
+    [RelayCommand]
+    private async Task ReplayFirstRunAsync()
+    {
+        await FirstRun.InitializeCommand.ExecuteAsync(null).ConfigureAwait(true);
+        _overlay.Show(FirstRun);
     }
 
     /// <summary>Section Général : thème, langue, carte d'adoption VS Launcher (état porté par ce ViewModel-ci).</summary>

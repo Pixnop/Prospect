@@ -54,6 +54,8 @@ public sealed partial class ShellViewModel : ObservableObject
         Toasts = toasts;
         UseCustomTitlebar = ResolveUseCustomTitlebar(appEnvironment.CurrentOperatingSystem);
         Home.InstanceOpenRequested += (_, slug) => ShowInstanceDetail(slug);
+        Settings.FirstRun.NavigateToVersionsRequested += (_, _) => Navigate(Versions);
+        Settings.FirstRun.VslAdopted += (_, _) => Home.RefreshCommand.Execute(null);
 
         var homeNavItem = new NavItemViewModel("layers", "Accueil", home, Navigate);
         var modsNavItem = new NavItemViewModel("package", "Mods", modBrowser, ShowModBrowser);
@@ -129,6 +131,26 @@ public sealed partial class ShellViewModel : ObservableObject
 
     /// <summary>Retour à l'Accueil : cible du bouton retour de la page de détail.</summary>
     public void ShowHome() => Navigate(Home);
+
+    /// <summary>
+    /// Affiche l'écran de premier lancement s'il n'a jamais été vu (voir
+    /// <see cref="ViewModels.FirstRun.FirstRunScreenViewModel.HasBeenSeen"/>), sur le panneau modal
+    /// partagé. Appelée une seule fois par <c>App.OnFrameworkInitializationCompleted</c>, juste
+    /// après la construction de la fenêtre principale — JAMAIS un effet de bord automatique du
+    /// constructeur (même principe que <c>ThemeService.ApplyStartupTheme</c>, voir sa docstring) :
+    /// les dizaines de tests headless qui résolvent ce ViewModel depuis le conteneur sans simuler un
+    /// vrai démarrage d'application ne doivent pas se retrouver avec cet écran ouvert par surprise.
+    /// </summary>
+    public void ShowFirstRunIfNeeded()
+    {
+        if (Settings.FirstRun.HasBeenSeen)
+        {
+            return;
+        }
+
+        Overlay.Show(Settings.FirstRun);
+        _ = Settings.FirstRun.InitializeCommand.ExecuteAsync(null);
+    }
 
     /// <summary>
     /// Ouvre la page de détail de l'instance <paramref name="slug"/> (clic sur une carte

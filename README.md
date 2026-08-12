@@ -18,6 +18,8 @@ The MVP targets a short list of things Prism does well and VS Launcher never qui
 
 VS Launcher, the launcher most of the community has relied on for years, was archived in June 2026. Prospect exists to give Vintage Story players somewhere to go next.
 
+Prospect also has a [website](https://leonfvt.fr/prospect-web/).
+
 ## Building from source
 
 You need the .NET 10 SDK. From the repository root:

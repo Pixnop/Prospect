@@ -1,0 +1,93 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Prospect.Desktop.ViewModels.FirstRun"
+             xmlns:conv="using:Prospect.Desktop.Converters"
+             mc:Ignorable="d" d:DesignWidth="520"
+             x:Class="Prospect.Desktop.Views.FirstRun.FirstRunScreenView"
+             x:DataType="vm:FirstRunScreenViewModel">
+
+  <!--
+    Port de design/ui_kits/launcher/screen-firstrun.jsx : logo, titre, description, checklist de
+    cartes (icône + titre + sous-titre + coche ou action), sortie Commencer/Passer. Affiché sur le
+    panneau modal partagé (ShellView.axaml, même calque que le wizard) : son voile plein BgScrim
+    tient lieu du fond flou du handoff v2, volontairement ignoré (tokens actuels uniquement, voir
+    docs/architecture.md). Logo en aplat Accent plutôt qu'une image : aucun asset de logo n'est
+    versionné (docs/architecture.md, point ouvert n°9), même choix que la carte À propos des
+    Réglages.
+
+    Écart avec la maquette statique documenté dans FirstRunScreenViewModel : pas de carte « compte
+    Vintage Story » (aucune fonctionnalité réelle derrière, l'auth est post-MVP), remplacée par une
+    checklist dynamique dont chaque ligne montre soit une coche (déjà fait), soit un bouton d'action
+    direct (sinon) — jamais les deux à la fois pour une même ligne.
+  -->
+
+  <Border Width="520" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
+          Background="{DynamicResource BgSurface}" BorderBrush="{DynamicResource BorderDefault}"
+          BorderThickness="1" BoxShadow="{DynamicResource Elev3}">
+    <StackPanel Margin="32" HorizontalAlignment="Stretch">
+
+      <Border Width="72" Height="72" CornerRadius="{StaticResource RadiusMd}"
+              Background="{DynamicResource Accent}" HorizontalAlignment="Center" />
+
+      <TextBlock Text="{StaticResource App_Title}" Margin="0,22,0,0" HorizontalAlignment="Center"
+                 FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsDisplay}"
+                 FontWeight="{StaticResource FwBold}" Foreground="{DynamicResource Text1}" />
+
+      <TextBlock Text="{StaticResource FirstRun_Description}" Margin="0,12,0,0" MaxWidth="440"
+                 HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" LineHeight="19"
+                 FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+
+      <ItemsControl Margin="0,28,0,0" ItemsSource="{Binding Steps}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Spacing="10" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:FirstRunStepViewModel">
+            <Border Classes="card" Padding="14,12">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Path Grid.Column="0" Width="17" Height="17" Margin="0,0,12,0" Stretch="Uniform" VerticalAlignment="Center"
+                      Data="{Binding IconKey, Converter={x:Static conv:IconKeyToGeometryConverter.Instance}}"
+                      Stroke="{DynamicResource Text3}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+
+                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding Title}" FontSize="{StaticResource FsBodySm}"
+                             FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text1}" />
+                  <TextBlock Text="{Binding Subtitle}" FontFamily="{DynamicResource FontMono}"
+                             FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}"
+                             TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+
+                <!-- L'une des deux suivantes est visible, jamais les deux (docs de la mission :
+                     « cochée si déjà faite, action directe sinon »), donc jamais de chevauchement
+                     réel même si toutes deux occupent la colonne 2. -->
+                <Path Grid.Column="2" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center"
+                      Data="{StaticResource Icon.check-circle}" Stroke="{DynamicResource SuccessText}"
+                      StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round"
+                      IsVisible="{Binding IsDone}" />
+                <Button Grid.Column="2" Classes="secondary sm" Content="{Binding ActionLabel}"
+                        Command="{Binding ActionCommand}" VerticalAlignment="Center"
+                        IsVisible="{Binding HasAction}" />
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <StackPanel Orientation="Horizontal" Margin="0,26,0,0" Spacing="10" HorizontalAlignment="Center">
+        <Button Classes="lg" Command="{Binding StartCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="{StaticResource FirstRun_StartButton}" VerticalAlignment="Center" />
+            <Path Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center" Data="{StaticResource Icon.chevron-right}"
+                  Stroke="{DynamicResource TextOnAccent}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+          </StackPanel>
+        </Button>
+        <Button Classes="ghost lg" Content="{StaticResource FirstRun_SkipButton}" Command="{Binding SkipCommand}" />
+      </StackPanel>
+
+    </StackPanel>
+  </Border>
+</UserControl>

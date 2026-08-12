@@ -17,6 +17,8 @@ public class ProspectSettingsTests
         settings.Theme.ShouldBe(ThemePreference.Dark);
         settings.Language.ShouldBe(ProspectSettings.French);
         settings.Downloads.ShouldBe(DownloadPreferences.Default);
+        // Jamais vu par défaut : une installation neuve doit voir l'écran de premier lancement.
+        settings.HasSeenFirstRun.ShouldBeFalse();
     }
 
     [Fact]
