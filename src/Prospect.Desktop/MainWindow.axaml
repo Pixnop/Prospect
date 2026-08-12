@@ -8,12 +8,17 @@
         Title="{StaticResource App_Title}"
         Icon="/Assets/app-icon.png"
         Width="1160" Height="780"
-        MinWidth="900" MinHeight="560"
+        MinWidth="960" MinHeight="600"
         Background="{DynamicResource BgWindow}"
         FontFamily="{DynamicResource FontSans}"
         Foreground="{DynamicResource Text1}">
 
   <!--
+    Plancher 960x600 : c'est la taille sous laquelle la garde de mise en page
+    (ResponsiveRegressionTests) n'a plus rien à garantir, et donc celle qu'aucune mise en page ne
+    doit casser. En dessous, la sidebar de 216px et les barres d'actions d'en-tête ne tiennent plus
+    sans redessiner les écrans ; au-dessus, tout est vérifié à chaque exécution de la suite.
+
     Le shell (titlebar, sidebar, navigation, panneau modal, toasts) vit entièrement dans ShellView,
     liée à ShellViewModel (DataContext posé par le code-behind, seule la fenêtre concrète peut
     fournir les propriétés de décoration natives que la composition root doit connaître avant de

@@ -6,6 +6,7 @@
              xmlns:dl="using:Prospect.Desktop.ViewModels.Downloads"
              xmlns:shell="using:Prospect.Desktop.Views.Shell"
              xmlns:conv="using:Prospect.Desktop.Converters"
+             xmlns:layout="using:Prospect.Desktop.Layout"
              mc:Ignorable="d" d:DesignWidth="1160" d:DesignHeight="780"
              x:Class="Prospect.Desktop.Views.Shell.ShellView"
              x:DataType="vm:ShellViewModel">
@@ -80,10 +81,14 @@
       </Grid>
     </Grid>
 
+    <!-- AllowsOverlap sur les trois calques ci-dessous : ils sont posés PAR-DESSUS la zone de
+         contenu, c'est leur raison d'être. Le Panel les empile volontairement dans cet ordre de
+         déclaration (donc de z-order) ; tout autre recouvrement dans ce shell reste un défaut. -->
+
     <!-- Popover Téléchargements : vue directe sur la file du DownloadManager
          (design/components/launcher/DownloadItem.jsx). L'état vide reste affiché tant que rien
          ne tourne. -->
-    <Border IsVisible="{Binding IsDownloadsPopoverOpen}" Width="400"
+    <Border IsVisible="{Binding IsDownloadsPopoverOpen}" Width="400" layout:LayoutContract.AllowsOverlap="True"
             HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,44,20,0"
             CornerRadius="{StaticResource RadiusMd}" ClipToBounds="True"
             Background="{DynamicResource BgSurfaceRaised}" BorderBrush="{DynamicResource BorderDefault}"
@@ -157,7 +162,8 @@
     </Border>
 
     <!-- Pile de toasts. -->
-    <ItemsControl ItemsSource="{Binding Toasts.Toasts}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="24">
+    <ItemsControl ItemsSource="{Binding Toasts.Toasts}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="24"
+                  layout:LayoutContract.AllowsOverlap="True">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>
           <StackPanel Spacing="12" />
@@ -166,7 +172,7 @@
     </ItemsControl>
 
     <!-- Panneau modal partagé : wizard de création, dialogues de carte (renommer/dupliquer/supprimer). -->
-    <Border Background="{DynamicResource BgScrim}"
+    <Border Background="{DynamicResource BgScrim}" layout:LayoutContract.AllowsOverlap="True"
             IsVisible="{Binding Overlay.Active, Converter={x:Static ObjectConverters.IsNotNull}}">
       <ContentControl Content="{Binding Overlay.Active}" HorizontalAlignment="Center" VerticalAlignment="Center" />
     </Border>

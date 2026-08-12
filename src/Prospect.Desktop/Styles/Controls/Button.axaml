@@ -195,6 +195,11 @@
       <Setter Property="FontWeight" Value="{StaticResource FwRegular}" />
       <Setter Property="Padding" Value="0,8,0,8" />
       <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <!-- Height="NaN" pour la même raison que .cardHit plus bas : la hauteur fixe du ControlTheme
+           Button (32px) ne laissait ici que 14px de contenu une fois retirés les 16px de padding et
+           le soulignement de 2px, alors qu'une ligne de FsBodySm en demande 17 — le bas des glyphes
+           se faisait rogner sur les quatre onglets. La rangée se dimensionne donc sur son texte. -->
+      <Setter Property="Height" Value="NaN" />
     </Style>
     <Style Selector="^.tab:pointerover /template/ Border#PART_Border">
       <Setter Property="Background" Value="Transparent" />

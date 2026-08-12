@@ -146,8 +146,9 @@
       </StackPanel>
     </StackPanel>
 
-    <ScrollViewer Padding="28,20,28,28">
-      <StackPanel Spacing="20">
+    <!-- Voir HomeView : marge sur le contenu, jamais Padding sur le ScrollViewer. -->
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="20" Margin="28,20,28,28">
 
         <Border CornerRadius="{StaticResource RadiusSm}" BorderThickness="1" Padding="14,10"
                 Background="Transparent" BorderBrush="{DynamicResource BorderDefault}"

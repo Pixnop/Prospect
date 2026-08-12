@@ -40,21 +40,31 @@
         </Border>
 
         <StackPanel Grid.Column="1" Margin="18,0,18,0" VerticalAlignment="Center">
-          <StackPanel Orientation="Horizontal" Spacing="10">
+          <!-- WrapPanel et non StackPanel horizontal : un StackPanel horizontal mesure ses enfants
+               sans contrainte de largeur, donc un nom d'instance long sortait de la colonne et
+               allait se peindre par-dessus les boutons d'action. Le WrapPanel, lui, mesure sous la
+               largeur disponible : le nom se tronque proprement (infobulle pour le lire en entier)
+               et le badge passe à la ligne quand il n'y a plus la place. -->
+          <WrapPanel>
             <TextBlock Text="{Binding Name}" FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsTitle}"
-                       FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
-            <ContentControl Classes="badge" Content="{Binding VersionText}" VerticalAlignment="Center"
+                       FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}"
+                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />
+            <ContentControl Classes="badge" Content="{Binding VersionText}" VerticalAlignment="Center" Margin="10,0,0,0"
                             Classes.stable="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=stable}"
                             Classes.unstable="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=unstable}"
                             Classes.pre="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=pre}" />
-          </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
-            <TextBlock Text="{Binding PlaytimeText}" FontFamily="{DynamicResource FontMono}"
+          </WrapPanel>
+          <!-- Ligne meta en Grid : le chemin du dataPath est long par nature (racine de données +
+               slug), il prend la place restante et se tronque, l'infobulle le rend en entier —
+               une valeur machine tronquée doit rester lisible au survol. -->
+          <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,6,0,0">
+            <TextBlock Grid.Column="0" Text="{Binding PlaytimeText}" FontFamily="{DynamicResource FontMono}"
                        FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
-            <TextBlock Text="·" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text4}" />
-            <TextBlock Text="{Binding PathText}" FontFamily="{DynamicResource FontMono}" TextTrimming="CharacterEllipsis"
+            <TextBlock Grid.Column="1" Text="·" Margin="8,0" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text4}" />
+            <TextBlock Grid.Column="2" Text="{Binding PathText}" FontFamily="{DynamicResource FontMono}" TextTrimming="CharacterEllipsis"
+                       ToolTip.Tip="{Binding PathText}"
                        FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
-          </StackPanel>
+          </Grid>
         </StackPanel>
 
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
@@ -130,8 +140,9 @@
       </Border>
     </StackPanel>
 
-    <ScrollViewer Padding="28,20,28,28">
-      <Grid>
+    <!-- Voir HomeView : marge sur le contenu, jamais Padding sur le ScrollViewer. -->
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <Grid Margin="28,20,28,28">
 
         <!-- ── Mods ──────────────────────────────────────────────────────────────── -->
         <ContentControl Content="{Binding ModsTab}"
@@ -194,8 +205,8 @@
           </Grid>
 
           <Border Classes="card" IsVisible="{Binding HasJournalContent}">
-            <ScrollViewer MaxHeight="440" Padding="16">
-              <SelectableTextBlock Text="{Binding JournalContent}" FontFamily="{DynamicResource FontMono}"
+            <ScrollViewer MaxHeight="440" HorizontalScrollBarVisibility="Disabled">
+              <SelectableTextBlock Text="{Binding JournalContent}" Margin="16" FontFamily="{DynamicResource FontMono}"
                                     FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}"
                                     TextWrapping="Wrap" LineHeight="18" />
             </ScrollViewer>

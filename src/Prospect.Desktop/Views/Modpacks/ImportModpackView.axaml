@@ -79,8 +79,11 @@
         </Grid>
       </Border>
 
-      <ScrollViewer Padding="22">
-        <Grid>
+      <!-- Marge portée par le contenu, jamais par le Padding du ScrollViewer : ce dernier
+           n'est retiré qu'à l'arrangement, pas à la mesure, donc le contenu est mesuré plus
+           large que la place qu'il reçoit et finit par déborder. -->
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="22">
 
           <!-- ── Chargement ─────────────────────────────────────────────────────── -->
           <StackPanel Spacing="10" HorizontalAlignment="Center" Margin="0,24"

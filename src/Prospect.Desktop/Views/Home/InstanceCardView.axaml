@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Prospect.Desktop.ViewModels.Home"
              xmlns:conv="using:Prospect.Desktop.Converters"
+             xmlns:layout="using:Prospect.Desktop.Layout"
              mc:Ignorable="d" d:DesignWidth="212"
              x:Class="Prospect.Desktop.Views.Home.InstanceCardView"
              x:DataType="vm:InstanceCardViewModel">
@@ -35,7 +36,10 @@
                 <GradientStop Color="{StaticResource Stone850}" Offset="1" />
               </LinearGradientBrush>
             </Panel.Background>
-            <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" />
+            <!-- Ce Border ne peint qu'un filet en bas de la bande, mais occupe toute sa surface :
+                 il passe donc sous l'icône et sous le badge, par construction. -->
+            <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}"
+                    layout:LayoutContract.AllowsOverlap="True" />
             <Path Width="26" Height="26" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
                   Data="{Binding IconKey, Converter={x:Static conv:IconKeyToGeometryConverter.Instance}}"
                   Stroke="{DynamicResource Text4}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />

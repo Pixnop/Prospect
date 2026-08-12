@@ -99,13 +99,21 @@
                     <ContentControl Classes="badge incompatible" Content="{StaticResource Mods_Row_Unidentified}"
                                     VerticalAlignment="Center" IsVisible="{Binding IsUnidentified}" />
                   </StackPanel>
-                  <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
-                    <TextBlock Text="{Binding AuthorText}" TextTrimming="CharacterEllipsis"
+                  <!-- Grid et non StackPanel horizontal : auteur et nom de fichier viennent du
+                       modinfo.json et du zip, deux valeurs qu'aucune longueur ne borne. Dans un
+                       StackPanel horizontal, leur TextTrimming ne servait à rien (les enfants y
+                       sont mesurés sans contrainte de largeur) et la ligne sortait de la rangée.
+                       L'auteur est plafonné, le nom de fichier prend le reste, les deux se
+                       tronquent et se relisent au survol. -->
+                  <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,2,0,0">
+                    <TextBlock Grid.Column="0" Text="{Binding AuthorText}" TextTrimming="CharacterEllipsis"
+                               MaxWidth="160" ToolTip.Tip="{Binding AuthorText}"
                                FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
-                    <TextBlock Text="·" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
-                    <TextBlock Text="{Binding FileNameText}" TextTrimming="CharacterEllipsis" FontFamily="{DynamicResource FontMono}"
+                    <TextBlock Grid.Column="1" Text="·" Margin="6,0" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+                    <TextBlock Grid.Column="2" Text="{Binding FileNameText}" TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding FileNameText}" FontFamily="{DynamicResource FontMono}"
                                FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
-                  </StackPanel>
+                  </Grid>
                   <TextBlock Text="{Binding UnidentifiedReason}" Margin="0,2,0,0" TextWrapping="Wrap"
                              IsVisible="{Binding IsUnidentified}"
                              FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource WarningText}" />

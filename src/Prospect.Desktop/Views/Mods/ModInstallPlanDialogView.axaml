@@ -30,8 +30,11 @@
         </Grid>
       </Border>
 
-      <ScrollViewer Padding="22">
-        <StackPanel Spacing="14">
+      <!-- Marge portée par le contenu, jamais par le Padding du ScrollViewer : ce dernier
+           n'est retiré qu'à l'arrangement, pas à la mesure, donc le contenu est mesuré plus
+           large que la place qu'il reçoit et finit par déborder. -->
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="14" Margin="22">
           <TextBlock Text="{Binding Message}" TextWrapping="Wrap" LineHeight="20"
                      FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text2}" />
 

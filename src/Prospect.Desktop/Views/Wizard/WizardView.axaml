@@ -51,6 +51,12 @@
       <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
       <Setter Property="Background" Value="{DynamicResource AccentQuiet}" />
     </Style>
+    <!-- Hauteur de rangée de liste (44px du design) et non celle d'un bouton ordinaire (32px) :
+         avec les 10px de padding vertical de la rangée, un bouton de 32px ne laissait que 10px de
+         contenu, où la pastille de canal (20px) ne pouvait que déborder. -->
+    <Style Selector="Button.version-choice">
+      <Setter Property="Height" Value="{StaticResource RowH}" />
+    </Style>
     <Style Selector="Button.version-choice.selected /template/ Border#PART_Border">
       <Setter Property="Background" Value="{DynamicResource BgSelected}" />
     </Style>
@@ -226,10 +232,14 @@
             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedIconKey}" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" Margin="0,0,0,10" />
 
             <TextBlock Grid.Row="3" Grid.Column="0" Text="{StaticResource Wizard_Step4_Location}" Foreground="{DynamicResource Text3}" FontSize="{StaticResource FsBodySm}" />
-            <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal">
-              <TextBlock Text="~/.prospect/instances/" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
-              <TextBlock Text="{Binding SlugPreview}" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
-            </StackPanel>
+            <!-- Grid et non StackPanel horizontal : le slug dérive du nom saisi, donc il est aussi
+                 long que l'utilisateur le veut, et un StackPanel horizontal le laissait sortir du
+                 panneau. Il prend ici la place restante et se tronque, l'infobulle le rend entier. -->
+            <Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="Auto,*">
+              <TextBlock Grid.Column="0" Text="~/.prospect/instances/" FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
+              <TextBlock Grid.Column="1" Text="{Binding SlugPreview}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding SlugPreview}"
+                         FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
+            </Grid>
           </Grid>
           <TextBlock Text="{Binding SummaryNote}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" TextWrapping="Wrap" />
           <TextBlock Text="{StaticResource Wizard_Step4_Note}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" TextWrapping="Wrap" />
