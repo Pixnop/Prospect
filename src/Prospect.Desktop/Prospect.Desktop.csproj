@@ -4,6 +4,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Icône de l'exécutable Windows (barre des tâches, explorateur, raccourcis) ; sans effet
+         sur Linux, où l'icône de fenêtre vient de MainWindow.axaml (WindowIcon). -->
+    <ApplicationIcon>Assets\app-icon.ico</ApplicationIcon>
     <!-- Décision d'architecture (docs/architecture.md) : bindings compilés partout. Chaque vue
          doit déclarer x:DataType ; une vue qui l'omet échoue à la compilation plutôt que de
          retomber silencieusement sur une liaison par réflexion. -->
