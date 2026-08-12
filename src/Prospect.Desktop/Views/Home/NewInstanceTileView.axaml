@@ -31,10 +31,14 @@
            que lui, c'est le principe même d'une bordure. -->
       <Rectangle Name="DashedBorder" RadiusX="10" RadiusY="10" StrokeThickness="1" StrokeDashArray="4,3"
                  Stroke="{DynamicResource BorderStrong}" layout:LayoutContract.AllowsOverlap="True" />
-      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+      <!-- Margin horizontal de 16px : même gouttière que le contenu d'InstanceCardView (voisine
+           directe dans la grille), pour que le libellé respire au lieu de toucher le cadre en
+           pointillés. TextWrapping+TextAlignment en défense supplémentaire : sans eux, un libellé
+           plus long (traduction, thème) n'aurait aucun filet et déborderait sec du cadre. -->
+      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" Margin="16,0">
         <Path Width="26" Height="26" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.plus}"
               Stroke="{DynamicResource Text3}" StrokeThickness="1.4" StrokeLineCap="Round" StrokeJoin="Round" />
-        <TextBlock Text="{StaticResource Card_NewInstance}" HorizontalAlignment="Center"
+        <TextBlock Text="{StaticResource Card_NewInstance}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
                    FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text3}" />
       </StackPanel>
     </Grid>

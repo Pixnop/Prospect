@@ -36,7 +36,7 @@ public sealed class ModInstallServiceUpdateTests
         MockFileSystem FileSystem,
         FakeServer Server);
 
-    private static Harness Create(string gameVersion = "1.22.1")
+    private static Harness Create(string gameVersion = "1.22.1", Func<IDownloadManager, IDownloadManager>? wrapDownloads = null)
     {
         var fileSystem = new MockFileSystem();
         var clock = new FakeClock(Noon);
@@ -58,7 +58,11 @@ public sealed class ModInstallServiceUpdateTests
             Paths,
             clock,
             new RetryPolicy(RetryOptions.NoDelay, (_, _) => Task.CompletedTask));
-        var downloads = new DownloadManager(new HttpClient(handler), fileSystem, Paths, clock);
+        IDownloadManager downloads = new DownloadManager(new HttpClient(handler), fileSystem, Paths, clock);
+        if (wrapDownloads is not null)
+        {
+            downloads = wrapDownloads(downloads);
+        }
 
         SeedInstance(fileSystem, gameVersion);
         server.CdnFiles["/configlib_1.12.0.zip"] = ModInfoSamples.BuildArchive(ModInfo("configlib", "Config lib", "1.12.0"));
@@ -403,8 +407,13 @@ public sealed class ModInstallServiceUpdateTests
     }
 
     [Fact]
-    public async Task ApplyAllUpdatesAsync_CancellationRequestedBeforeTheSecondMod_StopsCleanlyBetweenReplacements()
+    public async Task ApplyAllUpdatesAsync_CancellationRequestedAfterTheFirstModCompletes_NeverStartsTheSecond()
     {
+        // Annulation « entre deux mods » : le premier a déjà fini (CompletedCount == 1, le rapport
+        // qui annonce le second sur le point de démarrer) quand le jeton est coupé. Depuis que le
+        // jeton du lot atteint la préparation (voir ApplyAllUpdatesAsync), la boucle observe
+        // l'annulation dès l'entrée en préparation du second mod : celui-ci ne télécharge jamais
+        // rien, contrairement au scénario ci-dessous où l'annulation tombe PENDANT son téléchargement.
         var harness = Create();
         var configlib = await SeedInstalledConfigLibAsync(harness);
         var modsDirectory = harness.Repository.GetModsDirectory(Slug);
@@ -416,13 +425,11 @@ public sealed class ModInstallServiceUpdateTests
         var carryCapacity = installed.Single(mod => mod.Identity == "carrycapacity");
 
         using var cts = new CancellationTokenSource();
-        // Synchrone pour la même raison qu'au-dessus, et ici c'est le cœur du scénario : l'annulation
-        // doit tomber pendant le premier mod, pas quand le pool de threads voudra bien la livrer.
+        // Synchrone pour la même raison qu'au-dessus : l'annulation doit tomber de façon
+        // déterministe entre les deux mods, pas quand le pool de threads voudra bien la livrer.
         var progress = new SynchronousProgress<BulkUpdateProgress>(report =>
         {
-            // Le premier mod vient de démarrer : on annule immédiatement, mais ce mod doit quand
-            // même se terminer proprement avant que la boucle ne s'arrête.
-            if (report.CompletedCount == 0)
+            if (report.CompletedCount == 1)
             {
                 cts.Cancel();
             }
@@ -435,8 +442,41 @@ public sealed class ModInstallServiceUpdateTests
             cts.Token);
 
         outcome.Updated.ShouldHaveSingleItem().Identity.ShouldBe("configlib");
+        outcome.Failed.ShouldBeEmpty();
         (await harness.Repository.ScanAsync(Slug, CancellationToken.None))
             .ShouldContain(mod => mod.Identity == "carrycapacity" && mod.Version == ModVersion.Parse("1.0.0"));
+    }
+
+    [Fact]
+    public async Task ApplyAllUpdatesAsync_CancellationDuringTheSecondModsDownload_StopsCleanlyWithNoPartialFile()
+    {
+        // Le cœur du correctif : avant lui, PrepareUpdateAsync recevait CancellationToken.None dans
+        // cette boucle, donc une annulation ne pouvait JAMAIS interrompre un téléchargement déjà
+        // entamé, seulement empêcher le mod SUIVANT de démarrer. Ici, l'annulation tombe pendant le
+        // téléchargement du second mod lui-même (pas avant, pas après) : premier mod appliqué,
+        // second jamais posé sur le disque (ni son ancienne ni sa nouvelle version corrompue).
+        using var cts = new CancellationTokenSource();
+        var harness = Create(wrapDownloads: inner => new CancelingDownloadManager(inner, "carrycapacity-1.5.0.zip", cts));
+        var configlib = await SeedInstalledConfigLibAsync(harness);
+        var modsDirectory = harness.Repository.GetModsDirectory(Slug);
+        harness.FileSystem.AddFile(
+            harness.FileSystem.Path.Combine(modsDirectory, "carrycapacity-1.0.0.zip"),
+            new MockFileData(ModInfoSamples.BuildArchive(ModInfo("carrycapacity", "Carry Capacity", "1.0.0"))));
+        harness.Server.CdnFiles["/carrycapacity_1.5.0.zip"] = ModInfoSamples.BuildArchive(ModInfo("carrycapacity", "Carry Capacity", "1.5.0"));
+        var installed = await harness.Repository.ScanAsync(Slug, CancellationToken.None);
+        var carryCapacity = installed.Single(mod => mod.Identity == "carrycapacity");
+
+        var outcome = await harness.Service.ApplyAllUpdatesAsync(
+            Slug,
+            [UpdateResultFor(configlib), CarryCapacityUpdateResult(carryCapacity, "1.5.0")],
+            progress: null,
+            cts.Token);
+
+        outcome.Updated.ShouldHaveSingleItem().Identity.ShouldBe("configlib");
+        outcome.Failed.ShouldBeEmpty();
+        harness.FileSystem.File.Exists(harness.FileSystem.Path.Combine(modsDirectory, "configlib-1.12.0.zip")).ShouldBeTrue();
+        harness.FileSystem.File.Exists(harness.FileSystem.Path.Combine(modsDirectory, "carrycapacity-1.0.0.zip")).ShouldBeTrue();
+        harness.FileSystem.File.Exists(harness.FileSystem.Path.Combine(modsDirectory, "carrycapacity-1.5.0.zip")).ShouldBeFalse();
     }
 
     [Fact]
@@ -526,5 +566,49 @@ public sealed class ModInstallServiceUpdateTests
                 ? FakeHttpMessageHandler.Text(json)
                 : FakeHttpMessageHandler.Text(ModDbSamples.NotFound);
         }
+    }
+
+    /// <summary>
+    /// Décore un <see cref="IDownloadManager"/> réel pour simuler une annulation déclenchée
+    /// PENDANT le téléchargement d'un fichier donné : le jeton du lot est annulé au moment même où
+    /// ce téléchargement démarre, avant de continuer vers l'implémentation réelle (qui l'observera
+    /// donc dès sa première vérification). Sert à distinguer, dans les tests, une annulation qui
+    /// tombe ENTRE deux mods (jeton déjà coupé avant l'appel) d'une annulation qui tombe pendant le
+    /// téléchargement du mod en cours — exactement le cas que corrige le passage du jeton du lot à
+    /// PrepareUpdateAsync.
+    /// </summary>
+    private sealed class CancelingDownloadManager : IDownloadManager
+    {
+        private readonly IDownloadManager _inner;
+        private readonly string _triggerFileName;
+        private readonly CancellationTokenSource _cts;
+
+        public CancelingDownloadManager(IDownloadManager inner, string triggerFileName, CancellationTokenSource cts)
+        {
+            _inner = inner;
+            _triggerFileName = triggerFileName;
+            _cts = cts;
+        }
+
+        public IReadOnlyList<DownloadOperation> Operations => _inner.Operations;
+
+        public event EventHandler? OperationsChanged
+        {
+            add => _inner.OperationsChanged += value;
+            remove => _inner.OperationsChanged -= value;
+        }
+
+        public Task<string> DownloadAsync(DownloadRequest request, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
+        {
+            if (string.Equals(request.FileName, _triggerFileName, StringComparison.Ordinal))
+            {
+                _cts.Cancel();
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            return _inner.DownloadAsync(request, progress, cancellationToken);
+        }
+
+        public void Dismiss(DownloadOperation operation) => _inner.Dismiss(operation);
     }
 }

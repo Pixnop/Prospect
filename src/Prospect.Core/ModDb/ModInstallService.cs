@@ -333,9 +333,12 @@ public sealed class ModInstallService
     /// </param>
     /// <param name="progress">Avancement agrégé, un cran par mod traité.</param>
     /// <param name="cancellationToken">
-    /// Annulation honorée uniquement ENTRE deux mods : une fois la mise à jour d'un mod entamée,
-    /// elle va toujours jusqu'à son terme (succès ou échec propre), jamais coupée au milieu d'un
-    /// remplacement.
+    /// Annulation honorée dès la phase de PRÉPARATION (téléchargement, voir
+    /// <see cref="PrepareUpdateAsync"/>) du mod en cours : le lot s'arrête proprement sans
+    /// attendre le mod suivant, et le nettoyage du téléchargement interrompu est déjà géré par
+    /// <see cref="Http.IDownloadManager"/>. La phase d'APPLICATION (remplacement de l'ancien
+    /// fichier par le nouveau, voir <see cref="ApplyUpdateAsync"/>), elle, reste toujours menée
+    /// jusqu'à son terme une fois entamée : jamais coupée au milieu d'un remplacement.
     /// </param>
     public async Task<BulkUpdateOutcome> ApplyAllUpdatesAsync(
         string slug,
@@ -361,10 +364,24 @@ public sealed class ModInstallService
 
             try
             {
-                var plan = await PrepareUpdateAsync(slug, result, ModCompatibilityMode.ExactGameVersion, progress: null, CancellationToken.None).ConfigureAwait(false);
+                // Le jeton du lot atteint maintenant le téléchargement : une annulation peut
+                // interrompre proprement le mod EN COURS, pas seulement celui d'après (c'était le
+                // défaut corrigé ici — CancellationToken.None ne laissait jamais rien interrompre
+                // avant ce point). La phase d'application reste volontairement sur
+                // CancellationToken.None : une fois le nouveau fichier téléchargé et vérifié, le
+                // remplacement va jusqu'au bout, jamais coupé en plein échange des deux fichiers.
+                var plan = await PrepareUpdateAsync(slug, result, ModCompatibilityMode.ExactGameVersion, progress: null, cancellationToken).ConfigureAwait(false);
                 var outcome = await ApplyUpdateAsync(slug, plan, selectedDependencies: null, progress: null, CancellationToken.None).ConfigureAwait(false);
 
                 updated.Add(outcome.Installed[0]);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // Annulation authentique du lot (pas un délai interne, voir la distinction faite
+                // par ModDbClient.IsNetworkFailure) : le mod en préparation n'a pas été appliqué,
+                // rien n'est à moitié posé sur le disque. Un arrêt propre, donc, jamais un échec à
+                // consigner dans failed.
+                break;
             }
             catch (Exception exception) when (exception is ModDbApiException or ModDbUnavailableException or DownloadFailedException or ModInstallFailedException)
             {

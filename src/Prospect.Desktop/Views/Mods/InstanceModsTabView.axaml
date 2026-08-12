@@ -93,18 +93,21 @@
                 </Border>
 
                 <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
-                  <StackPanel Orientation="Horizontal" Spacing="8">
-                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
-                               FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
-                    <ContentControl Classes="badge incompatible" Content="{StaticResource Mods_Row_Unidentified}"
-                                    VerticalAlignment="Center" IsVisible="{Binding IsUnidentified}" />
-                  </StackPanel>
-                  <!-- Grid et non StackPanel horizontal : auteur et nom de fichier viennent du
-                       modinfo.json et du zip, deux valeurs qu'aucune longueur ne borne. Dans un
-                       StackPanel horizontal, leur TextTrimming ne servait à rien (les enfants y
-                       sont mesurés sans contrainte de largeur) et la ligne sortait de la rangée.
-                       L'auteur est plafonné, le nom de fichier prend le reste, les deux se
-                       tronquent et se relisent au survol. -->
+                  <!-- Grid et non StackPanel horizontal, ici comme pour la ligne meta juste en
+                       dessous : nom, auteur et nom de fichier viennent du modinfo.json et du zip,
+                       trois valeurs qu'aucune longueur ne borne. Dans un StackPanel horizontal,
+                       leur TextTrimming ne servait à rien (les enfants y sont mesurés sans
+                       contrainte de largeur) et la rangée sortait de la ligne. Le nom prend la
+                       colonne * et se tronque (infobulle pour le lire en entier), le badge « non
+                       identifié » reste en Auto à côté, sans jamais le pousser hors cadre. -->
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}"
+                               VerticalAlignment="Center" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
+                    <ContentControl Grid.Column="1" Classes="badge incompatible" Content="{StaticResource Mods_Row_Unidentified}"
+                                    Margin="8,0,0,0" VerticalAlignment="Center" IsVisible="{Binding IsUnidentified}" />
+                  </Grid>
+                  <!-- Même schéma que ci-dessus : l'auteur est plafonné, le nom de fichier prend
+                       le reste, les deux se tronquent et se relisent au survol. -->
                   <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,2,0,0">
                     <TextBlock Grid.Column="0" Text="{Binding AuthorText}" TextTrimming="CharacterEllipsis"
                                MaxWidth="160" ToolTip.Tip="{Binding AuthorText}"

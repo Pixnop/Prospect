@@ -102,7 +102,6 @@ public class WizardViewModelTests
 
         harness.ViewModel.CanGoNext.ShouldBeFalse();
         harness.ViewModel.NextCommand.CanExecute(null).ShouldBeFalse();
-        harness.ViewModel.NameError.ShouldNotBeNull();
     }
 
     [Fact]
@@ -114,6 +113,59 @@ public class WizardViewModelTests
 
         harness.ViewModel.CanGoNext.ShouldBeTrue();
         harness.ViewModel.NameError.ShouldBeNull();
+    }
+
+    // ── Modèle « touched » : le message ne doit rien reprocher avant une vraie interaction ────
+
+    [Fact]
+    public void NameStep_PristineState_IsBlankButShowsNoErrorYet()
+    {
+        var harness = CreateHarness();
+
+        harness.ViewModel.Name.ShouldBeEmpty();
+        harness.ViewModel.NameTouched.ShouldBeFalse();
+        harness.ViewModel.NameError.ShouldBeNull();
+        harness.ViewModel.CanGoNext.ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void NameStep_TypedThenClearedBackToBlank_ShowsTheErrorOnceTouched(string blankName)
+    {
+        var harness = CreateHarness();
+
+        harness.ViewModel.Name = "H";
+        harness.ViewModel.Name = blankName;
+
+        harness.ViewModel.NameTouched.ShouldBeTrue();
+        harness.ViewModel.NameError.ShouldNotBeNull();
+        harness.ViewModel.CanGoNext.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void NameStep_FirstKeystroke_TouchesTheFieldEvenIfTheResultIsValid()
+    {
+        var harness = CreateHarness();
+
+        harness.ViewModel.Name = "Homestead";
+
+        harness.ViewModel.NameTouched.ShouldBeTrue();
+        harness.ViewModel.NameError.ShouldBeNull();
+    }
+
+    [Fact]
+    public void NameStep_AttemptingNextWhileBlank_TouchesTheFieldSoTheErrorWouldShow()
+    {
+        // CanGoNext bloque déjà le bouton dans l'interface ; ce test invoque directement la
+        // commande (comme le ferait un appel qui contournerait CanExecute) pour vérifier la
+        // défense en profondeur de Next() plutôt que le seul chemin de la première frappe.
+        var harness = CreateHarness();
+
+        harness.ViewModel.NextCommand.Execute(null);
+
+        harness.ViewModel.NameTouched.ShouldBeTrue();
+        harness.ViewModel.NameError.ShouldNotBeNull();
     }
 
     [Fact]

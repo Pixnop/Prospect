@@ -106,6 +106,21 @@ public sealed partial class WizardViewModel : ObservableObject, IProgress<GameIn
     [NotifyCanExecuteChangedFor(nameof(CreateCommand))]
     private string _name = string.Empty;
 
+    partial void OnNameChanged(string value) => NameTouched = true;
+
+    /// <summary>
+    /// Modèle « touched » : vrai dès la première frappe dans le champ nom (voir
+    /// <see cref="OnNameChanged"/>) ou dès une tentative d'avancer alors qu'il est encore vide
+    /// (voir <see cref="Next"/>). Tant qu'il est faux, <see cref="NameError"/> reste
+    /// <see langword="null"/> même si le nom est vide : un champ tout juste ouvert n'a encore rien
+    /// à reprocher à l'utilisateur, seule une vraie interaction déclenche le message. Ne redevient
+    /// jamais faux une fois vrai (docs/architecture.md n'a pas besoin de plus qu'un booléen simple
+    /// ici, il n'y a qu'un seul champ à suivre).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NameError))]
+    private bool _nameTouched;
+
     [ObservableProperty]
     private string _selectedIconKey;
 
@@ -178,9 +193,16 @@ public sealed partial class WizardViewModel : ObservableObject, IProgress<GameIn
     /// <summary>Aperçu du slug de dossier, recalculé à chaque frappe (voir <see cref="InstanceSlugGenerator.Slugify"/>).</summary>
     public string SlugPreview => InstanceSlugGenerator.Slugify(Name);
 
-    public string? NameError => string.IsNullOrWhiteSpace(Name) ? UiText.Wizard.NameRequired : null;
+    /// <summary>
+    /// Message d'erreur affiché sous le champ, ou <see langword="null"/> tant que rien ne le
+    /// justifie : soit le nom est valide, soit le champ n'a pas encore été touché
+    /// (<see cref="NameTouched"/>). La validité elle-même (<see cref="IsNameStepValid"/>) ne
+    /// dépend jamais du touché : Suivant reste désactivé sur un nom vide dès le premier instant,
+    /// seul le MESSAGE attend une interaction avant de s'afficher.
+    /// </summary>
+    public string? NameError => NameTouched && string.IsNullOrWhiteSpace(Name) ? UiText.Wizard.NameRequired : null;
 
-    public bool IsNameStepValid => NameError is null;
+    public bool IsNameStepValid => !string.IsNullOrWhiteSpace(Name);
 
     public bool IsVersionStepValid => SelectedVersion is not null;
 
@@ -255,7 +277,18 @@ public sealed partial class WizardViewModel : ObservableObject, IProgress<GameIn
     }
 
     [RelayCommand(CanExecute = nameof(CanGoNext))]
-    private void Next() => CurrentStepIndex++;
+    private void Next()
+    {
+        // CanGoNext bloque déjà le bouton tant que le nom est vide ; ce marquage reste une
+        // défense en profondeur (un appelant qui invoquerait la commande directement en
+        // contournant CanExecute doit quand même voir l'erreur s'afficher s'il revient en arrière).
+        if (IsNameStep)
+        {
+            NameTouched = true;
+        }
+
+        CurrentStepIndex++;
+    }
 
     [RelayCommand(CanExecute = nameof(CanGoBack))]
     private void Back() => CurrentStepIndex--;

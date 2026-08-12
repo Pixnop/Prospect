@@ -45,8 +45,9 @@ public interface IModDbClient
     /// </param>
     /// <param name="cancellationToken">Annulation.</param>
     /// <returns>
-    /// <see cref="ModDbCompatibilityIndex.Unavailable"/> si l'API n'a pas répondu : un badge de
-    /// compatibilité est un confort, son absence ne doit pas vider l'écran de recherche.
+    /// <see cref="ModDbCompatibilityIndex.Unavailable"/> si l'API n'a pas répondu OU a répondu par
+    /// un échec applicatif (<see cref="ModDbApiException"/>) : un badge de compatibilité est un
+    /// confort, ni son absence ni la nature de la panne ne doivent vider l'écran de recherche.
     /// </returns>
     Task<ModDbCompatibilityIndex> GetCompatibilityIndexAsync(
         GameVersion gameVersion,

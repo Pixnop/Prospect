@@ -157,7 +157,12 @@ public sealed class ModDbClient : IModDbClient, IDisposable
 
             return index;
         }
-        catch (Exception exception) when (IsNetworkFailure(exception, cancellationToken))
+        // Aligné sur GetInstallInformationAsync (écart de contrat repéré en revue, #24) :
+        // ModDbApiException (statuscode v1 différent de "200") dégradait jusqu'ici en exception non
+        // rattrapée alors que rien ne distingue, pour cet appelant, une fiche introuvable d'une
+        // panne réseau — dans les deux cas, un index absent vaut mieux qu'un écran de recherche qui
+        // plante.
+        catch (Exception exception) when (IsNetworkFailure(exception, cancellationToken) || exception is ModDbApiException)
         {
             // Sans index, l'écran de recherche montre les mods sans badge de compatibilité, ce qui
             // vaut infiniment mieux qu'un écran vide ou qu'un badge inventé.
