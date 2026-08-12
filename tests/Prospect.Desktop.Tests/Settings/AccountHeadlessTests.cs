@@ -181,17 +181,20 @@ public sealed class AccountHeadlessTests
         var settingsPath = fileSystem.Path.Combine(dataDirectory, ClientSettingsSessionWriter.FileName);
         fileSystem.File.Exists(settingsPath).ShouldBeFalse();
 
-        // Le lanceur est reconstruit avec les pièces du conteneur SAUF le lanceur de processus :
-        // celui de production démarrerait un vrai binaire sur la machine qui exécute la suite,
-        // exactement la raison pour laquelle ces tests ne cliquent jamais IExternalUrlOpener non
-        // plus (voir SettingsHeadlessTests). Le service de compte, le stockage de session et
-        // l'écrivain de clientsettings, eux, sont bien ceux du graphe réel.
+        // Le lanceur est reconstruit avec les pièces du conteneur SAUF trois. Le lanceur de
+        // processus, parce que celui de production démarrerait un vrai binaire sur la machine qui
+        // exécute la suite (même raison qui interdit de cliquer IExternalUrlOpener ici, voir
+        // SettingsHeadlessTests). La stratégie de lancement, parce que celle du conteneur dépend de
+        // l'OS courant et que macOS refuse de lancer quoi que ce soit : ce test parle d'injection de
+        // session, pas de la matrice de plateformes, qui a ses propres tests. Et le détecteur de
+        // runtime, qui irait interroger le vrai dotnet de la machine. Le service de compte, le
+        // stockage de session et l'écrivain de clientsettings, eux, sont bien ceux du graphe réel.
         var launcher = new GameLauncher(
             provider.GetRequiredService<IInstanceRepository>(),
             provider.GetRequiredService<IInstalledGameVersionRepository>(),
             new FakeDotnetLocator(),
             provider.GetRequiredService<RunningInstanceTracker>(),
-            provider.GetRequiredService<IGameLaunchStrategy>(),
+            new LinuxGameLaunchStrategy(fileSystem),
             new FakeProcessRunner(),
             fileSystem,
             provider.GetRequiredService<AppPaths>(),
