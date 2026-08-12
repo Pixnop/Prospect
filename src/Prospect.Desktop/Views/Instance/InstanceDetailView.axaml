@@ -27,7 +27,7 @@
 
       <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,14,0,0">
         <Border Grid.Column="0" Width="72" Height="72" CornerRadius="{StaticResource RadiusMd}"
-                BorderBrush="{DynamicResource BorderSubtle}" BorderThickness="1">
+                BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1">
           <Border.Background>
             <LinearGradientBrush StartPoint="30%,0%" EndPoint="70%,100%">
               <GradientStop Color="{StaticResource Copper900}" Offset="0" />
@@ -46,7 +46,7 @@
                largeur disponible : le nom se tronque proprement (infobulle pour le lire en entier)
                et le badge passe à la ligne quand il n'y a plus la place. -->
           <WrapPanel>
-            <TextBlock Text="{Binding Name}" FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsTitle}"
+            <TextBlock Text="{Binding Name}" Classes="onGlass" FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsTitle}"
                        FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}"
                        TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />
             <ContentControl Classes="badge" Content="{Binding VersionText}" VerticalAlignment="Center" Margin="10,0,0,0"
@@ -163,7 +163,7 @@
             <ItemsControl ItemsSource="{Binding Worlds}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:InstanceWorldRowViewModel">
-                  <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="16,12">
+                  <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="16,12">
                     <Grid ColumnDefinitions="Auto,*,Auto">
                       <Path Grid.Column="0" Width="15" Height="15" Margin="0,0,12,0" Stretch="Uniform"
                             Data="{StaticResource Icon.layers}" Stroke="{DynamicResource Text3}"
@@ -183,8 +183,8 @@
             </ItemsControl>
           </Border>
 
-          <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="Transparent"
-                  BorderBrush="{DynamicResource BorderDefault}" IsVisible="{Binding !HasWorlds}">
+          <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="{DynamicResource GlassPane}"
+                  BorderBrush="{DynamicResource GlassEdgeStrong}" IsVisible="{Binding !HasWorlds}">
             <StackPanel HorizontalAlignment="Center" Spacing="12" Margin="32,48" MaxWidth="400">
               <Path Width="40" Height="40" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.layers}"
                     Stroke="{DynamicResource Text4}" StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round" />
@@ -220,8 +220,8 @@
             </ScrollViewer>
           </Border>
 
-          <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="Transparent"
-                  BorderBrush="{DynamicResource BorderDefault}" IsVisible="{Binding !HasJournalContent}">
+          <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="{DynamicResource GlassPane}"
+                  BorderBrush="{DynamicResource GlassEdgeStrong}" IsVisible="{Binding !HasJournalContent}">
             <StackPanel HorizontalAlignment="Center" Spacing="12" Margin="32,48" MaxWidth="400">
               <Path Width="40" Height="40" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.list}"
                     Stroke="{DynamicResource Text4}" StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round" />
@@ -313,7 +313,7 @@
               <ItemsControl ItemsSource="{Binding Backups}" IsVisible="{Binding HasBackups}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:InstanceBackupRowViewModel">
-                    <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="0,12">
+                    <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="0,12">
                       <Grid ColumnDefinitions="*,Auto,Auto">
                         <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                           <TextBlock Text="{Binding DateText}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />

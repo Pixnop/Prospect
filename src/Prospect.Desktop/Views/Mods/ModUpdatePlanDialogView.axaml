@@ -13,17 +13,17 @@
        montée de version ne peut pas violer une contrainte minimale déclarée. -->
 
   <Border Width="500" MaxHeight="620" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
-          Background="{DynamicResource BgSurface}" BorderBrush="{DynamicResource BorderDefault}"
-          BorderThickness="1" BoxShadow="{DynamicResource Elev3}">
+          Background="{DynamicResource GlassMenu}" BorderBrush="{DynamicResource GlassEdge}"
+          BorderThickness="1" BoxShadow="{DynamicResource GlassElevMenu}">
     <DockPanel>
-      <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="22,18">
+      <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="22,18">
         <TextBlock Text="{Binding Title}" TextWrapping="Wrap"
                    FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
                    FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
       </Border>
 
-      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}"
-              Background="{DynamicResource BgSurfaceRaised}">
+      <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}"
+              Background="{DynamicResource GlassRowOdd}">
         <Grid ColumnDefinitions="*,Auto" Margin="22,16">
           <Button Grid.Column="0" Classes="ghost" HorizontalAlignment="Left" Command="{Binding CancelCommand}"
                   Content="{StaticResource Dialog_Cancel}" />
@@ -65,7 +65,7 @@
               <ItemsControl ItemsSource="{Binding Dependencies}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:ModDependencyChoiceViewModel">
-                    <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="14,10">
+                    <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="14,10">
                       <Grid ColumnDefinitions="Auto,*,Auto">
                         <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalAlignment="Center" />
                         <StackPanel Grid.Column="1" Margin="6,0,10,0" VerticalAlignment="Center">

@@ -6,6 +6,9 @@
     Badge.axaml) plutôt qu'un ControlTheme : Border rend nativement Background/BorderBrush/
     BorderThickness/CornerRadius/BoxShadow, il n'y a pas de gabarit à recouvrir.
 
+    Profondeur de verre : une carte est un ITEM (50 %), une carte « raised » un MENU (72 %). Le
+    liseré passe clair (GlassEdge) et l'élévation embarque le sheen — voir Styles/Tokens/Glass.axaml.
+
     La variante dashed (carte « nouvelle instance ») n'est volontairement pas ici : Border n'expose
     pas de bordure en pointillés (ni Avalonia ni WPF ne le font). Elle est composée directement
     dans Views/Home/HomeView.axaml avec un Rectangle à StrokeDashArray, la solution habituelle
@@ -17,17 +20,17 @@
   -->
 
   <Style Selector="Border.card">
-    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    <Setter Property="Background" Value="{DynamicResource GlassItem}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassEdge}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusMd}" />
-    <Setter Property="BoxShadow" Value="{DynamicResource Elev1}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource GlassElevItem}" />
     <Setter Property="ClipToBounds" Value="True" />
   </Style>
 
   <Style Selector="Border.card.raised">
-    <Setter Property="Background" Value="{DynamicResource BgSurfaceRaised}" />
-    <Setter Property="BoxShadow" Value="{DynamicResource Elev2}" />
+    <Setter Property="Background" Value="{DynamicResource GlassMenu}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource GlassElevMenu}" />
   </Style>
 
   <Style Selector="Border.card.flat">
@@ -37,9 +40,11 @@
   <Style Selector="Border.card.interactive">
     <Setter Property="Cursor" Value="Hand" />
   </Style>
+  <!-- Sur le verre, l'ombre DISPARAÎT au survol au lieu de grandir : la vitre monte à la
+       rencontre du curseur, et seule la paire spéculaire lui garde son épaisseur. -->
   <Style Selector="Border.card.interactive:pointerover">
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
-    <Setter Property="BoxShadow" Value="{DynamicResource Elev2}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassEdgeStrong}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource GlassSheenStrong}" />
   </Style>
 
   <Style Selector="Border.card.selected">

@@ -23,7 +23,7 @@
     <Style Selector="Border.version-row">
       <Setter Property="Padding" Value="16,12" />
       <Setter Property="BorderThickness" Value="0,0,0,1" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource GlassEdge}" />
     </Style>
   </UserControl.Styles>
 
@@ -107,10 +107,10 @@
     <StackPanel DockPanel.Dock="Top" Margin="28,24,28,0">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Grid.Column="0" Spacing="4">
-          <TextBlock Text="{StaticResource Versions_Title}"
+          <TextBlock Text="{StaticResource Versions_Title}" Classes="onGlass"
                      FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsTitle}"
                      FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
-          <TextBlock Text="{Binding SubtitleText}" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text3}" />
+          <TextBlock Text="{Binding SubtitleText}" Classes="onGlass" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text3}" />
         </StackPanel>
         <Button Grid.Column="1" Classes="secondary" Command="{Binding CheckForUpdatesCommand}" VerticalAlignment="Top">
           <StackPanel Orientation="Horizontal" Spacing="8">
@@ -151,7 +151,7 @@
       <StackPanel Spacing="20" Margin="28,20,28,28">
 
         <Border CornerRadius="{StaticResource RadiusSm}" BorderThickness="1" Padding="14,10"
-                Background="Transparent" BorderBrush="{DynamicResource BorderDefault}"
+                Background="{DynamicResource GlassItem}" BorderBrush="{DynamicResource GlassEdge}"
                 IsVisible="{Binding CatalogWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
           <StackPanel Orientation="Horizontal" Spacing="10">
             <Path Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center" Data="{StaticResource Icon.wifi-off}"
@@ -179,8 +179,8 @@
           </Border>
         </StackPanel>
 
-        <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="Transparent"
-                BorderBrush="{DynamicResource BorderDefault}" IsVisible="{Binding ShowEmptyState}">
+        <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="{DynamicResource GlassPane}"
+                BorderBrush="{DynamicResource GlassEdgeStrong}" IsVisible="{Binding ShowEmptyState}">
           <StackPanel HorizontalAlignment="Center" Spacing="12" Margin="32,48" MaxWidth="400">
             <Path Width="40" Height="40" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.hard-drive}"
                   Stroke="{DynamicResource Text4}" StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round" />
@@ -210,7 +210,7 @@
           </ItemsControl>
         </StackPanel>
 
-        <TextBlock Text="{Binding VersionsDirectoryText}" FontFamily="{DynamicResource FontMono}"
+        <TextBlock Text="{Binding VersionsDirectoryText}" Classes="onGlass" FontFamily="{DynamicResource FontMono}"
                    FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
       </StackPanel>
     </ScrollViewer>

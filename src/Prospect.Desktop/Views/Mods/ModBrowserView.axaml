@@ -19,10 +19,10 @@
     <StackPanel DockPanel.Dock="Top" Margin="28,20,28,0">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Grid.Column="0" Spacing="4">
-          <TextBlock Text="{StaticResource Mods_Title}" FontFamily="{DynamicResource FontDisplay}"
+          <TextBlock Text="{StaticResource Mods_Title}" Classes="onGlass" FontFamily="{DynamicResource FontDisplay}"
                      FontSize="{StaticResource FsTitle}" FontWeight="{StaticResource FwSemibold}"
                      Foreground="{DynamicResource Text1}" />
-          <TextBlock Text="{Binding SubtitleText}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+          <TextBlock Text="{Binding SubtitleText}" Classes="onGlass" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
         </StackPanel>
         <Button Grid.Column="1" Classes="secondary" VerticalAlignment="Center" Command="{Binding RefreshCommand}">
           <StackPanel Orientation="Horizontal" Spacing="6">
@@ -151,7 +151,7 @@
                     <StackPanel>
                       <Grid ColumnDefinitions="Auto,*,Auto">
                         <Border Grid.Column="0" Width="40" Height="40" CornerRadius="{StaticResource RadiusSm}"
-                                Background="{DynamicResource Stone800}" BorderBrush="{DynamicResource BorderSubtle}" BorderThickness="1"
+                                Background="{DynamicResource Stone800}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1"
                                 ClipToBounds="True">
                           <Panel>
                             <!-- Repli générique : toujours dans l'arbre visuel, masqué une fois le logo décodé
@@ -207,7 +207,7 @@
              correspondent vraiment, et offre l'extension au clavier et à la souris pour qui
              n'utilise pas le défilement. -->
         <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding ShownCountText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-          <TextBlock Grid.Column="0" Text="{Binding ShownCountText}" VerticalAlignment="Center"
+          <TextBlock Grid.Column="0" Text="{Binding ShownCountText}" Classes="onGlass" VerticalAlignment="Center"
                      FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}"
                      Foreground="{DynamicResource Text4}" />
           <Button Grid.Column="1" Classes="sm secondary" Content="{StaticResource Mods_ShowMore}"
@@ -215,8 +215,8 @@
         </Grid>
 
         <!-- ── État vide ─────────────────────────────────────────────────────────── -->
-        <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="Transparent"
-                BorderBrush="{DynamicResource BorderDefault}" IsVisible="{Binding ShowEmptyState}">
+        <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="{DynamicResource GlassPane}"
+                BorderBrush="{DynamicResource GlassEdgeStrong}" IsVisible="{Binding ShowEmptyState}">
           <StackPanel HorizontalAlignment="Center" Spacing="12" Margin="32,48" MaxWidth="420">
             <Path Width="40" Height="40" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.wifi-off}"
                   Stroke="{DynamicResource Text4}" StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round"

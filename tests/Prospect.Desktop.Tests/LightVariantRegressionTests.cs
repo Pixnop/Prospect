@@ -301,7 +301,11 @@ public sealed class LightVariantRegressionTests
             () => new ContentControl { Content = "manuel", Classes = { "badge" } },
             badge => badge.Background.ShouldBeAssignableTo<ISolidColorBrush>()!.Color);
 
-        dark.ShouldBe(Color.Parse("#24211E")); // valeur historique, inchangée en sombre.
+        // Le fond de pastille neutre est devenu une vitre d'item (50 %) avec le rethème verre :
+        // l'ancien aplat stone-800 (#24211E) n'existe plus, mais l'invariant que ce test protège
+        // est inchangé — le fond doit BOUGER d'une variante à l'autre, sinon une pastille sombre
+        // se retrouve posée sur une carte claire avec son texte devenu illisible.
+        dark.ShouldBe(Color.Parse("#80111010"));
         light.ShouldNotBe(dark);
     }
 
@@ -312,7 +316,10 @@ public sealed class LightVariantRegressionTests
             () => new ToggleSwitch { IsChecked = false },
             toggle => FindPart<Border>(toggle, "PART_Track").Background.ShouldBeAssignableTo<ISolidColorBrush>()!.Color);
 
-        dark.ShouldBe(Color.Parse("#332E29")); // valeur historique, inchangée en sombre.
+        // Piste au repos devenue vitre d'item (50 %) avec le rethème verre ; même invariant
+        // qu'avant : elle doit suivre le thème, faute de quoi la piste reste presque noire sur
+        // une carte claire pendant que sa bordure et son pouce, eux, ont basculé.
+        dark.ShouldBe(Color.Parse("#80111010"));
         light.ShouldNotBe(dark);
     }
 
@@ -346,8 +353,13 @@ public sealed class LightVariantRegressionTests
         var lightBgColor = lightBg.ShouldBeOfType<SolidColorBrush>().Color;
         var lightTextColor = lightText.ShouldBeOfType<SolidColorBrush>().Color;
 
-        darkBgColor.ShouldBe(Color.Parse("#2B2724")); // valeur historique, inchangée en sombre.
+        // La bulle est passée à la profondeur MENU du verre (72 %) : l'aplat stone-750 historique
+        // a disparu, l'invariant non — le fond suit le thème et ne coïncide jamais avec l'encre.
+        darkBgColor.ShouldBe(Color.Parse("#B8111010"));
         lightBgColor.ShouldNotBe(darkBgColor);
         lightBgColor.ShouldNotBe(lightTextColor); // fond et texte de la bulle ne doivent jamais coïncider.
+        // Une bulle translucide ne doit pas l'être au point de laisser lire à travers : à 72 %,
+        // le fond qui transparaît ne peut plus faire basculer le contraste de son texte.
+        darkBgColor.A.ShouldBeGreaterThan((byte)180);
     }
 }

@@ -16,13 +16,13 @@
   -->
 
   <Border Width="720" MaxHeight="640" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
-          Background="{DynamicResource BgSurface}" BorderBrush="{DynamicResource BorderDefault}"
-          BorderThickness="1" BoxShadow="{DynamicResource Elev3}">
+          Background="{DynamicResource GlassMenu}" BorderBrush="{DynamicResource GlassEdge}"
+          BorderThickness="1" BoxShadow="{DynamicResource GlassElevMenu}">
     <DockPanel>
-      <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="22,20">
+      <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="22,20">
         <Grid ColumnDefinitions="Auto,*,Auto">
           <Border Grid.Column="0" Width="52" Height="52" CornerRadius="{StaticResource RadiusSm}"
-                  Background="{DynamicResource Stone800}" BorderBrush="{DynamicResource BorderSubtle}" BorderThickness="1">
+                  Background="{DynamicResource Stone800}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1">
             <Path Width="22" Height="22" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
                   Data="{StaticResource Icon.package}" Stroke="{DynamicResource Text4}"
                   StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
@@ -79,7 +79,7 @@
               <ItemsControl ItemsSource="{Binding Releases}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:ModReleaseRowViewModel">
-                    <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="16,10">
+                    <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="16,10">
                       <!-- MinWidth plutôt que Width sur la version : les vraies versions de mods
                            montent à « 1.22.0-pre.10 », plus large que les 76px qui alignaient
                            joliment les versions courtes des doubles. Le badge, lui, ne porte plus

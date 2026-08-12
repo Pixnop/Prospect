@@ -29,10 +29,10 @@
   <Border Width="340"
           Padding="16,14,12,14"
           CornerRadius="{StaticResource RadiusMd}"
-          Background="{DynamicResource BgSurfaceRaised}"
-          BorderBrush="{DynamicResource BorderDefault}"
+          Background="{DynamicResource GlassMenu}"
+          BorderBrush="{DynamicResource GlassEdge}"
           BorderThickness="1"
-          BoxShadow="{DynamicResource Elev3}">
+          BoxShadow="{DynamicResource GlassElevMenu}">
     <Grid ColumnDefinitions="Auto,*,Auto">
       <Path Grid.Column="0"
             Width="16" Height="16" Margin="0,2,12,0"

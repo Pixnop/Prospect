@@ -84,21 +84,29 @@
     </Style>
 
     <!-- ── Secondary ───────────────────────────────────────────────────────────── -->
+    <!-- Sur le verre, un bouton secondaire n'est plus un contour vide : c'est une vitre d'item
+         (50 %) à liseré clair, comme une carte de petite taille (.pr-btn, variante secondary). -->
     <Style Selector="^.secondary">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+      <Setter Property="Background" Value="{DynamicResource GlassItem}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource GlassEdge}" />
       <Setter Property="Foreground" Value="{DynamicResource Text1}" />
     </Style>
+    <Style Selector="^.secondary /template/ Border#PART_Border">
+      <Setter Property="BoxShadow" Value="{DynamicResource GlassElevItem}" />
+    </Style>
+    <!-- L'ombre tombe au survol (même règle que la carte interactive) : la vitre se rapproche. -->
     <Style Selector="^.secondary:pointerover /template/ Border#PART_Border">
-      <Setter Property="Background" Value="{DynamicResource BgHover}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+      <Setter Property="Background" Value="{DynamicResource BgSelected}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource GlassEdgeStrong}" />
+      <Setter Property="BoxShadow" Value="{StaticResource Elev0}" />
     </Style>
     <Style Selector="^.secondary:pressed /template/ Border#PART_Border">
       <Setter Property="Background" Value="{DynamicResource BgActive}" />
     </Style>
     <Style Selector="^.secondary:disabled /template/ Border#PART_Border">
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource GlassEdge}" />
+      <Setter Property="BoxShadow" Value="{StaticResource Elev0}" />
     </Style>
 
     <!-- ── Ghost ───────────────────────────────────────────────────────────────── -->
@@ -170,8 +178,17 @@
       <Setter Property="Width" Value="{StaticResource ControlHLg}" />
       <Setter Property="Height" Value="{StaticResource ControlHLg}" />
     </Style>
+    <!-- .pr-iconbtn, variante bordered : la seule variante d'icône qui porte une vitre. -->
     <Style Selector="^.icon.bordered">
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+      <Setter Property="Background" Value="{DynamicResource GlassItem}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource GlassEdge}" />
+    </Style>
+    <Style Selector="^.icon.bordered /template/ Border#PART_Border">
+      <Setter Property="BoxShadow" Value="{DynamicResource GlassShadow}" />
+    </Style>
+    <Style Selector="^.icon.bordered:pointerover /template/ Border#PART_Border">
+      <Setter Property="BorderBrush" Value="{DynamicResource GlassEdgeStrong}" />
+      <Setter Property="BoxShadow" Value="{StaticResource Elev0}" />
     </Style>
     <Style Selector="^.icon.danger:pointerover /template/ Border#PART_Border">
       <Setter Property="Background" Value="{DynamicResource DangerQuiet}" />

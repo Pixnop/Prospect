@@ -12,10 +12,10 @@
        l'utilisent » : l'utilisateur doit pouvoir décider sur ce qu'il lit. -->
 
   <Border Width="440" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
-          Background="{DynamicResource BgSurface}" BorderBrush="{DynamicResource BorderDefault}"
-          BorderThickness="1" BoxShadow="{DynamicResource Elev3}">
+          Background="{DynamicResource GlassMenu}" BorderBrush="{DynamicResource GlassEdge}"
+          BorderThickness="1" BoxShadow="{DynamicResource GlassElevMenu}">
     <StackPanel>
-      <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="22,18">
+      <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="22,18">
         <TextBlock Text="{Binding Title}" TextWrapping="Wrap"
                    FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
                    FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
@@ -26,7 +26,7 @@
                    FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text2}" />
 
         <Border CornerRadius="{StaticResource RadiusSm}" BorderThickness="1" Padding="14,10"
-                Background="Transparent" BorderBrush="{DynamicResource BorderDefault}"
+                Background="Transparent" BorderBrush="{DynamicResource GlassEdge}"
                 IsVisible="{Binding HasDependents}">
           <StackPanel Orientation="Horizontal" Spacing="10">
             <Path Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Top" Margin="0,2,0,0"
@@ -38,7 +38,7 @@
         </Border>
       </StackPanel>
 
-      <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}" Background="{DynamicResource BgSurfaceRaised}">
+      <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}" Background="{DynamicResource GlassRowOdd}">
         <Grid ColumnDefinitions="*,Auto" Margin="22,16">
           <Button Grid.Column="0" Classes="ghost" Command="{Binding CancelCommand}" HorizontalAlignment="Left"
                   Content="{StaticResource Dialog_Cancel}" />

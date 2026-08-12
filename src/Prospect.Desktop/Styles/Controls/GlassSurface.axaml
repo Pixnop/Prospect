@@ -1,0 +1,87 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Les vitres génériques, le grain et la protection de texte de design/tokens/glass.css.
+    Même nature que Badge.axaml ou Card.axaml : des Style par sélecteur sur des contrôles nus
+    (Border, Rectangle, TextBlock), pas des ControlThemes.
+
+    Ce fichier est inclus AVANT les autres feuilles de contrôle dans App.axaml : les vitres
+    qu'il pose sont un socle, et une feuille plus spécifique (Card, Button...) doit pouvoir la
+    recouvrir, ce qu'Avalonia décide par l'ordre du document, faute de spécificité.
+  -->
+
+  <!-- ── Les quatre profondeurs, en classes composables : Classes="glass menu" ────────── -->
+
+  <Style Selector="Border.glass">
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassEdge}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="Border.glass.chrome">
+    <Setter Property="Background" Value="{DynamicResource GlassChrome}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource GlassShadow}" />
+  </Style>
+
+  <Style Selector="Border.glass.pane">
+    <Setter Property="Background" Value="{DynamicResource GlassPane}" />
+  </Style>
+
+  <Style Selector="Border.glass.item">
+    <Setter Property="Background" Value="{DynamicResource GlassItem}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource GlassElevItem}" />
+  </Style>
+
+  <Style Selector="Border.glass.menu">
+    <Setter Property="Background" Value="{DynamicResource GlassMenu}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource GlassElevMenu}" />
+  </Style>
+
+  <!-- Bande de pied ou d'en-tête à l'intérieur d'une vitre : la teinte de rangée impaire, posée
+       PAR-DESSUS la vitre porteuse, donc composée avec elle. Remplace l'ancien fond opaque d'un
+       cran plus clair (BgSurfaceRaised), qui rendait la barre opaque au milieu d'un dialogue
+       translucide. -->
+  <Style Selector="Border.glassBand">
+    <Setter Property="Background" Value="{DynamicResource GlassRowOdd}" />
+  </Style>
+
+  <!-- ── Grain ────────────────────────────────────────────────────────────────────────
+       Le flou seul est trop propre : il lit plastique et laisse voir les bandes de dégradé du
+       fond. Une tuile de bruit monochrome (Assets/grain.png, 140x140, générée hors ligne — voir
+       MainWindow.axaml pour la commande) est répétée par-dessus la surface concernée.
+
+       Écart avec le CSS : celui-ci compose le bruit en `mix-blend-mode: overlay`, qu'Avalonia
+       n'expose pas par élément. Le bruit est donc simplement peint à faible opacité. Comme la
+       tuile est centrée sur un gris moyen, elle ajoute du grain dans les deux sens (elle
+       éclaircit à peine une vitre sombre, assombrit à peine une vitre claire), ce qui est
+       exactement l'effet recherché. -->
+  <Style Selector="Rectangle.grain">
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="Opacity" Value="0.035" />
+    <Setter Property="Fill">
+      <ImageBrush Source="avares://Prospect.Desktop/Assets/grain.png"
+                  TileMode="Tile"
+                  Stretch="None"
+                  DestinationRect="0,0,140,140" />
+    </Setter>
+  </Style>
+
+  <!-- Sur le fond de fenêtre, le CSS monte le grain d'un facteur 1,6 : c'est là que les bandes
+       de dégradé de la photo floutée sont les plus visibles. -->
+  <Style Selector="Rectangle.grain.strong">
+    <Setter Property="Opacity" Value="0.056" />
+  </Style>
+
+  <!-- ── Protection de texte ──────────────────────────────────────────────────────────
+       SÉLECTIVE, jamais globale : le voile et l'alpha des items donnent déjà le plancher de
+       contraste partout ailleurs. Réservée aux textes posés directement sur la vitre la plus
+       fine (glass-pane), les seuls sous lesquels la photo de fond reste lisible : titres de page,
+       sous-titres, et les lignes de valeur machine (chemin, décompte) qui vivent hors carte.
+
+       C'est aussi la réponse à retenir si un texte souffre du réglage d'alpha du thème clair
+       (voir Styles/Tokens/Glass.axaml) : on protège le texte, on ne rend pas la vitre opaque. -->
+  <Style Selector="TextBlock.onGlass">
+    <Setter Property="Effect" Value="{DynamicResource GlassTextShadow}" />
+  </Style>
+
+</Styles>

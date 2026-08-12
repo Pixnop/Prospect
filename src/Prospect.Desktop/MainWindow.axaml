@@ -3,6 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:shell="using:Prospect.Desktop.Views.Shell"
+        xmlns:layout="using:Prospect.Desktop.Layout"
         mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
         x:Class="Prospect.Desktop.MainWindow"
         Title="{StaticResource App_Title}"
@@ -24,8 +25,47 @@
     fournir les propriétés de décoration natives que la composition root doit connaître avant de
     construire quoi que ce soit — voir MainWindow.axaml.cs). La galerie de vérification de la PR
     précédente disparaît au profit de ce shell réel.
+
+    ══ Le fond de fenêtre ═══════════════════════════════════════════════════════════════
+
+    Trois couches sous le shell, dans cet ordre : image, voile, grain. Elles se recouvrent
+    volontairement — c'est l'empilement lui-même — et le déclarent chacune (portée ENFANT :
+    le reste de la fratrie, c'est-à-dire le shell, continue d'être vérifié par l'arpenteur
+    d'invariants, voir Layout/LayoutContract.cs).
+
+    L'image est PRÉ-FLOUTÉE hors ligne, pas floutée à l'exécution : aucun ExperimentalAcrylicBorder,
+    aucun TransparencyLevelHint, aucun flou par image. Voir Styles/Tokens/Glass.axaml pour le
+    raisonnement complet. La source est la capture de jeu du handoff design (2560x1440 RGBA,
+    7,4 Mo), ramenée à un asset servable par :
+
+      magick backdrop.png -alpha off -blur 0x8 -modulate 82,62 \
+             -resize 1920x1080 -quality 85 -strip Assets/backdrop.jpg
+
+    -blur 0x8 : le sigma du flou. Le CSS pose 3px pour un rendu à ~1280 logique ; à 2560
+    physique cela vaut 6, monté à 8 parce que les flous PAR VITRE du CSS (4/8/16px) n'existent
+    pas ici et que le fond doit porter seul la douceur.
+    -modulate 82,62 : les deux autres passes du filtre de fond du CSS (brightness .82,
+    saturate .62), qui tirent les verts de la capture vers les neutres chauds de la marque.
+    Elles sont pré-composées comme le flou parce qu'elles ne dépendent pas du thème, à la
+    différence du voile, qui reste une couche vivante.
+    Résultat : 1920x1080, JPEG (le PNG n'apporte plus rien sur une photo floutée sans alpha),
+    ~108 Ko contre 7,4 Mo.
+
+    La tuile de grain, elle, vient de :
+
+      magick -size 140x140 xc:gray50 +noise Gaussian -colorspace Gray \
+             -define png:color-type=0 -strip Assets/grain.png
   -->
 
-  <shell:ShellView />
+  <Panel>
+    <Image Source="/Assets/backdrop.jpg" Stretch="UniformToFill"
+           layout:LayoutContract.AllowsOverlap="True" />
+    <Rectangle Fill="{DynamicResource GlassVeil}"
+               layout:LayoutContract.AllowsOverlap="True" />
+    <Rectangle Classes="grain strong"
+               layout:LayoutContract.AllowsOverlap="True" />
+
+    <shell:ShellView />
+  </Panel>
 
 </Window>

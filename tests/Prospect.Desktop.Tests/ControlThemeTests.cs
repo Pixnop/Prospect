@@ -63,16 +63,22 @@ public class ControlThemeTests
     }
 
     [AvaloniaFact]
-    public void Bouton_ClasseSecondary_EstTransparentAvecBordure()
+    public void Bouton_ClasseSecondary_EstUneVitreDItemALisereClair()
     {
+        // Depuis le passage au verre, un bouton secondaire n'est plus un contour vide sur fond de
+        // page : c'est une vitre d'item (GlassItem, 50 %) bordée d'une arête CLAIRE (GlassEdge,
+        // cuivre à 10 %) et non plus d'un gris de rampe. L'intention du test ne change pas —
+        // secondary doit rester visuellement distinct de primary, qui est un aplat d'accent plein.
         var button = new Button { Content = "Annuler", Classes = { "secondary" } };
         var window = ShowInWindow(button);
 
         var background = button.Background.ShouldBeAssignableTo<ISolidColorBrush>();
-        background!.Color.ShouldBe(Colors.Transparent);
+        background!.Color.ShouldBe(Color.Parse("#80111010"));
+        background.Color.A.ShouldBeLessThan((byte)255); // une vitre laisse passer le fond, un aplat non.
+        background.Color.ShouldNotBe(Color.Parse("#C4854F")); // jamais l'accent plein de primary.
 
         var border = button.BorderBrush.ShouldBeAssignableTo<ISolidColorBrush>();
-        border!.Color.ShouldBe(Color.Parse("#443D36"));
+        border!.Color.ShouldBe(Color.Parse("#1AD5A275"));
 
         window.Close();
     }

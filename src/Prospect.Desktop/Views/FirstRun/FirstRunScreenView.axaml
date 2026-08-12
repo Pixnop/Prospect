@@ -28,8 +28,8 @@
   -->
 
   <Border Width="520" MaxHeight="680" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
-          Background="{DynamicResource BgSurface}" BorderBrush="{DynamicResource BorderDefault}"
-          BorderThickness="1" BoxShadow="{DynamicResource Elev3}">
+          Background="{DynamicResource GlassMenu}" BorderBrush="{DynamicResource GlassEdge}"
+          BorderThickness="1" BoxShadow="{DynamicResource GlassElevMenu}">
     <DockPanel>
 
       <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="32,0,32,32" Spacing="10" HorizontalAlignment="Center">

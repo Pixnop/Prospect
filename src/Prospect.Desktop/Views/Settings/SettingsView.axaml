@@ -19,7 +19,7 @@
 
   <DockPanel>
     <StackPanel DockPanel.Dock="Top" Margin="28,24,28,0" Spacing="4">
-      <TextBlock Text="{StaticResource Settings_Title}"
+      <TextBlock Text="{StaticResource Settings_Title}" Classes="onGlass"
                  FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsTitle}"
                  FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
 
@@ -136,7 +136,7 @@
                 <StackPanel Spacing="6">
                   <TextBlock Text="{StaticResource Settings_GameDataPathLabel}" FontSize="{StaticResource FsBodySm}"
                              FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text1}" />
-                  <Border Background="{DynamicResource BgInput}" BorderBrush="{DynamicResource BorderDefault}"
+                  <Border Background="{DynamicResource GlassItem}" BorderBrush="{DynamicResource GlassEdge}"
                           BorderThickness="1" CornerRadius="{StaticResource RadiusSm}" Padding="12,8">
                     <SelectableTextBlock Text="{Binding DataPath}" FontFamily="{DynamicResource FontMono}"
                                          FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}"
@@ -255,7 +255,7 @@
               <StackPanel Spacing="14" IsVisible="{Binding IsSignedIn}">
                 <Grid ColumnDefinitions="Auto,*,Auto">
                   <Border Grid.Column="0" Width="40" Height="40" CornerRadius="{StaticResource RadiusMd}"
-                          Background="{DynamicResource BgSurfaceRaised}" BorderBrush="{DynamicResource BorderDefault}" BorderThickness="1">
+                          Background="{DynamicResource GlassItem}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1">
                     <Path Width="20" Height="20" Stretch="Uniform" Data="{StaticResource Icon.user}"
                           Stroke="{DynamicResource Text2}" StrokeThickness="1.5" StrokeLineCap="Round" StrokeJoin="Round" />
                   </Border>

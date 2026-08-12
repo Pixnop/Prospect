@@ -2,17 +2,17 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
   <!--
-    Port de .pr-tooltip__bubble. TooltipBg (Styles/Tokens/Colors.axaml) est la bulle : stone-750
-    en sombre, comme le littéral direct de colors.css (pas d'alias sémantique dédié côté CSS),
-    plus une variante claire ajoutée ici. Sans elle, le fond restait figé en stone-750 pendant que
-    Foreground (Text1, ci-dessous) suivait le thème et passait sombre en clair : texte sombre sur
-    bulle sombre, illisible — le bug le plus sévère trouvé au balayage qui a suivi la QA visuelle
-    du thème clair, avant même les pastilles neutres.
+    Port de .pr-tooltip__bubble : la bulle est une vitre de MENU (72 %), comme un dropdown ou un
+    dialogue, avec l'arête claire et l'ombre lourde qui vont avec. TooltipBg (Styles/Tokens/
+    Colors.axaml) porte cette valeur dans les deux variantes ; l'alias survit au rethème parce
+    qu'il nomme un rôle. Sa variante claire est ce qui empêche le pire défaut trouvé au balayage
+    qui a suivi la QA visuelle du thème clair : un fond figé en sombre pendant que Foreground
+    (Text1, ci-dessous) suivait le thème et passait sombre — texte sombre sur bulle sombre.
   -->
 
   <ControlTheme x:Key="{x:Type ToolTip}" TargetType="ToolTip">
     <Setter Property="Background" Value="{DynamicResource TooltipBg}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassEdge}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusXs}" />
     <Setter Property="Foreground" Value="{DynamicResource Text1}" />
@@ -26,7 +26,7 @@
                 BorderBrush="{TemplateBinding BorderBrush}"
                 BorderThickness="{TemplateBinding BorderThickness}"
                 CornerRadius="{TemplateBinding CornerRadius}"
-                BoxShadow="{DynamicResource Elev2}">
+                BoxShadow="{DynamicResource GlassElevMenu}">
           <ContentPresenter Padding="{TemplateBinding Padding}"
                              Content="{TemplateBinding Content}"
                              ContentTemplate="{TemplateBinding ContentTemplate}"
