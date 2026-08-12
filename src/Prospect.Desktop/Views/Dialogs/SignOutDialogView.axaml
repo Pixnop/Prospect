@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Prospect.Desktop.ViewModels.Dialogs"
+             mc:Ignorable="d" d:DesignWidth="420"
+             x:Class="Prospect.Desktop.Views.Dialogs.SignOutDialogView"
+             x:DataType="vm:SignOutDialogViewModel">
+
+  <!-- Même gabarit que StopInstanceDialogView : titre et message posés par le ViewModel (le titre
+       nomme le joueur), bouton de confirmation en secondaire et non en danger — se déconnecter ne
+       détruit ni monde ni fichier de jeu, ça efface une session qu'on peut reprendre. -->
+
+  <Border Width="420" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
+          Background="{DynamicResource BgSurface}" BorderBrush="{DynamicResource BorderDefault}"
+          BorderThickness="1" BoxShadow="{DynamicResource Elev3}">
+    <StackPanel>
+      <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="22,18">
+        <TextBlock Text="{Binding Title}" TextWrapping="Wrap"
+                   FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                   FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+      </Border>
+
+      <StackPanel Margin="22">
+        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" LineHeight="20"
+                   FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text2}" />
+      </StackPanel>
+
+      <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtle}" Background="{DynamicResource BgSurfaceRaised}">
+        <Grid ColumnDefinitions="*,Auto,Auto" Margin="22,16">
+          <Button Grid.Column="0" Classes="ghost" Content="{StaticResource Dialog_Cancel}" Command="{Binding CancelCommand}" HorizontalAlignment="Left" />
+          <Button Grid.Column="2" Content="{StaticResource Dialog_SignOut_Confirm}" Command="{Binding ConfirmCommand}" />
+        </Grid>
+      </Border>
+    </StackPanel>
+  </Border>
+</UserControl>

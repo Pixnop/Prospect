@@ -10,6 +10,7 @@ using Prospect.Core.ModDb;
 using Prospect.Core.Storage;
 using Prospect.Core.Tests.Common;
 using Prospect.Core.Tests.Http;
+using Prospect.Core.Tests.Instances;
 using Prospect.Core.Tests.Storage;
 
 using Shouldly;
@@ -365,10 +366,14 @@ public sealed class ModInstallServiceUpdateTests
         var configlib = await SeedInstalledConfigLibAsync(harness);
         var reports = new List<BulkUpdateProgress>();
 
+        // SynchronousProgress, pas Progress<T> : ce dernier poste ses rappels sur le contexte de
+        // synchronisation capturé, donc APRÈS le retour de l'appel dans un test sans contexte. Les
+        // assertions couraient contre le pool de threads et ce test échouait au hasard en CI. Tout
+        // le reste de la suite utilise déjà ce double pour cette raison exacte.
         await harness.Service.ApplyAllUpdatesAsync(
             Slug,
             [UpdateResultFor(configlib)],
-            new Progress<BulkUpdateProgress>(reports.Add),
+            new SynchronousProgress<BulkUpdateProgress>(reports.Add),
             CancellationToken.None);
 
         reports.ShouldContain(report => report.CompletedCount == 0 && report.TotalCount == 1 && report.CurrentModName == "Config lib");
@@ -411,7 +416,9 @@ public sealed class ModInstallServiceUpdateTests
         var carryCapacity = installed.Single(mod => mod.Identity == "carrycapacity");
 
         using var cts = new CancellationTokenSource();
-        var progress = new Progress<BulkUpdateProgress>(report =>
+        // Synchrone pour la même raison qu'au-dessus, et ici c'est le cœur du scénario : l'annulation
+        // doit tomber pendant le premier mod, pas quand le pool de threads voudra bien la livrer.
+        var progress = new SynchronousProgress<BulkUpdateProgress>(report =>
         {
             // Le premier mod vient de démarrer : on annule immédiatement, mais ce mod doit quand
             // même se terminer proprement avant que la boucle ne s'arrête.

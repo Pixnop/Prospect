@@ -55,6 +55,7 @@ public sealed partial class ShellViewModel : ObservableObject
         UseCustomTitlebar = ResolveUseCustomTitlebar(appEnvironment.CurrentOperatingSystem);
         Home.InstanceOpenRequested += (_, slug) => ShowInstanceDetail(slug);
         Settings.FirstRun.NavigateToVersionsRequested += (_, _) => Navigate(Versions);
+        Settings.FirstRun.NavigateToAccountSettingsRequested += (_, _) => ShowAccountSettings();
         Settings.FirstRun.VslAdopted += (_, _) => Home.RefreshCommand.Execute(null);
 
         var homeNavItem = new NavItemViewModel("layers", "Accueil", home, Navigate);
@@ -131,6 +132,18 @@ public sealed partial class ShellViewModel : ObservableObject
 
     /// <summary>Retour à l'Accueil : cible du bouton retour de la page de détail.</summary>
     public void ShowHome() => Navigate(Home);
+
+    /// <summary>
+    /// Ouvre les Réglages directement sur la section Comptes : cible de la ligne « Compte Vintage
+    /// Story » de la checklist de premier lancement. Passe par le même <see cref="ShowSettings"/>
+    /// que l'entrée de sidebar (donc même relance de détection VS Launcher), puis sélectionne
+    /// l'onglet, plutôt que de laisser l'utilisateur le chercher.
+    /// </summary>
+    public void ShowAccountSettings()
+    {
+        ShowSettings(Settings);
+        Settings.SelectTabCommand.Execute(SettingsTab.Accounts);
+    }
 
     /// <summary>
     /// Affiche l'écran de premier lancement s'il n'a jamais été vu (voir

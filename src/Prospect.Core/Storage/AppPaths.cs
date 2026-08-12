@@ -49,6 +49,14 @@ public sealed class AppPaths
     /// <summary>Chemin du fichier de réglages globaux (<c>prospect.json</c>).</summary>
     public string SettingsFilePath => Path.Combine(RootDirectory, "prospect.json");
 
+    /// <summary>
+    /// Chemin du secret de session du compte Vintage Story (<c>session.json</c>). Un fichier à
+    /// part, en permissions restrictives (voir <see cref="Auth.FileSecretStore"/>) : une session
+    /// n'est pas un réglage et n'a rien à faire dans <see cref="SettingsFilePath"/>, que
+    /// l'utilisateur est justement invité à ouvrir à la main.
+    /// </summary>
+    public string SessionFilePath => Path.Combine(RootDirectory, "session.json");
+
     private static string ComputeDefaultRoot(IAppEnvironment environment) => environment.CurrentOperatingSystem switch
     {
         AppOperatingSystem.Windows => ComputeWindowsRoot(environment),

@@ -60,7 +60,8 @@ public sealed class InstanceCardViewModelTests
         var dotnetLocator = new FakeDotnetLocator();
         var tracker = new RunningInstanceTracker(service, clock);
         var launcher = new GameLauncher(
-            repository, versions, dotnetLocator, tracker, new LinuxGameLaunchStrategy(fileSystem), processRunner, fileSystem, Paths, clock);
+            repository, versions, dotnetLocator, tracker, new LinuxGameLaunchStrategy(fileSystem), processRunner, fileSystem, Paths, clock,
+            AccountDoubles.SignedOut(), AccountDoubles.ClientSettings(fileSystem));
         var overlay = new RecordingOverlayService();
         var toasts = new RecordingToastService();
         var updateCache = new ModUpdateCheckCache();
@@ -201,7 +202,8 @@ public sealed class InstanceCardViewModelTests
         var versions = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
         var tracker = new RunningInstanceTracker(service, clock);
         var launcher = new GameLauncher(
-            repository, versions, new FakeDotnetLocator(), tracker, new LinuxGameLaunchStrategy(fileSystem), new FakeProcessRunner(), fileSystem, Paths, clock);
+            repository, versions, new FakeDotnetLocator(), tracker, new LinuxGameLaunchStrategy(fileSystem), new FakeProcessRunner(), fileSystem, Paths, clock,
+            AccountDoubles.SignedOut(), AccountDoubles.ClientSettings(fileSystem));
         var updateCache = new ModUpdateCheckCache();
         updateCache.Store(record.Slug, SampleReport(2));
 
@@ -277,7 +279,8 @@ public sealed class InstanceCardViewModelTests
         var versions = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
         var tracker = new RunningInstanceTracker(service, clock);
         var launcher = new GameLauncher(
-            repository, versions, new FakeDotnetLocator(), tracker, new LinuxGameLaunchStrategy(fileSystem), new FakeProcessRunner(), fileSystem, Paths, clock);
+            repository, versions, new FakeDotnetLocator(), tracker, new LinuxGameLaunchStrategy(fileSystem), new FakeProcessRunner(), fileSystem, Paths, clock,
+            AccountDoubles.SignedOut(), AccountDoubles.ClientSettings(fileSystem));
         var overlay = new RecordingOverlayService();
         var toasts = new RecordingToastService();
         var dispatcher = new ImmediateUiDispatcher();

@@ -286,10 +286,26 @@
   <x:String x:Key="Settings_NetworkConcurrencyLabel">Téléchargements simultanés</x:String>
   <x:String x:Key="Settings_NetworkConcurrencyHint">Utilisé pour les versions du jeu et les mods.</x:String>
 
-  <!-- Comptes -->
-  <x:String x:Key="Settings_AccountsSectionTitle">Comptes</x:String>
-  <x:String x:Key="Settings_AccountsEmptyTitle">Pas encore de compte</x:String>
-  <x:String x:Key="Settings_AccountsEmptyDescription">Arrive avec la connexion au compte Vintage Story.</x:String>
+  <!-- Comptes. Les messages d'échec ne sont pas ici : ils dépendent du cas rencontré, donc
+       calculés par SettingsAccountsViewModel via Resources/UiText.cs (section Account). -->
+  <x:String x:Key="Settings_AccountsSectionTitle">Compte Vintage Story</x:String>
+  <x:String x:Key="Settings_AccountsIntro">Se connecter n'est utile que pour le multijoueur : ta session est écrite dans chaque instance au lancement, c'est le jeu qui s'authentifie. Télécharger et jouer en solo n'en a jamais besoin.</x:String>
+  <x:String x:Key="Settings_AccountsEmailLabel">Adresse du compte</x:String>
+  <x:String x:Key="Settings_AccountsPasswordLabel">Mot de passe</x:String>
+  <x:String x:Key="Settings_AccountsPasswordHint">Ton mot de passe sert à obtenir la session, puis il est oublié : Prospect ne le conserve nulle part.</x:String>
+  <x:String x:Key="Settings_AccountsSignIn">Se connecter</x:String>
+  <x:String x:Key="Settings_AccountsSigningIn">Connexion en cours…</x:String>
+  <x:String x:Key="Settings_AccountsTwoFactorTitle">Code de vérification</x:String>
+  <x:String x:Key="Settings_AccountsTwoFactorLabel">Code à six chiffres</x:String>
+  <x:String x:Key="Settings_AccountsTwoFactorHint">Ton compte demande une double authentification. Ouvre ton application de codes et recopie celui affiché.</x:String>
+  <x:String x:Key="Settings_AccountsTwoFactorSubmit">Valider le code</x:String>
+  <x:String x:Key="Settings_AccountsTwoFactorCancel">Annuler</x:String>
+  <x:String x:Key="Settings_AccountsSignedInTitle">Connecté</x:String>
+  <x:String x:Key="Settings_AccountsSignedInHint">La session multijoueur est injectée dans chaque instance au moment où tu lances le jeu.</x:String>
+  <x:String x:Key="Settings_AccountsSignOut">Se déconnecter</x:String>
+
+  <!-- Déconnexion du compte -->
+  <x:String x:Key="Dialog_SignOut_Confirm">Se déconnecter</x:String>
 
   <!-- À propos -->
   <x:String x:Key="Settings_AboutDescription">Launcher indépendant pour Vintage Story. Instances isolées, gestion multi-versions et navigateur ModDB intégré. Sans affiliation avec Anego Studios.</x:String>
@@ -305,7 +321,7 @@
        Titres/sous-titres/libellés d'action des lignes de checklist NE SONT PAS ici : ils sont
        calculés par FirstRunScreenViewModel (état réel des services), donc dans Resources/UiText.cs
        comme le reste des textes produits par du code C# plutôt que liés en XAML direct. -->
-  <x:String x:Key="FirstRun_Description">Avant de créer ta première instance, vérifions que tout est prêt : le dossier de données et une version du jeu installée.</x:String>
+  <x:String x:Key="FirstRun_Description">Avant de créer ta première instance, vérifions que tout est prêt : le dossier de données, une version du jeu installée, et ton compte si tu comptes jouer en multijoueur.</x:String>
   <x:String x:Key="FirstRun_StartButton">Commencer</x:String>
   <x:String x:Key="FirstRun_SkipButton">Passer</x:String>
 

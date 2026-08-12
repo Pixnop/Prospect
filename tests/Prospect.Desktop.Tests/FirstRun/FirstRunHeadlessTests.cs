@@ -37,8 +37,9 @@ public sealed class FirstRunHeadlessTests
         var firstRun = shell.Overlay.Active.ShouldBeOfType<FirstRunScreenViewModel>();
         window.GetVisualDescendants().OfType<FirstRunScreenView>().ShouldNotBeEmpty();
         // Ni version installée ni VS Launcher détecté sur ce conteneur de test : dossier de données
-        // (toujours satisfait) + version du jeu (proposée), pas de troisième entrée.
-        firstRun.Steps.Count.ShouldBe(2);
+        // (toujours satisfait), version du jeu (proposée) et compte (proposé), pas de quatrième
+        // entrée.
+        firstRun.Steps.Count.ShouldBe(3);
 
         window.Close();
     }
@@ -126,8 +127,8 @@ public sealed class FirstRunHeadlessTests
         shell.ShowFirstRunIfNeeded();
         window.Settle();
         var firstRun = shell.Overlay.Active.ShouldBeOfType<FirstRunScreenViewModel>();
-        firstRun.Steps.Count.ShouldBe(3);
-        var vslStep = firstRun.Steps[2];
+        firstRun.Steps.Count.ShouldBe(4);
+        var vslStep = firstRun.Steps[3];
         vslStep.ActionCommand.ShouldBeSameAs(firstRun.OpenVslAdoptionCommand);
 
         await firstRun.OpenVslAdoptionCommand.ExecuteAsync(null);

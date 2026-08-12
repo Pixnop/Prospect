@@ -4,6 +4,7 @@ using Avalonia;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Prospect.Core.Auth;
 using Prospect.Core.Common;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Http;
@@ -77,6 +78,7 @@ public static class CompositionRoot
         services.AddSingleton<InstanceService>();
 
         AddSettings(services);
+        AddAuth(services, httpMessageHandler);
         AddGameVersions(services, httpMessageHandler);
         AddLaunching(services);
         AddModDb(services, httpMessageHandler);
@@ -184,6 +186,17 @@ public static class CompositionRoot
     {
         services.AddSingleton<SettingsMigrationPipeline>();
         services.AddSingleton<SettingsService>();
+    }
+
+    // Compte Vintage Story (docs/architecture.md, « Après le MVP ») : un client HTTP à part, avec un
+    // délai court — une connexion qui traîne au-delà de quinze secondes n'aboutira pas — et le
+    // stockage de session derrière ISecretStore, le seul endroit du graphe qui sait où vit le secret.
+    private static void AddAuth(IServiceCollection services, HttpMessageHandler? httpMessageHandler)
+    {
+        services.AddSingleton(_ => new VsAccountClient(CreateHttpClient(httpMessageHandler, TimeSpan.FromSeconds(15))));
+        services.AddSingleton<ISecretStore, FileSecretStore>();
+        services.AddSingleton<VsAccountService>();
+        services.AddSingleton<ClientSettingsSessionWriter>();
     }
 
     // Les deux clients HTTP sont construits ici, et pas résolus par type, parce qu'ils n'ont pas le

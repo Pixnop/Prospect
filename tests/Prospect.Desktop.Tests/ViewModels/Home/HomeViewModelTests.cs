@@ -109,7 +109,9 @@ public class HomeViewModelTests
             new FakeProcessRunner(),
             fileSystem,
             Paths,
-            clock);
+            clock,
+            AccountDoubles.SignedOut(),
+            AccountDoubles.ClientSettings(fileSystem));
 
         return (launcher, tracker);
     }

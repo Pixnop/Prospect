@@ -167,6 +167,35 @@ internal static class UiText
     }
 
     /// <summary>
+    /// Textes du compte Vintage Story (Réglages, section Comptes, et checklist de premier
+    /// lancement). Règle tenue pour tous : aucun ne reprend un champ d'API, un code HTTP ou le
+    /// message d'une exception. Un joueur qui se trompe de mot de passe lit une phrase, pas
+    /// « invalidemailorpassword ».
+    /// </summary>
+    internal static class Account
+    {
+        internal const string InvalidCredentials = "Adresse ou mot de passe incorrect.";
+
+        internal const string InvalidTwoFactorCode =
+            "Ce code n'est pas le bon. Il change toutes les trente secondes, retape le dernier affiché.";
+
+        internal const string Refused =
+            "La connexion a été refusée. Vérifie ton compte sur vintagestory.at, puis réessaie.";
+
+        internal const string ServiceUnavailable =
+            "Le service de compte de Vintage Story ne répond pas. Vérifie ta connexion et réessaie.";
+
+        internal const string UnknownPlayerName = "ce compte";
+
+        internal const string SignOutConfirmMessage =
+            "Ta session sera effacée de cet ordinateur. Le jeu démarrera sans multijoueur tant que tu ne te reconnecteras pas.";
+
+        internal static string SignOutConfirmTitle(string playerName) => $"Déconnecter « {playerName} » ?";
+
+        internal static string SignedInSubtitle(string playerName) => $"Connecté en tant que {playerName}.";
+    }
+
+    /// <summary>
     /// Textes du navigateur de mods et de l'onglet Mods d'une instance
     /// (design/ui_kits/launcher/screen-mods.jsx et components/launcher/ModRow.jsx).
     /// </summary>
@@ -566,6 +595,9 @@ internal static class UiText
         internal const string DataFolderTitle = "Dossier de données";
         internal const string GameVersionTitle = "Version du jeu";
         internal const string VslDetectedTitle = "Installations VS Launcher détectées";
+        internal const string AccountTitle = "Compte Vintage Story";
+        internal const string AccountSignedOut = "Facultatif : utile seulement pour jouer en multijoueur.";
+        internal const string AccountSignInAction = "Se connecter";
         internal const string InstallVersionAction = "Installer";
         internal const string AdoptAction = "Adopter";
         internal const string NoVersionInstalled = "aucune installée";

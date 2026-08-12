@@ -68,7 +68,8 @@ public sealed class InstanceDetailViewModelTests
         var dotnetLocator = new FakeDotnetLocator();
         var tracker = new RunningInstanceTracker(service, clock);
         var launcher = new GameLauncher(
-            repository, versions, dotnetLocator, tracker, new LinuxGameLaunchStrategy(fileSystem), processRunner, fileSystem, Paths, clock);
+            repository, versions, dotnetLocator, tracker, new LinuxGameLaunchStrategy(fileSystem), processRunner, fileSystem, Paths, clock,
+            AccountDoubles.SignedOut(), AccountDoubles.ClientSettings(fileSystem));
         var environment = new FakeAppEnvironment { CurrentOperatingSystem = linux ? AppOperatingSystem.Linux : AppOperatingSystem.Windows };
         var overlay = new RecordingOverlayService();
         var toasts = new RecordingToastService();
@@ -201,7 +202,9 @@ public sealed class InstanceDetailViewModelTests
             fixture.Slug,
             fixture.Service,
             fixture.Repository,
-            new GameLauncher(fixture.Repository, fixture.Versions, fixture.DotnetLocator, fixture.Tracker, new MacGameLaunchStrategy(), fixture.ProcessRunner, fixture.FileSystem, Paths, new FakeClock(Now)),
+            new GameLauncher(
+                fixture.Repository, fixture.Versions, fixture.DotnetLocator, fixture.Tracker, new MacGameLaunchStrategy(), fixture.ProcessRunner,
+                fixture.FileSystem, Paths, new FakeClock(Now), AccountDoubles.SignedOut(), AccountDoubles.ClientSettings(fixture.FileSystem)),
             fixture.Tracker,
             fixture.Mods,
             fixture.ModInstallService,
@@ -369,5 +372,6 @@ public sealed class InstanceDetailViewModelTests
 
     private static GameLauncher MakeLauncher(Fixture fixture) => new(
         fixture.Repository, fixture.Versions, fixture.DotnetLocator, fixture.Tracker,
-        new LinuxGameLaunchStrategy(fixture.FileSystem), fixture.ProcessRunner, fixture.FileSystem, Paths, new FakeClock(Now));
+        new LinuxGameLaunchStrategy(fixture.FileSystem), fixture.ProcessRunner, fixture.FileSystem, Paths, new FakeClock(Now),
+        AccountDoubles.SignedOut(), AccountDoubles.ClientSettings(fixture.FileSystem));
 }

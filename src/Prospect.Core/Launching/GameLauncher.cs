@@ -1,5 +1,6 @@
 using System.IO.Abstractions;
 
+using Prospect.Core.Auth;
 using Prospect.Core.Common;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
@@ -11,10 +12,10 @@ namespace Prospect.Core.Launching;
 /// <summary>
 /// Construit et démarre la commande de lancement du jeu pour une instance (docs/architecture.md,
 /// section « 3. Lancement ») : valide tout ce qui doit l'être avant de spawner un processus,
-/// construit la ligne de commande via la stratégie de l'OS courant, capture la sortie du
-/// processus dans le journal de l'instance, puis délègue le suivi du cycle de vie à
-/// <see cref="RunningInstanceTracker"/>. Ne bloque jamais jusqu'à la sortie du jeu : revient dès
-/// que le processus est démarré.
+/// construit la ligne de commande via la stratégie de l'OS courant, injecte la session de compte
+/// dans le dataPath si quelqu'un est connecté, capture la sortie du processus dans le journal de
+/// l'instance, puis délègue le suivi du cycle de vie à <see cref="RunningInstanceTracker"/>. Ne
+/// bloque jamais jusqu'à la sortie du jeu : revient dès que le processus est démarré.
 /// </summary>
 public sealed class GameLauncher
 {
@@ -27,6 +28,8 @@ public sealed class GameLauncher
     private readonly IFileSystem _fileSystem;
     private readonly AppPaths _appPaths;
     private readonly IClock _clock;
+    private readonly VsAccountService _accounts;
+    private readonly ClientSettingsSessionWriter _clientSettings;
 
     public GameLauncher(
         IInstanceRepository instances,
@@ -37,7 +40,9 @@ public sealed class GameLauncher
         IProcessRunner processRunner,
         IFileSystem fileSystem,
         AppPaths appPaths,
-        IClock clock)
+        IClock clock,
+        VsAccountService accounts,
+        ClientSettingsSessionWriter clientSettings)
     {
         ArgumentNullException.ThrowIfNull(instances);
         ArgumentNullException.ThrowIfNull(installedVersions);
@@ -48,6 +53,8 @@ public sealed class GameLauncher
         ArgumentNullException.ThrowIfNull(fileSystem);
         ArgumentNullException.ThrowIfNull(appPaths);
         ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(accounts);
+        ArgumentNullException.ThrowIfNull(clientSettings);
 
         _instances = instances;
         _installedVersions = installedVersions;
@@ -58,6 +65,8 @@ public sealed class GameLauncher
         _fileSystem = fileSystem;
         _appPaths = appPaths;
         _clock = clock;
+        _accounts = accounts;
+        _clientSettings = clientSettings;
     }
 
     /// <summary>
@@ -110,11 +119,44 @@ public sealed class GameLauncher
         var logPath = GetLogFilePath(slug);
         PrepareLogFile(logPath, instance);
 
+        await InjectAccountSessionAsync(slug, logPath, cancellationToken).ConfigureAwait(false);
+
         var request = new ProcessStartRequest(executablePath, arguments, instance.Metadata.Launch.Env, installed.Directory);
         var process = _processRunner.Start(request);
         WireLogCapture(process, logPath);
 
         return await _tracker.TrackStartedAsync(slug, process, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Pose la session de compte dans le <c>clientsettings.json</c> du dataPath, juste avant le
+    /// spawn, pour que le JEU se considère connecté en multijoueur (docs/research, section d).
+    /// Sans compte connecté, ce chemin ne touche rigoureusement à rien : le jeu démarre non
+    /// authentifié, exactement comme avant l'existence de cette fonctionnalité.
+    /// </summary>
+    /// <remarks>
+    /// Un échec d'injection ne fait jamais échouer un lancement : le joueur voulait jouer, pas
+    /// forcément se connecter, et un fichier de réglages illisible ou un disque plein n'ont pas à
+    /// lui interdire son solo. La raison part dans le journal de l'instance — visible depuis
+    /// l'onglet Journal — plutôt que d'être avalée en silence comme le fait VS Launcher.
+    /// </remarks>
+    private async Task InjectAccountSessionAsync(string slug, string logPath, CancellationToken cancellationToken)
+    {
+        if (_accounts.CurrentSession is not { } session)
+        {
+            return;
+        }
+
+        try
+        {
+            await _clientSettings
+                .WriteAsync(_instances.GetDataDirectory(slug), session, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is CorruptedFileException or IOException or UnauthorizedAccessException)
+        {
+            AppendLogLine(logPath, $"Session multijoueur non injectée : {exception.Message}");
+        }
     }
 
     // Écrit un en-tête horodaté (IClock, pas DateTimeOffset.UtcNow) puis remplace tout contenu

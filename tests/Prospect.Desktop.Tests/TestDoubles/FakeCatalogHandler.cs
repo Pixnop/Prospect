@@ -13,6 +13,9 @@ internal sealed class FakeCatalogHandler : HttpMessageHandler
     /// <summary>Serveur ModDB factice adossé à ce gestionnaire, pour les écrans de mods.</summary>
     public FakeModDbHandler ModDb { get; } = new();
 
+    /// <summary>Service de compte factice, pour la section Comptes des Réglages.</summary>
+    public FakeVsAuthHandler Auth { get; } = new();
+
     /// <summary>Extrait de <c>stable.json</c> au format réel (docs/research/vslauncher-et-distribution.md).</summary>
     public const string StableJson = """
     {
@@ -57,6 +60,14 @@ internal sealed class FakeCatalogHandler : HttpMessageHandler
         if (!IsOnline)
         {
             throw new HttpRequestException("Réseau simulé indisponible.");
+        }
+
+        // Le service de compte a son propre hôte : le router ici plutôt que dans le ModDB garde la
+        // garantie centrale de cet assembly, à savoir qu'AUCUNE requête ne peut sortir, pas même une
+        // tentative de connexion.
+        if (request.RequestUri?.Host == "auth3.vintagestory.at")
+        {
+            return Task.FromResult(Auth.Respond(request));
         }
 
         var path = request.RequestUri?.AbsolutePath ?? string.Empty;

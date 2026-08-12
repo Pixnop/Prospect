@@ -30,6 +30,13 @@ internal static class TestServiceProviderFactory
         var services = new ServiceCollection();
         CompositionRoot.ConfigureServices(services, fileSystem, catalogHandler);
 
+        // Troisième substitution, après le système de fichiers et le réseau, et pour exactement la
+        // même raison : SystemUnixFilePermissions appelle la BCL directement, donc le VRAI disque,
+        // pendant que tout le reste du conteneur travaille sur le MockFileSystem. La dernière
+        // inscription gagne à la résolution, ce qui évite un troisième paramètre de seam sur la
+        // composition root de production.
+        services.AddSingleton<IUnixFilePermissions, RecordingUnixFilePermissions>();
+
         return services.BuildServiceProvider();
     }
 

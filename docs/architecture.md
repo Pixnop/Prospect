@@ -140,7 +140,7 @@ Prospect.Core/
 ├── Instances/       # modèle Instance, InstanceService (CRUD), scan du dossier instances/
 ├── GameVersions/    # catalogue distant, installations locales, téléchargement, extraction
 ├── Runtime/         # détection du runtime .NET requis par le jeu
-├── Auth/            # (post-MVP) session compte vintagestory.at pour le multijoueur
+├── Auth/            # session compte vintagestory.at pour le multijoueur (client, ISecretStore)
 ├── Launching/       # construction de la ligne de commande, suivi du processus, playtime
 ├── ModDb/           # client API, recherche, installation, provenance, détection de MàJ
 ├── Modpacks/        # manifest, export, import
@@ -173,7 +173,7 @@ graph LR
     end
     MD -->|REST| API[mods.vintagestory.at/api]
     GV -->|"catalogue + téléchargements, anonymes"| CDN[api / cdn.vintagestory.at]
-    GL -.->|"post-MVP : session multijoueur"| ACC[auth3.vintagestory.at]
+    GL -.->|"session multijoueur, si un compte est connecté"| ACC[auth3.vintagestory.at]
     GL -->|"--dataPath"| GAME[processus Vintagestory]
 ```
 
@@ -632,14 +632,18 @@ les fondations.
 
 ## Après le MVP (repéré pendant la recherche, hors périmètre actuel)
 
-La connexion au compte vintagestory.at devient une feature de confort multijoueur : le
-contrat est connu (`POST auth3.vintagestory.at/v2/gamelogin` en form-urlencoded, champs
-`email`/`password`/`totpcode`/`prelogintoken`, trois cas d'erreur dont le 2FA en deux
-passes) et le résultat s'injecte dans le `clientsettings.json` du dataPath juste avant
-le lancement, c'est le jeu qui s'authentifie, pas le launcher. Sans compte connecté, le
-jeu démarre très bien en mode non authentifié. Quand on la fera, la session ira dans un
-vrai stockage de secrets (`ISecretStore` : fichier 600 d'abord, trousseau OS ensuite),
-pas en clair dans la config comme le faisait VS Launcher.
+**Fait, domaine `Auth/`** : la connexion au compte vintagestory.at, feature de confort
+multijoueur. Le contrat documenté est suivi tel quel (`POST
+auth3.vintagestory.at/v2/gamelogin` en form-urlencoded, champs
+`email`/`password`/`totpcode`/`prelogintoken`, machine à deux passes pour le 2FA, refus
+typés) et le résultat s'injecte dans le `clientsettings.json` du dataPath juste avant le
+lancement : c'est le jeu qui s'authentifie, pas le launcher. Sans compte connecté, le jeu
+démarre en mode non authentifié et rien n'est écrit. Le mot de passe ne fait que
+transiter, en paramètre de méthode, et n'est ni stocké ni journalisé ; la session vit
+derrière `ISecretStore`, aujourd'hui un `session.json` séparé en 600, pas en clair dans la
+config comme le faisait VS Launcher. **Reste à faire** : le trousseau de l'OS (DPAPI,
+Secret Service, Keychain) derrière la même interface, et sur Windows la protection se
+limite pour l'instant aux ACL par défaut du profil utilisateur.
 
 Également notés pour plus tard : sauvegardes automatiques d'instance avant lancement
 (VS Launcher le faisait, les joueurs y tiennent), installation automatique du runtime
