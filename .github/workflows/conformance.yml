@@ -20,7 +20,12 @@ env:
 
 jobs:
   conformance:
-    name: Game conformance suite (VS ${{ env.VS_VERSION }})
+    # Nom statique obligatoirement : le contexte env n'est pas résolu dans jobs.<id>.name (seuls
+    # github, needs, strategy, matrix, vars et inputs le sont), et un ${{ env.… }} ici rendait le
+    # fichier ENTIER invalide — GitHub créait un run fantôme en échec à chaque push, sans jamais
+    # honorer ni un dispatch ni le cron du dimanche. La version testée reste lisible dans VS_VERSION
+    # ci-dessus et dans les logs des étapes qui s'en servent.
+    name: Game conformance suite
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
