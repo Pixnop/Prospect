@@ -1,8 +1,10 @@
 name: conformance
 
-# Volontairement PAS de pull_request ni de push : cet étage boote un vrai serveur Vintage Story
-# (voir tests/Prospect.GameConformance.Tests/README.md) et n'a donc rien à faire dans la gate
-# d'une pull request, qui doit rester rapide. Déclenchement manuel ou hebdomadaire seulement.
+# Volontairement PAS de pull_request ni de push : les deux étages de ce workflow sortent de la
+# machine. Le premier boote un vrai serveur Vintage Story (voir
+# tests/Prospect.GameConformance.Tests/README.md), le second interroge le VRAI ModDB
+# (tests/*/Live). Ni l'un ni l'autre n'a sa place dans la gate d'une pull request, qui doit rester
+# rapide et n'appeler aucun service tiers. Déclenchement manuel ou hebdomadaire seulement.
 on:
   workflow_dispatch:
   schedule:
@@ -97,4 +99,63 @@ jobs:
         with:
           name: conformance-server-logs
           path: /tmp/atlas/**/*.log
+          if-no-files-found: warn
+
+  # Étage « conditions réelles » : les tests marqués [LiveFact]/[LiveAvaloniaFact] appellent le VRAI
+  # ModDB (https://mods.vintagestory.at). Job séparé de la conformité moteur : il ne partage ni ses
+  # dépendances (aucune installation Vintage Story à télécharger) ni ses causes d'échec (le ModDB
+  # peut être indisponible sans que le launcher ait bougé), et un échec ici ne doit pas se lire
+  # comme une régression de conformité au jeu.
+  #
+  # Ces tests espacent leurs requêtes d'au moins 1,5 s et se nomment dans leur User-Agent (voir
+  # tests/Prospect.Core.Tests/Live/LiveModDb.cs). ci.yml, la gate des pull requests, n'est pas
+  # touché : sans PROSPECT_LIVE, ces tests sont rapportés « Skipped » et aucune socket ne s'ouvre.
+  live-moddb:
+    name: Real ModDB suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Installation du SDK .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-live-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-live-
+
+      - name: Restauration des paquets
+        run: dotnet restore
+
+      - name: Build (Release)
+        run: dotnet build --no-restore -c Release
+
+      # Filtré sur la catégorie Live : le reste de la suite tourne déjà dans ci.yml, sur les trois
+      # OS, et n'a aucune raison d'être rejoué ici. CollectCoverage=false parce que le seuil de
+      # couverture de Prospect.Core.Tests porte sur la suite ENTIÈRE, pas sur un sous-ensemble
+      # filtré qui ne touche qu'une poignée de classes.
+      - name: Tests en conditions réelles (Release)
+        env:
+          PROSPECT_LIVE: "1"
+        run: >
+          dotnet test
+          --no-build -c Release
+          --filter "Category=Live"
+          -p:CollectCoverage=false
+          --logger "trx;LogFileName=live-moddb.trx"
+          --results-directory TestResults
+
+      - name: Publication des résultats
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: live-moddb-trx
+          path: TestResults/*.trx
           if-no-files-found: warn
