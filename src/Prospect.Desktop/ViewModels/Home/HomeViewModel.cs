@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -25,6 +26,16 @@ namespace Prospect.Desktop.ViewModels.Home;
 /// docs/architecture.md, patterns Repository / Services applicatifs) : ce ViewModel ne fait que
 /// les appeler, jamais de logique métier composée à partir de briques plus basses.
 /// </summary>
+[SuppressMessage(
+    "Design",
+    "CA1001:Types that own disposable fields should be disposable",
+    Justification = "HomeViewModel est un singleton pour toute la durée de l'application (voir CompositionRoot). " +
+        "Le rendre IDisposable serait dangereux : ShellViewModel.Navigate dispose systématiquement la page SORTANTE " +
+        "quand elle implémente IDisposable, et Home redevient page sortante à chaque navigation vers Réglages/Mods/" +
+        "Versions/détail d'instance. Le sémaphore de _refreshGate serait alors coupé dès la première navigation, " +
+        "cassant tout rafraîchissement ultérieur d'un Accueil qu'on revisite ensuite. WaitAsync n'alloue jamais le " +
+        "AvailableWaitHandle sous-jacent (seuls Wait() ou la lecture de cette propriété le feraient), donc ce " +
+        "sémaphore ne détient en pratique aucune ressource système à libérer.")]
 public sealed partial class HomeViewModel : ObservableObject
 {
     private readonly InstanceService _instanceService;
@@ -41,6 +52,14 @@ public sealed partial class HomeViewModel : ObservableObject
     private readonly Func<string, ImportModpackViewModel> _importFactory;
     private readonly List<InstanceCardViewModel> _allInstances = [];
     private readonly NewInstanceTileViewModel _newInstanceTile;
+
+    // Sérialise les scans (voir RefreshAsync) : jamais disposé, HomeViewModel est un singleton
+    // qui vit toute la durée de l'application (voir CompositionRoot) et n'implémente pas
+    // IDisposable — l'ajouter ferait disposer ce sémaphore par ShellViewModel.Navigate() au
+    // premier changement de page, cassant tout rafraîchissement ultérieur d'un Accueil qu'on
+    // revisite. WaitAsync n'alloue jamais le AvailableWaitHandle sous-jacent (seuls Wait() ou la
+    // lecture de cette propriété le feraient), donc il n'y a rien à libérer côté OS en pratique.
+    private readonly SemaphoreSlim _refreshGate = new(1, 1);
 
     public HomeViewModel(
         InstanceService instanceService,
@@ -155,8 +174,35 @@ public sealed partial class HomeViewModel : ObservableObject
         var count => $"{count} instances",
     };
 
+    /// <summary>
+    /// Point d'entrée unique du rafraîchissement. Sérialise les scans via <see cref="_refreshGate"/>
+    /// plutôt que de les laisser se chevaucher : depuis que <see cref="ViewModels.Shell.ShellViewModel"/>
+    /// déclenche ce rafraîchissement tout seul au démarrage (l'angle mort corrigé — voir sa
+    /// docstring), un second appel (création d'instance, adoption VS Launcher, import de modpack)
+    /// peut très bien arriver pendant que ce premier scan tourne encore. Deux scans VRAIMENT
+    /// concurrents entrelaceraient leurs <c>Clear()</c>/<c>AddRange()</c> sur <see cref="_allInstances"/>
+    /// (et disposeraient les mêmes cartes deux fois) — mais fusionner le second appel dans le
+    /// premier (au lieu de le mettre en file) serait FAUX : un appel qui arrive après une mutation
+    /// (nouvelle instance créée, par exemple) doit voir un scan qui la trouve, pas le résultat d'un
+    /// scan parti avant qu'elle n'existe. La file d'attente (un seul scan à la fois, mais chaque
+    /// appelant obtient bien SON propre scan, exécuté après celui qui le précède) est le seul
+    /// choix qui satisfait les deux contraintes à la fois.
+    /// </summary>
     [RelayCommand]
     private async Task RefreshAsync(CancellationToken cancellationToken = default)
+    {
+        await _refreshGate.WaitAsync(cancellationToken).ConfigureAwait(true);
+        try
+        {
+            await RefreshCoreAsync(cancellationToken).ConfigureAwait(true);
+        }
+        finally
+        {
+            _refreshGate.Release();
+        }
+    }
+
+    private async Task RefreshCoreAsync(CancellationToken cancellationToken)
     {
         IsLoading = true;
         try
