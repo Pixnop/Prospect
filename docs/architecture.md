@@ -504,11 +504,52 @@ sur la barre native selon la plateforme. Et les quatre états système maquetté
 aucune instance, ModDB injoignable, premier lancement) sont des états de ViewModel à
 modéliser dès le début, pas des écrans à rajouter après coup.
 
+### Décorations de fenêtre : la recette qui marche
+
+Le chemin « barre de titre maison » demande TROIS propriétés ensemble sur `MainWindow`,
+et non deux :
+
+| Propriété | Valeur | Pourquoi |
+|---|---|---|
+| `ExtendClientAreaToDecorationsHint` | `true` | La zone client couvre la bande de légende. |
+| `ExtendClientAreaChromeHints` | `NoChrome` | **La plus importante.** Sa valeur par défaut est `Default`, qui est un alias de `PreferSystemChrome` (métadonnées d'Avalonia 11.3.20 : propriété enregistrée avec la valeur 2). Ne pas l'écrire revient à demander au système de dessiner SA barre de titre par-dessus la nôtre — c'est exactement le défaut de double barre observé sur Windows. |
+| `ExtendClientAreaTitleBarHeightHint` | `38` | La bande que le système considère comme légende (déplacement, accrochage) doit coïncider avec notre `TitlebarView`, dimensionnée par le jeton `TitlebarH`. |
+
+`SystemDecorations` reste à `Full` : `BorderOnly` ne masque aucun chrome, il retire
+seulement le cadre non client sur lequel Windows appuie l'ombre, les poignées de
+redimensionnement et l'accrochage. Les propriétés sont figées par un test headless
+(`ShellHeadlessTests`), qui vérifie aussi que la constante C# et le jeton XAML de hauteur
+ne divergent pas ; le rendu lui-même n'est vérifiable qu'à l'œil, sur Windows.
+
+### Rendu paresseux du navigateur de mods
+
+`/api/mods` ne pagine pas : le catalogue entier (plus de 8 000 fiches) arrive en un appel.
+La recherche, les filtres et le tri travaillent donc sur la liste COMPLÈTE en mémoire,
+mais le rendu, lui, est fenêtré : `ModBrowserViewModel` ne construit qu'une trentaine de
+`ModCardViewModel` à la fois, étend la fenêtre à l'approche du bas du défilement, et la
+remet à zéro à chaque changement de recherche, de tag, de tri ou d'instance cible.
+
+Le fenêtrage a été préféré à une virtualisation de panneau pour deux raisons. Avalonia
+11.3 ne fournit aucun panneau virtualisant en grille dans `Avalonia.Controls` (seul
+`VirtualizingStackPanel` est présent ; `ItemsRepeater` et ses layouts vivent dans un
+paquet à part), donc l'adopter voudrait dire ajouter une dépendance. Et surtout, une
+virtualisation ne virtualise que les CONTRÔLES : les 8 000 ViewModels seraient toujours
+construits, donc les milliers de téléchargements et de décodages de logos qu'ils
+déclenchent aussi. C'est ce coût-là, pas celui des contrôles, qui tuait le processus.
+
+Le cache de logos (`ModLogoCache`) complète le dispositif : il réduit chaque vignette à
+sa taille d'affichage plutôt que de garder la résolution du CDN, borne le nombre
+d'entrées mémorisées, et ne libère jamais un bitmap déjà distribué — un `Image.Source`
+pointant vers un `Bitmap` libéré fait lever une `NullReferenceException` dans la passe de
+mise en page suivante.
+
 Les règles restent : aucun code-behind au-delà d'`InitializeComponent`, ViewModels
 constructibles sans UI (testables en headless), textes en français centralisés dans un
 dictionnaire de ressources. La voix du produit est spécifiée dans le readme du design :
 tutoiement, casse de phrase, boutons à l'infinitif, valeurs machine en monospace,
-jamais d'emoji.
+jamais d'emoji. Deux dérogations documentées à la première règle : `TitlebarView`
+(primitives natives de `Window`) et `ModBrowserView` (position de défilement, un fait de
+vue que rien ne gagnerait à traverser un ViewModel).
 
 ## Qualité et CI
 
@@ -525,6 +566,26 @@ Le workflow `ci.yml` tourne sur push vers `main` et sur toute PR :
    soit réellement bloquante sur la PR.
 3. **format** : `dotnet format --verify-no-changes`, le garde-fou de style le moins
    cher qui existe.
+
+Un second workflow, `conformance.yml`, porte tout ce qui sort de la machine et n'a donc
+rien à faire dans la gate d'une PR. Déclenchement manuel ou hebdomadaire uniquement, deux
+jobs indépendants :
+
+- **conformance** : boote un vrai serveur Vintage Story headless et confronte nos
+  hypothèses au moteur (`PROSPECT_CONFORMANCE=1`).
+- **live-moddb** : interroge le VRAI ModDB (`PROSPECT_LIVE=1`). Le catalogue complet est
+  relevé et mappé en entier, le vocabulaire de `/api/tags` est compté, et le chemin du
+  clic sur une fiche est joué en headless sur des formes réelles diverses (mod le plus
+  téléchargé, sans logo, sans `modidstr`, à identifiants multiples, sans tag, outil
+  externe, le plus ancien, le plus récent). Les requêtes sont espacées d'au moins 1,5 s
+  et le `User-Agent` du client est suffixé pour être reconnaissable côté serveur.
+
+Les deux étages partagent la même mécanique d'opt-in : l'attribut pose son `Skip` dès sa
+construction, donc sans la variable d'environnement le test est rapporté « Skipped » sans
+qu'aucun serveur ne démarre ni qu'aucune socket ne s'ouvre. Ce que l'étage live attrape,
+aucun double ne le peut : nos faux catalogues ont trois mods, le vrai en a plus de huit
+mille, et c'est cet écart d'échelle qui a produit les défauts que cette suite garde
+désormais.
 
 La protection de branche sur `main` exige les trois. Merge en squash, titre de PR au
 format conventional commits vérifié par une action, ce qui donne un historique propre

@@ -137,7 +137,13 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
     }
     """;
 
-    public const string TagsJson = """
+    /// <summary>
+    /// Corps de <c>/api/tags</c>. Propriété plutôt que constante, pour la même raison que
+    /// <see cref="CatalogJson"/> : le vocabulaire réel compte plus de deux cents catégories
+    /// (docs/research/moddb-api.md), et les tests qui vérifient le comportement de la rangée de
+    /// tags à cette échelle doivent pouvoir le remplacer.
+    /// </summary>
+    public string TagsJson { get; set; } = """
     {
       "statuscode": "200",
       "tags": [
@@ -188,6 +194,20 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
     // dans les tests headless, pas seulement des octets arbitraires.
     private static readonly byte[] LogoPngBytes = TinyPng.Create();
 
+    /// <summary>
+    /// Octets servis pour toute URL de logo. Les tests d'échelle les remplacent par une vignette
+    /// aux dimensions réelles du CDN (480x320) : c'est la TAILLE DÉCODÉE qui pèse en mémoire, pas
+    /// celle du fichier, et un PNG de 2x2 ne peut donc rien révéler du coût d'un catalogue entier.
+    /// </summary>
+    public byte[] LogoBytes { get; set; } = LogoPngBytes;
+
+    /// <summary>
+    /// Nombre de logos réellement demandés. C'est la mesure qui prouve la paresse du rendu : une
+    /// grille qui matérialise tout le catalogue demande un logo par fiche, une grille fenêtrée n'en
+    /// demande que pour les cartes construites.
+    /// </summary>
+    public int LogoRequestCount { get; private set; }
+
     /// <summary>Faux pour simuler un ModDB injoignable.</summary>
     public bool IsOnline { get; set; } = true;
 
@@ -219,7 +239,12 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
             // le pipeline d'installation, une vignette de logo (.png) pour IModLogoCache. Les
             // confondre servirait des octets de zip comme si c'était une image.
             var isLogo = url.AbsolutePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase);
-            var bytes = isLogo ? LogoPngBytes : ConfigLibArchive;
+            if (isLogo)
+            {
+                LogoRequestCount++;
+            }
+
+            var bytes = isLogo ? LogoBytes : ConfigLibArchive;
 
             var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) };
             response.Content.Headers.ContentType = new MediaTypeHeaderValue(isLogo ? "image/png" : "application/zip");

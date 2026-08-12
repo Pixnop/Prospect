@@ -2,7 +2,9 @@ using System.IO.Abstractions.TestingHelpers;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Prospect.Core.Common;
 using Prospect.Core.GameVersions;
+using Prospect.Core.Instances;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Tests.TestDoubles;
 
@@ -28,6 +30,25 @@ internal static class TestServiceProviderFactory
         CompositionRoot.ConfigureServices(services, fileSystem, catalogHandler);
 
         return services.BuildServiceProvider();
+    }
+
+    /// <summary>
+    /// Crée une instance de travail, pour les tests qui ont besoin que le navigateur de mods ait
+    /// une cible d'installation (et donc des badges de compatibilité) plutôt que la seule entrée
+    /// « Toutes les versions ».
+    /// </summary>
+    /// <returns>Le slug de l'instance créée.</returns>
+    public static async Task<string> SeedTargetInstanceAsync(
+        this ServiceProvider provider,
+        string name = "Homestead",
+        string gameVersion = "1.21.3")
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        var service = provider.GetRequiredService<InstanceService>();
+        var record = await service.CreateAsync(name, GameVersion.Parse(gameVersion));
+
+        return record.Slug;
     }
 
     /// <summary>

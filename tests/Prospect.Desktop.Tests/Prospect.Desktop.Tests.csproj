@@ -24,6 +24,14 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- Étage « conditions réelles » : l'opt-in et la fabrique de client live sont écrits une seule
+       fois, dans Prospect.Core.Tests, et liés ici. Les dupliquer ferait diverger deux copies de la
+       seule chose qui garantit qu'aucune requête ne part sans PROSPECT_LIVE=1. -->
+  <ItemGroup>
+    <Compile Include="..\Prospect.Core.Tests\Live\LiveOptIn.cs" Link="Live\LiveOptIn.cs" />
+    <Compile Include="..\Prospect.Core.Tests\Live\LiveModDb.cs" Link="Live\LiveModDb.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\Prospect.Desktop\Prospect.Desktop.csproj" />
   </ItemGroup>

@@ -80,16 +80,22 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:ModReleaseRowViewModel">
                     <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderSubtle}" Padding="16,10">
+                      <!-- MinWidth plutôt que Width sur la version : les vraies versions de mods
+                           montent à « 1.22.0-pre.10 », plus large que les 76px qui alignaient
+                           joliment les versions courtes des doubles. Le badge, lui, ne porte plus
+                           que la version de jeu visée : la liste des versions compatibles reste
+                           dans sa colonne, tronquée, parce qu'une release réelle en déclare
+                           jusqu'à 23. -->
                       <Grid ColumnDefinitions="Auto,Auto,*,Auto">
-                        <TextBlock Grid.Column="0" Text="{Binding VersionText}" Width="76" VerticalAlignment="Center"
+                        <TextBlock Grid.Column="0" Text="{Binding VersionText}" MinWidth="76" VerticalAlignment="Center"
                                    FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsCaption}"
                                    Foreground="{DynamicResource Text1}" />
-                        <ContentControl Grid.Column="1" Classes="badge" Content="{Binding GameVersionsText}" IsVisible="{Binding ShowBadge}"
+                        <ContentControl Grid.Column="1" Classes="badge" Content="{Binding BadgeText}" IsVisible="{Binding ShowBadge}"
                                         VerticalAlignment="Center"
                                         Classes.stable="{Binding BadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=stable}"
                                         Classes.incompatible="{Binding BadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=incompatible}" />
                         <TextBlock Grid.Column="2" Text="{Binding GameVersionsText}" Margin="10,0,0,0" VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis" IsVisible="{Binding !ShowBadge}"
+                                   TextTrimming="CharacterEllipsis"
                                    FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
                         <TextBlock Grid.Column="3" Text="{Binding DateText}" VerticalAlignment="Center"
                                    FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}"
