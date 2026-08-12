@@ -110,10 +110,17 @@ public sealed class InstanceBackupServiceTests
 
         var backupsDir = fixture.Backups.GetBackupsDirectory(fixture.Slug);
         var dataDir = fixture.Repository.GetDataDirectory(fixture.Slug);
+        var instanceDir = fixture.Repository.GetInstanceDirectory(fixture.Slug);
 
         backupsDir.ShouldNotBe(dataDir);
         backupsDir.StartsWith(dataDir, StringComparison.Ordinal).ShouldBeFalse();
-        fixture.FileSystem.Path.GetDirectoryName(backupsDir).ShouldBe(fixture.Repository.GetInstanceDirectory(fixture.Slug));
+        // Comparé à une valeur reconstruite par le même Path.Combine plutôt qu'un aller-retour par
+        // GetDirectoryName : AppPaths calcule ses chemins avec le System.IO.Path réel (voir sa
+        // docstring) tandis que ce service passe par _fileSystem.Path, deux normalisations qui ne
+        // s'accordent pas forcément caractère pour caractère sur un racine POSIX de test (« /... »)
+        // exécuté sous Windows (le séparateur de tête ne survit pas à GetDirectoryName de la même
+        // façon des deux côtés), sans que ça ne dise rien du vrai bug qu'on veut détecter ici.
+        backupsDir.ShouldBe(fixture.FileSystem.Path.Combine(instanceDir, "backups"));
     }
 
     // ── Création ─────────────────────────────────────────────────────────────────────────────
