@@ -5,6 +5,7 @@ using Avalonia;
 using Microsoft.Extensions.DependencyInjection;
 
 using Prospect.Core.Auth;
+using Prospect.Core.Backups;
 using Prospect.Core.Common;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Http;
@@ -70,12 +71,18 @@ public static class CompositionRoot
         services.AddSingleton<AppPaths>();
         services.AddSingleton<JsonFileStore>();
 
-        // Domaine Instances. Aucune IInstanceMetadataMigration n'est enregistrée : le schéma v1
-        // est le premier, la résolution de IEnumerable<IInstanceMetadataMigration> par le
-        // conteneur donne alors naturellement une séquence vide.
+        // Domaine Instances. InstanceMetadataV1ToV2Migration (chantier Sauvegardes) est la
+        // première vraie migration enregistrée : IEnumerable<IInstanceMetadataMigration> ne
+        // donnait qu'une séquence vide jusqu'ici, le schéma v1 étant le premier schéma réel.
+        services.AddSingleton<IInstanceMetadataMigration, InstanceMetadataV1ToV2Migration>();
         services.AddSingleton<InstanceMetadataMigrationPipeline>();
         services.AddSingleton<IInstanceRepository, FileSystemInstanceRepository>();
         services.AddSingleton<InstanceService>();
+
+        // Sauvegardes d'instance : n'a besoin de rien de plus qu'IInstanceRepository (topologie
+        // disque) et les effets de bord déjà enregistrés plus haut. Enregistré ici, avant
+        // AddLaunching, puisque GameLauncher en dépend (sauvegarde automatique de pré-lancement).
+        services.AddSingleton<InstanceBackupService>();
 
         AddSettings(services);
         AddAuth(services, httpMessageHandler);
@@ -160,6 +167,7 @@ public static class CompositionRoot
             provider.GetRequiredService<IInstanceRepository>(),
             provider.GetRequiredService<GameLauncher>(),
             provider.GetRequiredService<RunningInstanceTracker>(),
+            provider.GetRequiredService<InstanceBackupService>(),
             provider.GetRequiredService<IInstalledModRepository>(),
             provider.GetRequiredService<ModInstallService>(),
             provider.GetRequiredService<ModUpdateChecker>(),

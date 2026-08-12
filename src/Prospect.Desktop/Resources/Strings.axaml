@@ -171,6 +171,21 @@
   <x:String x:Key="Instance_Options_Save">Enregistrer</x:String>
   <x:String x:Key="Instance_Options_ApplyNote">Les changements s'appliquent au prochain lancement.</x:String>
 
+  <!-- ── Sauvegardes (bloc de l'onglet Options) ─────────────────────────────────── -->
+  <x:String x:Key="Instance_Backups_Title">Sauvegardes</x:String>
+  <x:String x:Key="Instance_Backups_Description">Archive complète du dossier de données (mondes, configs, mods), stockée à part de celui-ci et jamais copiée par une duplication.</x:String>
+  <x:String x:Key="Instance_Backups_AutoToggle">Sauvegarder automatiquement avant chaque lancement</x:String>
+  <x:String x:Key="Instance_Backups_KeepCountLabel">Sauvegardes à conserver</x:String>
+  <x:String x:Key="Instance_Backups_CreateNow">Sauvegarder maintenant</x:String>
+  <x:String x:Key="Instance_Backups_EmptyTitle">Aucune sauvegarde</x:String>
+  <x:String x:Key="Instance_Backups_EmptyDescription">Crée ta première sauvegarde, ou active la sauvegarde automatique avant chaque lancement.</x:String>
+  <x:String x:Key="Instance_Backups_Restore">Restaurer</x:String>
+  <x:String x:Key="Instance_Backups_Delete">Supprimer</x:String>
+
+  <!-- ── Dialogues de sauvegarde ─────────────────────────────────────────────────── -->
+  <x:String x:Key="Dialog_RestoreBackup_Confirm">Restaurer la sauvegarde</x:String>
+  <x:String x:Key="Dialog_DeleteBackup_Confirm">Supprimer la sauvegarde</x:String>
+
   <!-- ── Dialogue d'arrêt ────────────────────────────────────────────────────────── -->
   <x:String x:Key="Dialog_Stop_Confirm">Arrêter le jeu</x:String>
   <x:String x:Key="Dialog_Close">Fermer</x:String>

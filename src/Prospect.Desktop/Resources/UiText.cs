@@ -47,6 +47,15 @@ internal static class UiText
 
         internal static string DeleteMessage(string instanceName)
             => $"Toutes les données de « {instanceName} » seront supprimées définitivement, mondes et mods compris. Cette action est irréversible.";
+
+        internal static string RestoreBackupTitle(string instanceName) => $"Restaurer « {instanceName} » ?";
+
+        internal static string RestoreBackupMessage(string instanceName, string dateText)
+            => $"L'état actuel de « {instanceName} » sera d'abord sauvegardé par sécurité, puis remplacé par la sauvegarde du {dateText}. Mondes, configs et mods reviendront exactement à cet état.";
+
+        internal static string DeleteBackupTitle(string dateText) => $"Supprimer la sauvegarde du {dateText} ?";
+
+        internal const string DeleteBackupMessage = "Cette sauvegarde sera supprimée définitivement. Les autres sauvegardes de l'instance ne sont pas concernées.";
     }
 
     internal static class Toasts
@@ -59,6 +68,16 @@ internal static class UiText
         internal const string VersionUninstalledTitle = "Version désinstallée";
         internal const string LaunchSettingsSavedTitle = "Réglages de lancement enregistrés";
         internal const string ModpackExportedTitle = "Modpack exporté";
+
+        internal const string BackupCreatedTitle = "Sauvegarde créée";
+        internal const string BackupRestoredTitle = "Sauvegarde restaurée";
+        internal const string BackupDeletedTitle = "Sauvegarde supprimée";
+
+        // Avertissement bien visible (ToastTone.Warning), volontairement distinct d'un simple log :
+        // c'est le filet de sécurité du joueur qui a raté, pas un confort accessoire comme
+        // l'injection de session (voir GameLauncher.RunAutoBackupBeforeLaunchAsync).
+        internal const string AutoBackupFailedTitle = "Sauvegarde automatique ratée";
+        internal const string AutoBackupFailedMessage = "Le lancement continue, mais aucune sauvegarde n'a été prise avant. Vérifie l'espace disque disponible.";
 
         internal static string WithVersion(string name, string version) => $"{name} · {version}";
     }
@@ -164,6 +183,20 @@ internal static class UiText
             => $"Le jeu de « {instanceName} » va s'arrêter immédiatement. Toute progression non sauvegardée sera perdue.";
 
         internal const string EnvVarsInvalidLine = "Chaque ligne doit être au format CLE=valeur.";
+
+        /// <summary>Textes du bloc Sauvegardes de l'onglet Options (chantier Sauvegardes d'instance).</summary>
+        internal static class Backups
+        {
+            internal const string CreateFailedTitle = "Sauvegarde impossible";
+
+            internal static string KeepCountChoiceLabel(int count) => count == 1 ? "1 sauvegarde conservée" : $"{count} sauvegardes conservées";
+
+            internal static string CreateProgress(int filesProcessed, int totalFiles)
+                => totalFiles == 0 ? "Préparation de la sauvegarde…" : $"Sauvegarde en cours ({filesProcessed}/{totalFiles})";
+
+            internal static string AutoBackupProgress(int filesProcessed, int totalFiles)
+                => totalFiles == 0 ? "Sauvegarde automatique…" : $"Sauvegarde automatique ({filesProcessed}/{totalFiles})…";
+        }
     }
 
     /// <summary>

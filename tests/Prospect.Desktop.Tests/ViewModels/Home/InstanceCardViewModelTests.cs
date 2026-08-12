@@ -1,5 +1,6 @@
 using System.IO.Abstractions.TestingHelpers;
 
+using Prospect.Core.Backups;
 using Prospect.Core.Common;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
@@ -61,7 +62,7 @@ public sealed class InstanceCardViewModelTests
         var tracker = new RunningInstanceTracker(service, clock);
         var launcher = new GameLauncher(
             repository, versions, dotnetLocator, tracker, new LinuxGameLaunchStrategy(fileSystem), processRunner, fileSystem, Paths, clock,
-            AccountDoubles.SignedOut(), AccountDoubles.ClientSettings(fileSystem));
+            AccountDoubles.SignedOut(), AccountDoubles.ClientSettings(fileSystem), new InstanceBackupService(repository, fileSystem, clock));
         var overlay = new RecordingOverlayService();
         var toasts = new RecordingToastService();
         var updateCache = new ModUpdateCheckCache();
@@ -94,6 +95,37 @@ public sealed class InstanceCardViewModelTests
         var toast = fixture.Toasts.Shown.ShouldHaveSingleItem();
         toast.Tone.ShouldBe(ToastTone.Error);
         toast.Title.ShouldBe("Version non installée");
+    }
+
+    [Fact]
+    public async Task PlayCommand_AutoBackupEnabledAndFails_ShowsAProminentWarningToastButStillLaunches()
+    {
+        // Même garantie que côté page de détail (InstanceDetailViewModelTests) : les deux
+        // surfaces de lancement doivent traiter l'échec du filet de sécurité de façon identique.
+        var fileSystem = new MockFileSystem();
+        var repository = new FileSystemInstanceRepository(fileSystem, Paths, new JsonFileStore(fileSystem), new InstanceMetadataMigrationPipeline([]));
+        var clock = new FakeClock(Now);
+        var service = new InstanceService(repository, fileSystem, clock);
+        var record = await service.CreateAsync("Homestead", SampleVersion);
+        var versions = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
+        versions.PrepareDirectory(SampleVersion);
+        await versions.MarkCompleteAsync(SampleVersion, CancellationToken.None);
+        var tracker = new RunningInstanceTracker(service, clock);
+        var backups = new InstanceBackupService(repository, fileSystem, clock);
+        var launcher = new GameLauncher(
+            repository, versions, new FakeDotnetLocator(), tracker, new LinuxGameLaunchStrategy(fileSystem), new FakeProcessRunner(), fileSystem, Paths, clock,
+            AccountDoubles.SignedOut(), AccountDoubles.ClientSettings(fileSystem), backups);
+        var toasts = new RecordingToastService();
+        var card = new InstanceCardViewModel(
+            record, "jamais", service, launcher, tracker, new ModUpdateCheckCache(),
+            new RecordingOverlayService(), toasts, new ImmediateUiDispatcher(), () => Task.CompletedTask);
+        await service.UpdateBackupSettingsAsync(record.Slug, new InstanceBackupSettings { AutoBeforeLaunch = true }, CancellationToken.None);
+        fileSystem.AddFile(backups.GetBackupsDirectory(record.Slug), new MockFileData("obstacle"));
+
+        await card.PlayCommand.ExecuteAsync(null);
+
+        card.IsRunning.ShouldBeTrue();
+        toasts.Shown.Single(t => t.Title == "Sauvegarde automatique ratée").Tone.ShouldBe(ToastTone.Warning);
     }
 
     [Fact]
@@ -203,7 +235,7 @@ public sealed class InstanceCardViewModelTests
         var tracker = new RunningInstanceTracker(service, clock);
         var launcher = new GameLauncher(
             repository, versions, new FakeDotnetLocator(), tracker, new LinuxGameLaunchStrategy(fileSystem), new FakeProcessRunner(), fileSystem, Paths, clock,
-            AccountDoubles.SignedOut(), AccountDoubles.ClientSettings(fileSystem));
+            AccountDoubles.SignedOut(), AccountDoubles.ClientSettings(fileSystem), new InstanceBackupService(repository, fileSystem, clock));
         var updateCache = new ModUpdateCheckCache();
         updateCache.Store(record.Slug, SampleReport(2));
 
@@ -280,7 +312,7 @@ public sealed class InstanceCardViewModelTests
         var tracker = new RunningInstanceTracker(service, clock);
         var launcher = new GameLauncher(
             repository, versions, new FakeDotnetLocator(), tracker, new LinuxGameLaunchStrategy(fileSystem), new FakeProcessRunner(), fileSystem, Paths, clock,
-            AccountDoubles.SignedOut(), AccountDoubles.ClientSettings(fileSystem));
+            AccountDoubles.SignedOut(), AccountDoubles.ClientSettings(fileSystem), new InstanceBackupService(repository, fileSystem, clock));
         var overlay = new RecordingOverlayService();
         var toasts = new RecordingToastService();
         var dispatcher = new ImmediateUiDispatcher();

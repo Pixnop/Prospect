@@ -1,5 +1,6 @@
 using System.IO.Abstractions.TestingHelpers;
 
+using Prospect.Core.Backups;
 using Prospect.Core.Common;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Http;
@@ -111,7 +112,8 @@ public class HomeViewModelTests
             Paths,
             clock,
             AccountDoubles.SignedOut(),
-            AccountDoubles.ClientSettings(fileSystem));
+            AccountDoubles.ClientSettings(fileSystem),
+            new InstanceBackupService(repository, fileSystem, clock));
 
         return (launcher, tracker);
     }

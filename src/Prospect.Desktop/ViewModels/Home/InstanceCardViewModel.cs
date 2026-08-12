@@ -131,7 +131,11 @@ public sealed partial class InstanceCardViewModel : ObservableObject, IDisposabl
         IsLaunching = true;
         try
         {
-            await _launcher.LaunchAsync(Slug, CancellationToken.None).ConfigureAwait(true);
+            var outcome = await _launcher.LaunchAsync(Slug, cancellationToken: CancellationToken.None).ConfigureAwait(true);
+            if (outcome.AutoBackupFailed)
+            {
+                _toasts.Show(ToastTone.Warning, UiText.Toasts.AutoBackupFailedTitle, UiText.Toasts.AutoBackupFailedMessage);
+            }
         }
         catch (Exception ex) when (ex is InstanceNotFoundException or InstanceAlreadyRunningException
                                         or GameVersionNotInstalledException or Core.Runtime.RuntimeNotAvailableException

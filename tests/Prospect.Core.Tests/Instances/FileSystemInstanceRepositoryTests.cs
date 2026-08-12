@@ -200,7 +200,8 @@ public class FileSystemInstanceRepositoryTests
         var fileSystem = new MockFileSystem();
         var repository = CreateRepository(fileSystem);
         var path = fileSystem.Path.Combine(repository.GetInstanceDirectory("future"), "instance.json");
-        var json = ToJson(CreateSampleMetadata()).Replace("\"schemaVersion\":1", "\"schemaVersion\":99", StringComparison.Ordinal);
+        var json = ToJson(CreateSampleMetadata()).Replace(
+            $"\"schemaVersion\":{InstanceMetadata.CurrentSchemaVersion}", "\"schemaVersion\":99", StringComparison.Ordinal);
         fileSystem.AddFile(path, new MockFileData(json));
 
         var exception = await Should.ThrowAsync<InstanceSchemaVersionUnsupportedException>(
@@ -210,31 +211,39 @@ public class FileSystemInstanceRepositoryTests
         exception.CurrentSchemaVersion.ShouldBe(InstanceMetadata.CurrentSchemaVersion);
     }
 
-    [Fact]
-    public async Task LoadAsync_PartialJsonMissingOptionalFields_RestoresDocumentedDefaults()
-    {
-        // Reproduit le piège de désérialisation découvert sur ProspectSettings (voir la docstring
-        // de ProspectSettings.Normalized() et d'InstanceMetadata.Normalized()) : un instance.json
-        // partiel, ici sans icon/launch/notes (fichier édité à la main, ou écrit par une version
-        // antérieure de Prospect qui n'avait pas encore ces champs), ne doit pas laisser ces
-        // propriétés à null en aval de LoadAsync.
-        var fileSystem = new MockFileSystem();
-        var repository = CreateRepository(fileSystem);
-        var path = fileSystem.Path.Combine(repository.GetInstanceDirectory("partial"), "instance.json");
-        fileSystem.AddFile(path, new MockFileData("""
+    // JSON minimal au schéma COURANT (pas v1) mais sans les champs optionnels : représente un
+    // instance.json déjà migré (ou hand-édité) au schéma courant, auquel il ne manque que des
+    // champs de référence. Distinct des tests de migration (Migrations/InstanceMetadataV1ToV2MigrationTests.cs
+    // et LoadAsync_OlderSchemaWith(out)MigrationRegistered_* ci-dessous) : celui-ci isole le filet
+    // Normalized()/désérialisation partielle de la mécanique de migration elle-même.
+    private static string PartialJsonAtCurrentSchema() => $$"""
         {
-          "schemaVersion": 1,
+          "schemaVersion": {{InstanceMetadata.CurrentSchemaVersion}},
           "id": "0c9c1f57-8b2e-4f2a-9c41-3d8a12f7b6e0",
           "name": "Homestead 1.21",
           "gameVersion": "1.21.3",
           "createdUtc": "2026-08-10T14:00:00+00:00"
         }
-        """));
+        """;
+
+    [Fact]
+    public async Task LoadAsync_PartialJsonMissingOptionalFields_RestoresDocumentedDefaults()
+    {
+        // Reproduit le piège de désérialisation découvert sur ProspectSettings (voir la docstring
+        // de ProspectSettings.Normalized() et d'InstanceMetadata.Normalized()) : un instance.json
+        // partiel, ici sans icon/launch/backups/notes (fichier édité à la main, ou écrit par une
+        // version antérieure de Prospect qui n'avait pas encore ces champs), ne doit pas laisser
+        // ces propriétés à null en aval de LoadAsync.
+        var fileSystem = new MockFileSystem();
+        var repository = CreateRepository(fileSystem);
+        var path = fileSystem.Path.Combine(repository.GetInstanceDirectory("partial"), "instance.json");
+        fileSystem.AddFile(path, new MockFileData(PartialJsonAtCurrentSchema()));
 
         var loaded = await repository.LoadAsync("partial", CancellationToken.None);
 
         loaded.Metadata.Icon.ShouldBe(InstanceMetadata.DefaultIcon);
         loaded.Metadata.Launch.ShouldBe(InstanceLaunchSettings.Empty);
+        loaded.Metadata.Backups.ShouldBe(InstanceBackupSettings.Default);
         loaded.Metadata.Notes.ShouldBe(string.Empty);
     }
 
@@ -247,15 +256,7 @@ public class FileSystemInstanceRepositoryTests
         var fileSystem = new MockFileSystem();
         var repository = CreateRepository(fileSystem);
         var path = fileSystem.Path.Combine(repository.GetInstanceDirectory("partial"), "instance.json");
-        fileSystem.AddFile(path, new MockFileData("""
-        {
-          "schemaVersion": 1,
-          "id": "0c9c1f57-8b2e-4f2a-9c41-3d8a12f7b6e0",
-          "name": "Homestead 1.21",
-          "gameVersion": "1.21.3",
-          "createdUtc": "2026-08-10T14:00:00+00:00"
-        }
-        """));
+        fileSystem.AddFile(path, new MockFileData(PartialJsonAtCurrentSchema()));
 
         var result = await repository.ScanAsync(CancellationToken.None);
 
@@ -263,17 +264,25 @@ public class FileSystemInstanceRepositoryTests
         var instance = result.Instances.ShouldHaveSingleItem();
         instance.Metadata.Icon.ShouldBe(InstanceMetadata.DefaultIcon);
         instance.Metadata.Launch.ShouldBe(InstanceLaunchSettings.Empty);
+        instance.Metadata.Backups.ShouldBe(InstanceBackupSettings.Default);
         instance.Metadata.Notes.ShouldBe(string.Empty);
     }
 
     [Fact]
     public async Task LoadAsync_OlderSchemaWithMigrationRegistered_MigratesAndPersistsUpgradedFile()
     {
+        // Chaîne de deux migrations factices (0 -> 1 -> 2) : la mécanique générique du pipeline
+        // s'exerce isolément d'InstanceMetadataV1ToV2Migration elle-même (voir son test dédié,
+        // Migrations/InstanceMetadataV1ToV2MigrationTests.cs), ce test-ci ne prouve que
+        // « FileSystemInstanceRepository migre puis persiste », pas le contenu d'une migration
+        // précise.
         var fileSystem = new MockFileSystem();
-        var migration = new FakeInstanceMetadataMigration(fromSchemaVersion: 0, markerPropertyName: "migrated");
-        var repository = CreateRepository(fileSystem, [migration]);
+        var v0ToV1 = new FakeInstanceMetadataMigration(fromSchemaVersion: 0, markerPropertyName: "migratedFromV0");
+        var v1ToV2 = new FakeInstanceMetadataMigration(fromSchemaVersion: 1, markerPropertyName: "migratedFromV1");
+        var repository = CreateRepository(fileSystem, [v0ToV1, v1ToV2]);
         var path = fileSystem.Path.Combine(repository.GetInstanceDirectory("legacy"), "instance.json");
-        var json = ToJson(CreateSampleMetadata()).Replace("\"schemaVersion\":1", "\"schemaVersion\":0", StringComparison.Ordinal);
+        var json = ToJson(CreateSampleMetadata()).Replace(
+            $"\"schemaVersion\":{InstanceMetadata.CurrentSchemaVersion}", "\"schemaVersion\":0", StringComparison.Ordinal);
         fileSystem.AddFile(path, new MockFileData(json));
 
         var loaded = await repository.LoadAsync("legacy", CancellationToken.None);
@@ -290,13 +299,48 @@ public class FileSystemInstanceRepositoryTests
         var fileSystem = new MockFileSystem();
         var repository = CreateRepository(fileSystem);
         var path = fileSystem.Path.Combine(repository.GetInstanceDirectory("legacy"), "instance.json");
-        var json = ToJson(CreateSampleMetadata()).Replace("\"schemaVersion\":1", "\"schemaVersion\":0", StringComparison.Ordinal);
+        var json = ToJson(CreateSampleMetadata()).Replace(
+            $"\"schemaVersion\":{InstanceMetadata.CurrentSchemaVersion}", "\"schemaVersion\":0", StringComparison.Ordinal);
         fileSystem.AddFile(path, new MockFileData(json));
 
         var exception = await Should.ThrowAsync<InstanceSchemaVersionUnsupportedException>(
             () => repository.LoadAsync("legacy", CancellationToken.None));
 
         exception.FoundSchemaVersion.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task LoadAsync_RealV1ToV2Migration_MigratesWithSaneBackupDefaultsAndPersistsStably()
+    {
+        // La première vraie migration du projet (voir sa docstring), testée dans les deux sens :
+        // v1 chargé → défauts de backups posés → sauvé en v2 ; v2 rechargé ensuite identique.
+        var fileSystem = new MockFileSystem();
+        var repository = CreateRepository(fileSystem, [new InstanceMetadataV1ToV2Migration()]);
+        var path = fileSystem.Path.Combine(repository.GetInstanceDirectory("legacy"), "instance.json");
+        fileSystem.AddFile(path, new MockFileData("""
+        {
+          "schemaVersion": 1,
+          "id": "0c9c1f57-8b2e-4f2a-9c41-3d8a12f7b6e0",
+          "name": "Homestead 1.21",
+          "gameVersion": "1.21.3",
+          "createdUtc": "2026-08-10T14:00:00+00:00"
+        }
+        """));
+
+        var loaded = await repository.LoadAsync("legacy", CancellationToken.None);
+
+        loaded.Metadata.SchemaVersion.ShouldBe(2);
+        loaded.Metadata.Backups.AutoBeforeLaunch.ShouldBeFalse();
+        loaded.Metadata.Backups.KeepCount.ShouldBe(5);
+
+        // Sauvé en v2 : le fichier sur disque porte désormais le schéma courant et un bloc backups.
+        var persisted = System.Text.Json.Nodes.JsonNode.Parse(fileSystem.File.ReadAllText(path))!.AsObject();
+        persisted["schemaVersion"]!.GetValue<int>().ShouldBe(2);
+        persisted["backups"].ShouldNotBeNull();
+
+        // Rechargé, le document v2 passe directement (sans migration) et reste identique.
+        var reloaded = await repository.LoadAsync("legacy", CancellationToken.None);
+        reloaded.ShouldBe(loaded);
     }
 
     [Fact]
@@ -343,7 +387,8 @@ public class FileSystemInstanceRepositoryTests
             new MockFileData("{ pas du JSON"));
         fileSystem.AddFile(
             fileSystem.Path.Combine(repository.GetInstanceDirectory("too-new"), "instance.json"),
-            new MockFileData(ToJson(CreateSampleMetadata()).Replace("\"schemaVersion\":1", "\"schemaVersion\":99", StringComparison.Ordinal)));
+            new MockFileData(ToJson(CreateSampleMetadata()).Replace(
+                $"\"schemaVersion\":{InstanceMetadata.CurrentSchemaVersion}", "\"schemaVersion\":99", StringComparison.Ordinal)));
 
         var result = await repository.ScanAsync(CancellationToken.None);
 

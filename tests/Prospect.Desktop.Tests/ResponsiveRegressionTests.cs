@@ -4,6 +4,7 @@ using Avalonia.Styling;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Prospect.Core.Backups;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Modpacks;
 using Prospect.Core.Storage;
@@ -192,6 +193,36 @@ public sealed class ResponsiveRegressionTests
         window.Settle();
 
         window.ShouldHoldLayoutInvariantsAtEverySize("Détail d'instance, bandeau d'erreur de lancement");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task InstanceDetail_OptionsTabWithPopulatedBackups_HoldsItsBoxes()
+    {
+        // La garde générique (InstanceDetail_EveryTab_HoldsItsBoxes) visite l'onglet Options avec
+        // le bloc Sauvegardes VIDE (aucune sauvegarde à la création) ; celle-ci couvre l'état
+        // peuplé (plusieurs lignes, boutons Restaurer/Supprimer), jamais mesuré ailleurs.
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        provider.SeedInstalledVersion(fileSystem, "1.20.4");
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var home = provider.GetRequiredService<HomeViewModel>();
+
+        var record = await ResponsiveScenario.CreateInstanceAsync(shell, home, ResponsiveScenario.LongInstanceName, "1.20.4");
+        var backups = provider.GetRequiredService<InstanceBackupService>();
+        await backups.CreateAsync(record.Slug, progress: null, CancellationToken.None);
+        await backups.CreateAsync(record.Slug, progress: null, CancellationToken.None);
+
+        shell.ShowInstanceDetail(record.Slug);
+        var detail = shell.CurrentPage.ShouldBeOfType<InstanceDetailViewModel>();
+        await detail.InitializeCommand.ExecuteAsync(null);
+        detail.SelectTabCommand.Execute(InstanceDetailTab.Options);
+        window.Settle();
+        detail.OptionsTab.Backups.HasBackups.ShouldBeTrue();
+        detail.OptionsTab.Backups.Backups.Count.ShouldBe(2);
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Détail d'instance, Options, sauvegardes peuplées");
 
         window.Close();
     }

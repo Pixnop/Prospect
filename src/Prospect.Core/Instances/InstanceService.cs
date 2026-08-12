@@ -167,6 +167,23 @@ public sealed class InstanceService
     }
 
     /// <summary>
+    /// Remplace les réglages de sauvegarde (déclenchement automatique avant lancement, nombre de
+    /// sauvegardes conservées) d'une instance. Même contrat que <see cref="UpdateLaunchSettingsAsync"/> :
+    /// un seul champ change, consommé par le bloc Sauvegardes de l'onglet Options.
+    /// </summary>
+    /// <exception cref="InstanceNotFoundException">Aucune instance pour <paramref name="slug"/>.</exception>
+    public async Task<InstanceRecord> UpdateBackupSettingsAsync(string slug, InstanceBackupSettings settings, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var current = await _repository.LoadAsync(slug, cancellationToken).ConfigureAwait(false);
+        var updated = current with { Metadata = current.Metadata with { Backups = settings.Clamped() } };
+        await _repository.SaveAsync(updated, cancellationToken).ConfigureAwait(false);
+
+        return updated;
+    }
+
+    /// <summary>
     /// Marque l'instance comme lancée à l'instant courant (<see cref="InstanceMetadata.LastLaunchedUtc"/>).
     /// Appelée par <c>RunningInstanceTracker</c> au DÉMARRAGE du processus de jeu, pas à sa sortie :
     /// « dernier lancement » décrit le moment où l'utilisateur a cliqué sur Jouer, et une session
