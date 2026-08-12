@@ -125,10 +125,17 @@
                     <StackPanel>
                       <Grid ColumnDefinitions="Auto,*,Auto">
                         <Border Grid.Column="0" Width="40" Height="40" CornerRadius="{StaticResource RadiusSm}"
-                                Background="{DynamicResource Stone800}" BorderBrush="{DynamicResource BorderSubtle}" BorderThickness="1">
-                          <Path Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                Data="{StaticResource Icon.package}" Stroke="{DynamicResource Text4}"
-                                StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                                Background="{DynamicResource Stone800}" BorderBrush="{DynamicResource BorderSubtle}" BorderThickness="1"
+                                ClipToBounds="True">
+                          <Panel>
+                            <!-- Repli générique : toujours dans l'arbre visuel, masqué une fois le logo décodé
+                                 (IModLogoCache). Jamais de traitement de couleur sur l'image tierce, voir Image ci-dessous. -->
+                            <Path Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  Data="{StaticResource Icon.package}" Stroke="{DynamicResource Text4}"
+                                  StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round"
+                                  IsVisible="{Binding !HasLogo}" />
+                            <Image Width="40" Height="40" Stretch="UniformToFill" Source="{Binding LogoBitmap}" IsVisible="{Binding HasLogo}" />
+                          </Panel>
                         </Border>
                         <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
                           <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" FontWeight="{StaticResource FwSemibold}"
@@ -143,7 +150,8 @@
                                      FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
                         </StackPanel>
                       </Grid>
-                      <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,12,0,0" MaxLines="3" Height="60"
+                      <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,12,0,0" MaxLines="2"
+                                 IsVisible="{Binding HasDescription}"
                                  TextTrimming="CharacterEllipsis" LineHeight="19" TextAlignment="Left"
                                  FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text2}" />
                     </StackPanel>

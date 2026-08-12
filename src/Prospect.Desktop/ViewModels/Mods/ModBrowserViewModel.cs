@@ -32,6 +32,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     private readonly IExternalUrlOpener _urlOpener;
     private readonly IOverlayService _overlay;
     private readonly IToastService _toasts;
+    private readonly IModLogoCache _logoCache;
 
     private IReadOnlyList<ModDbModSummary> _catalog = [];
     private ModDbCompatibilityIndex? _compatibilityIndex;
@@ -42,7 +43,8 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         IInstanceRepository instances,
         IExternalUrlOpener urlOpener,
         IOverlayService overlay,
-        IToastService toasts)
+        IToastService toasts,
+        IModLogoCache logoCache)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(installService);
@@ -50,6 +52,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(urlOpener);
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(toasts);
+        ArgumentNullException.ThrowIfNull(logoCache);
 
         _client = client;
         _installService = installService;
@@ -57,6 +60,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         _urlOpener = urlOpener;
         _overlay = overlay;
         _toasts = toasts;
+        _logoCache = logoCache;
     }
 
     /// <summary>Résultats affichés dans la grille.</summary>
@@ -245,10 +249,19 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
         var matches = ModCatalogSearch.Apply(_catalog, query, _compatibilityIndex);
 
+        // Chaque carte peut avoir un chargement de logo en vol (IModLogoCache) : sans ce Dispose,
+        // reconstruire Results à chaque frappe de recherche laisserait une traînée de
+        // téléchargements pour des cartes déjà jetées (même mécanique que HomeViewModel.RefreshAsync
+        // pour InstanceCardViewModel).
+        foreach (var previous in Results)
+        {
+            previous.Dispose();
+        }
+
         Results.Clear();
         foreach (var summary in matches)
         {
-            Results.Add(new ModCardViewModel(summary, BuildBadge(summary), OpenAsync, StartInstallAsync));
+            Results.Add(new ModCardViewModel(summary, BuildBadge(summary), OpenAsync, StartInstallAsync, _logoCache));
         }
 
         SubtitleText = UiText.Mods.Subtitle(_catalog.Count);
