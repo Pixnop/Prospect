@@ -79,6 +79,12 @@ public static class CompositionRoot
         services.AddSingleton<IUiDispatcher, AvaloniaUiDispatcher>();
         services.AddSingleton<IModUpdateCheckCache, ModUpdateCheckCache>();
 
+        // Cache des logos du navigateur de mods : un délai plus court que celui du catalogue, une
+        // vignette décorative ne justifie pas d'attendre aussi longtemps qu'un appel API (voir
+        // IModLogoCache).
+        services.AddSingleton<IModLogoCache>(provider => new ModLogoCache(
+            CreateHttpClient(httpMessageHandler, TimeSpan.FromSeconds(15))));
+
         // Sélecteur de fichiers du système (export/import de modpack). Fabrique vers MainWindow
         // plutôt que la fenêtre elle-même : voir la remarque d'AvaloniaFilePickerService sur le
         // cycle que la résolution directe créerait avec ShellViewModel/HomeViewModel.

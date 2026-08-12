@@ -2,6 +2,7 @@ using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.IO.Compression;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 
 using Prospect.Core.Common;
@@ -9,6 +10,7 @@ using Prospect.Core.Http;
 using Prospect.Core.Instances;
 using Prospect.Core.ModDb;
 using Prospect.Core.Storage;
+using Prospect.Desktop.Services;
 
 namespace Prospect.Desktop.Tests.TestDoubles;
 
@@ -71,6 +73,10 @@ internal static class ModDbDoubles
         HttpMessageHandler? handler = null)
         => new(CreateClient(fileSystem, paths, clock, handler), mods, instances, clock);
 
+    /// <summary>Le vrai <see cref="ModLogoCache"/>, adossé au même gestionnaire HTTP factice que le reste du domaine.</summary>
+    public static IModLogoCache CreateLogoCache(HttpMessageHandler? handler = null)
+        => new ModLogoCache(new HttpClient(handler ?? new FakeModDbHandler(), disposeHandler: false));
+
     /// <summary>Pose une archive de mod valide dans le dossier <c>data/Mods/</c> d'une instance.</summary>
     public static void SeedMod(MockFileSystem fileSystem, string modsDirectory, string fileName, string modInfoJson)
         => fileSystem.AddFile(fileSystem.Path.Combine(modsDirectory, fileName), new MockFileData(BuildArchive(modInfoJson)));
@@ -111,7 +117,10 @@ internal static class ModDbDoubles
 /// </summary>
 internal sealed class FakeModDbHandler : HttpMessageHandler
 {
-    public const string CatalogJson = """
+    // Propriété plutôt que const (comme UpdatesJson plus bas) : un test qui veut exercer un
+    // troisième mod (par exemple sans logo ni résumé, voir ModsHeadlessTests) écrase cette valeur
+    // avant d'initialiser le navigateur, sans toucher au catalogue par défaut des autres tests.
+    public string CatalogJson { get; set; } = """
     {
       "statuscode": "200",
       "mods": [
@@ -174,6 +183,11 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
 
     private static readonly byte[] ConfigLibArchive = ModDbDoubles.BuildArchive(ModDbDoubles.ModInfo("configlib", "Config lib", "1.11.1"));
 
+    // Vignette PNG minuscule mais réellement décodable, servie pour toute URL de logo (voir
+    // Respond) : IModLogoCache doit pouvoir exercer un vrai décodage Avalonia.Media.Imaging.Bitmap
+    // dans les tests headless, pas seulement des octets arbitraires.
+    private static readonly byte[] LogoPngBytes = TinyPng.Create();
+
     /// <summary>Faux pour simuler un ModDB injoignable.</summary>
     public bool IsOnline { get; set; } = true;
 
@@ -201,10 +215,17 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
 
         if (url.Host == "moddbcdn.vintagestory.at")
         {
-            var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(ConfigLibArchive) };
+            // Deux natures de fichier servies par le même hôte CDN : une archive de mod (.zip) pour
+            // le pipeline d'installation, une vignette de logo (.png) pour IModLogoCache. Les
+            // confondre servirait des octets de zip comme si c'était une image.
+            var isLogo = url.AbsolutePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase);
+            var bytes = isLogo ? LogoPngBytes : ConfigLibArchive;
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) };
+            response.Content.Headers.ContentType = new MediaTypeHeaderValue(isLogo ? "image/png" : "application/zip");
             if (request.Method == HttpMethod.Head)
             {
-                response.Content.Headers.ContentLength = ConfigLibArchive.Length;
+                response.Content.Headers.ContentLength = bytes.Length;
             }
 
             return response;

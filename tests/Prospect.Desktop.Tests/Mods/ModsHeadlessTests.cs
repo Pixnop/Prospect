@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
 
@@ -56,6 +57,73 @@ public sealed class ModsHeadlessTests
         shell.CurrentPage.ShouldBeOfType<ModBrowserViewModel>();
         window.GetVisualDescendants().OfType<ModBrowserView>().ShouldNotBeEmpty();
         shell.ModBrowser.Results.ShouldNotBeEmpty();
+    }
+
+    [AvaloniaFact]
+    public async Task ModBrowser_CardsRenderLogosAndSummaries_MatchingTheDesign()
+    {
+        using var provider = TestServiceProviderFactory.Create(out _, out var catalogHandler);
+
+        // Un troisième mod sans logo ni résumé, en plus des deux du catalogue par défaut (Config
+        // lib : résumé sans logo ; BetterRuins : résumé et logo), pour vérifier que la carte reste
+        // propre dans ce cas (design/ui_kits/launcher/screen-mods.jsx : la ligne de description et
+        // l'image sont ABSENTES, pas un blanc réservé).
+        catalogHandler.ModDb.CatalogJson = """
+        {
+          "statuscode": "200",
+          "mods": [
+            { "modid": 1783, "assetid": 9551, "downloads": 627953, "follows": 0, "trendingpoints": 5, "comments": 0,
+              "name": "Config lib", "summary": "A universal place to configure your mods.", "modidstrs": ["configlib"],
+              "author": "Maltiez", "urlalias": null, "side": "both", "type": "mod", "logo": null,
+              "tags": ["Utility"], "lastreleased": "2026-05-01 12:03:34" },
+            { "modid": 792, "assetid": 3829, "downloads": 1095320, "follows": 8133, "trendingpoints": 0, "comments": 1440,
+              "name": "BetterRuins", "summary": "Adds many new ruins to your survival world.", "modidstrs": ["betterruins"],
+              "author": "NiclAss", "urlalias": "betterruins", "side": "both", "type": "mod",
+              "logo": "https://moddbcdn.vintagestory.at/betterruins.png",
+              "tags": ["Worldgen", "Exploration"], "lastreleased": "2026-07-28 18:59:32" },
+            { "modid": 555, "assetid": 1, "downloads": 3, "follows": 0, "trendingpoints": 0, "comments": 0,
+              "name": "Blank Mod", "summary": "", "modidstrs": ["blankmod"],
+              "author": "Personne", "urlalias": null, "side": "both", "type": "mod", "logo": null,
+              "tags": [], "lastreleased": null }
+          ]
+        }
+        """;
+
+        var window = provider.GetRequiredService<MainWindow>();
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        window.Show();
+
+        shell.ShowModBrowser();
+        await shell.ModBrowser.InitializeCommand.ExecuteAsync(null);
+        window.Settle();
+
+        shell.ModBrowser.Results.Count.ShouldBe(3);
+        foreach (var card in shell.ModBrowser.Results)
+        {
+            await card.LogoLoadCompletion;
+        }
+
+        window.Settle();
+
+        var withLogo = shell.ModBrowser.Results.Single(card => card.Name == "BetterRuins");
+        withLogo.HasLogo.ShouldBeTrue();
+        withLogo.HasDescription.ShouldBeTrue();
+
+        var withoutLogo = shell.ModBrowser.Results.Single(card => card.Name == "Config lib");
+        withoutLogo.HasLogo.ShouldBeFalse();
+        withoutLogo.HasDescription.ShouldBeTrue();
+
+        var blank = shell.ModBrowser.Results.Single(card => card.Name == "Blank Mod");
+        blank.HasLogo.ShouldBeFalse();
+        blank.HasDescription.ShouldBeFalse();
+
+        // Rendu réel, pas seulement l'état du ViewModel : chaque carte a un Image dans son arbre
+        // visuel (toujours présent, voir ModBrowserView.axaml), avec une Source seulement pour
+        // celle dont le logo a été décodé.
+        var images = window.GetVisualDescendants().OfType<Image>().ToList();
+        images.Single(image => ReferenceEquals(image.DataContext, withLogo)).Source.ShouldNotBeNull();
+        images.Single(image => ReferenceEquals(image.DataContext, withoutLogo)).Source.ShouldBeNull();
+        images.Single(image => ReferenceEquals(image.DataContext, blank)).Source.ShouldBeNull();
     }
 
     [AvaloniaFact]
