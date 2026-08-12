@@ -10,8 +10,10 @@ using Prospect.Core.Storage;
 using Prospect.Desktop.Tests.Support;
 using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Instance;
+using Prospect.Desktop.ViewModels.Migration;
 using Prospect.Desktop.ViewModels.Modpacks;
 using Prospect.Desktop.ViewModels.Mods;
+using Prospect.Desktop.ViewModels.Settings;
 using Prospect.Desktop.ViewModels.Shell;
 using Prospect.Desktop.ViewModels.Toasts;
 using Prospect.Desktop.ViewModels.Versions;
@@ -298,6 +300,105 @@ public sealed class ResponsiveRegressionTests
         versions.Available.ShouldNotBeEmpty();
 
         window.ShouldHoldLayoutInvariantsAtEverySize("Versions");
+
+        window.Close();
+    }
+
+    // ── Réglages et adoption VS Launcher ─────────────────────────────────────────────────────
+
+    [AvaloniaFact]
+    public async Task Settings_NothingDetected_HoldsItsBoxes()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out _, out _);
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.SettingsNavItem.SelectCommand.Execute(null);
+        await shell.Settings.InitializeCommand.ExecuteAsync(null);
+        window.Settle();
+        shell.Settings.VslDetected.ShouldBeFalse();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Réglages, rien détecté");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task Settings_VslDetected_HoldsItsBoxes()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        provider.SeedVslInstallation(fileSystem, "/vsl/installations/survie-medievale-communautaire", "1.20.4");
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.SettingsNavItem.SelectCommand.Execute(null);
+        await shell.Settings.InitializeCommand.ExecuteAsync(null);
+        window.Settle();
+        shell.Settings.VslDetected.ShouldBeTrue();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Réglages, VS Launcher détecté");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task Home_EmptyWithVslDetected_HoldsItsBoxes()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        provider.SeedVslInstallation(fileSystem, "/vsl/installations/survie-medievale-communautaire", "1.20.4");
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var home = provider.GetRequiredService<HomeViewModel>();
+
+        await home.RefreshCommand.ExecuteAsync(null);
+        window.Settle();
+        home.FirstRun.VslDetected.ShouldBeTrue();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Accueil vide, rappel VS Launcher");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task AdoptVslDialog_SelectionStep_HoldsItsBoxes()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        provider.SeedVslInstallation(fileSystem, "/vsl/installations/" + ResponsiveScenario.LongInstanceName, "1.20.4");
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var home = provider.GetRequiredService<HomeViewModel>();
+
+        await home.RefreshCommand.ExecuteAsync(null);
+        window.Settle();
+        home.FirstRun.OpenAdoptionCommand.Execute(null);
+        window.Settle();
+        shell.Overlay.Active.ShouldBeOfType<AdoptVslViewModel>();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Dialogue d'adoption VS Launcher, sélection");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task AdoptVslDialog_ReportStep_HoldsItsBoxes()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        provider.SeedVslInstallation(fileSystem, "/vsl/installations/" + ResponsiveScenario.LongInstanceName, "1.20.4");
+        provider.SeedInstalledVersion(fileSystem, "1.20.4");
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var home = provider.GetRequiredService<HomeViewModel>();
+
+        await home.RefreshCommand.ExecuteAsync(null);
+        window.Settle();
+        home.FirstRun.OpenAdoptionCommand.Execute(null);
+        window.Settle();
+        var adopt = shell.Overlay.Active.ShouldBeOfType<AdoptVslViewModel>();
+
+        await adopt.ConfirmCommand.ExecuteAsync(null);
+        window.Settle();
+        adopt.Step.ShouldBe(AdoptVslStep.Report);
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Dialogue d'adoption VS Launcher, rapport");
 
         window.Close();
     }

@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Prospect.Core.Common;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
+using Prospect.Core.Migration;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Tests.TestDoubles;
 
@@ -64,5 +65,31 @@ internal static class TestServiceProviderFactory
         fileSystem.AddFile(
             fileSystem.Path.Combine(directory, FileSystemInstalledGameVersionRepository.CompletionMarkerFileName),
             new MockFileData(version));
+    }
+
+    /// <summary>
+    /// Écrit un <c>config.json</c> de VS Launcher factice à l'emplacement par défaut de la VRAIE
+    /// machine qui exécute les tests (<see cref="IAppEnvironment"/> n'est pas doublé dans ce
+    /// conteneur, voir <see cref="CompositionRoot.ConfigureServices"/>) : même principe que
+    /// <see cref="SeedInstalledVersion"/>, la racine réellement calculée est demandée au conteneur
+    /// plutôt que supposée, pour que le test reste vrai sur n'importe quelle machine ou CI.
+    /// </summary>
+    public static string SeedVslInstallation(this ServiceProvider provider, MockFileSystem fileSystem, string installationPath, string version = "1.20.4")
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        var environment = provider.GetRequiredService<IAppEnvironment>();
+        var vslPaths = new VslPaths(environment);
+        var configPath = vslPaths.ConfigFilePath;
+
+        fileSystem.AddFile(configPath, new MockFileData($$"""
+        {
+          "installations": [ { "id": "a", "name": "Survie médiévale", "path": "{{installationPath.Replace("\\", "\\\\")}}", "version": "{{version}}" } ],
+          "gameVersions": []
+        }
+        """));
+        fileSystem.AddFile(fileSystem.Path.Combine(installationPath, "Mods", "carrycapacity.zip"), new MockFileData("mod-content"));
+
+        return configPath;
     }
 }

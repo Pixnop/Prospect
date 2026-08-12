@@ -6,9 +6,11 @@ using CommunityToolkit.Mvvm.Input;
 using Prospect.Core.Common;
 using Prospect.Core.Instances;
 using Prospect.Core.Launching;
+using Prospect.Core.Migration;
 using Prospect.Desktop.Formatting;
 using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
+using Prospect.Desktop.ViewModels.FirstRun;
 using Prospect.Desktop.ViewModels.Modpacks;
 using Prospect.Desktop.ViewModels.Toasts;
 using Prospect.Desktop.ViewModels.Wizard;
@@ -52,7 +54,8 @@ public sealed partial class HomeViewModel : ObservableObject
         IUiDispatcher dispatcher,
         IFilePickerService filePicker,
         Func<WizardViewModel> wizardFactory,
-        Func<string, ImportModpackViewModel> importFactory)
+        Func<string, ImportModpackViewModel> importFactory,
+        FirstRunViewModel firstRun)
     {
         ArgumentNullException.ThrowIfNull(instanceService);
         ArgumentNullException.ThrowIfNull(repository);
@@ -66,6 +69,7 @@ public sealed partial class HomeViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(filePicker);
         ArgumentNullException.ThrowIfNull(wizardFactory);
         ArgumentNullException.ThrowIfNull(importFactory);
+        ArgumentNullException.ThrowIfNull(firstRun);
 
         _instanceService = instanceService;
         _repository = repository;
@@ -80,10 +84,21 @@ public sealed partial class HomeViewModel : ObservableObject
         _wizardFactory = wizardFactory;
         _importFactory = importFactory;
         _newInstanceTile = new NewInstanceTileViewModel(NewInstance);
+
+        FirstRun = firstRun;
+        FirstRun.Completed += OnVslAdopted;
     }
 
     /// <summary>Levé quand une carte est ouverte (clic hors bouton Jouer/Arrêter et menu) : la page de détail correspondante.</summary>
     public event EventHandler<string>? InstanceOpenRequested;
+
+    /// <summary>
+    /// Rappel de premier lancement affiché par la vue dans l'état vide (voir
+    /// <see cref="HasNoInstancesAtAll"/>) : la carte d'adoption VS Launcher ne s'affiche que si
+    /// <see cref="ViewModels.FirstRun.FirstRunViewModel.VslDetected"/> est vrai, elle-même mise à
+    /// jour par <see cref="RefreshAsync"/> tant que la bibliothèque est vide (voir plus bas).
+    /// </summary>
+    public FirstRunViewModel FirstRun { get; }
 
     public ObservableCollection<InstanceCardViewModel> Instances { get; } = new();
 
@@ -191,6 +206,14 @@ public sealed partial class HomeViewModel : ObservableObject
             IsLoading = false;
             ApplyFilterAndSort();
         }
+
+        // Sans intérêt une fois la bibliothèque peuplée (la carte ne s'affiche plus dans ce cas de
+        // toute façon, voir HomeView) : inutile de relancer une détection VS Launcher à chaque
+        // rafraîchissement d'une Accueil déjà habitée.
+        if (HasNoInstancesAtAll)
+        {
+            await FirstRun.InitializeCommand.ExecuteAsync(null).ConfigureAwait(true);
+        }
     }
 
     [RelayCommand]
@@ -260,6 +283,11 @@ public sealed partial class HomeViewModel : ObservableObject
 
         _ = RefreshAsync(CancellationToken.None);
     }
+
+    // Le toast de fin d'adoption est déjà affiché par AdoptVslViewModel lui-même (même partage des
+    // rôles que ModpackImportService / ImportModpackViewModel) : ce gestionnaire ne fait que
+    // rafraîchir, pour que les instances tout juste créées apparaissent sans action supplémentaire.
+    private void OnVslAdopted(object? sender, VslAdoptionOutcome outcome) => _ = RefreshAsync(CancellationToken.None);
 
     private void ApplyFilterAndSort()
     {

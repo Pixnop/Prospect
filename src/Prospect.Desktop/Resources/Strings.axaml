@@ -127,10 +127,10 @@
   <x:String x:Key="Dialog_Uninstall_Confirm">Désinstaller</x:String>
 
   <!-- ── Pages placeholder ───────────────────────────────────────────────────────── -->
+  <!-- Placeholder_Mods_* : orphelines depuis que le navigateur de mods réel existe (feature 4a),
+       laissées telles quelles ici (hors du périmètre de ce chantier). -->
   <x:String x:Key="Placeholder_Mods_Title">Navigateur de mods</x:String>
   <x:String x:Key="Placeholder_Mods_Description">Bientôt disponible : recherche et installation de mods depuis le ModDB officiel.</x:String>
-  <x:String x:Key="Placeholder_Settings_Title">Réglages</x:String>
-  <x:String x:Key="Placeholder_Settings_Description">Bientôt disponible : préférences générales, jeu, réseau et comptes.</x:String>
 
   <!-- ── Page de détail d'instance ───────────────────────────────────────────────── -->
   <x:String x:Key="Instance_Back">Instances</x:String>
@@ -240,5 +240,27 @@
   <x:String x:Key="Dialog_Import_ReportTitle">Rapport d'import</x:String>
   <x:String x:Key="Dialog_Import_Close">Fermer</x:String>
   <x:String x:Key="Dialog_Import_ErrorTitle">Import impossible</x:String>
+
+  <!-- ── Dialogue d'adoption VS Launcher ─────────────────────────────────────────── -->
+  <x:String x:Key="Dialog_AdoptVsl_Title">Adopter tes installations VS Launcher</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_Cancel">Annuler</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_Confirm">Adopter</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_CancelAdoption">Annuler l'adoption</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_Close">Fermer</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_InstallationsSectionTitle">Installations</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_EnginesSectionTitle">Moteurs</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_EnginesNotice">Ces fichiers sont copiés tels quels depuis VS Launcher, sans nouvelle vérification (pas de contrôle d'empreinte comme au téléchargement). En cas de doute, désinstalle puis retélécharge depuis l'écran Versions.</x:String>
+
+  <!-- ── Réglages ────────────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Settings_Title">Réglages</x:String>
+  <x:String x:Key="Settings_GeneralSectionTitle">Général</x:String>
+  <x:String x:Key="Settings_VslCardTitle">VS Launcher</x:String>
+  <x:String x:Key="Settings_VslPickFolder">Choisir un dossier…</x:String>
+  <x:String x:Key="Settings_VslOpenAdoption">Adopter tes installations VS Launcher</x:String>
+  <x:String x:Key="Settings_VslDetecting">Détection en cours…</x:String>
+
+  <!-- ── Rappel de premier lancement (Accueil, état vide) ───────────────────────── -->
+  <x:String x:Key="FirstRun_VslCardTitle">Tu utilisais VS Launcher ?</x:String>
+  <x:String x:Key="FirstRun_VslOpenAdoption">Adopter tes installations VS Launcher</x:String>
 
 </ResourceDictionary>

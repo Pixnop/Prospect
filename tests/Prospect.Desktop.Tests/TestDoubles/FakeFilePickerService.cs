@@ -15,9 +15,14 @@ internal sealed class FakeFilePickerService : IFilePickerService
     /// <summary>Chemin rendu par le prochain appel à <see cref="PickOpenFileAsync"/>, ou <see langword="null"/> pour simuler une annulation.</summary>
     public string? NextOpenPath { get; set; }
 
+    /// <summary>Chemin rendu par le prochain appel à <see cref="PickFolderAsync"/>, ou <see langword="null"/> pour simuler une annulation.</summary>
+    public string? NextFolderPath { get; set; }
+
     public List<(string Title, string SuggestedFileName, string Extension)> SaveRequests { get; } = [];
 
     public List<(string Title, IReadOnlyList<string> Extensions)> OpenRequests { get; } = [];
+
+    public List<string> FolderRequests { get; } = [];
 
     public Task<string?> PickSaveFileAsync(string title, string suggestedFileName, string extension, CancellationToken cancellationToken = default)
     {
@@ -31,5 +36,12 @@ internal sealed class FakeFilePickerService : IFilePickerService
         OpenRequests.Add((title, extensions));
 
         return Task.FromResult(NextOpenPath);
+    }
+
+    public Task<string?> PickFolderAsync(string title, CancellationToken cancellationToken = default)
+    {
+        FolderRequests.Add(title);
+
+        return Task.FromResult(NextFolderPath);
     }
 }

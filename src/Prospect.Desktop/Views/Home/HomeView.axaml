@@ -96,6 +96,24 @@
           </StackPanel>
         </Border>
 
+        <!-- Rappel de premier lancement (voir HomeViewModel.FirstRun) : ne s'affiche que si
+             VslDetector a trouvé quelque chose à l'emplacement par défaut de l'OS. Placée sous
+             l'état vide « Aucune instance » plutôt qu'à sa place : la création manuelle reste
+             l'action principale, l'adoption un raccourci pour qui vient de VS Launcher. -->
+        <Border Classes="card" Padding="20" IsVisible="{Binding FirstRun.VslDetected}">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Grid.Column="0" Spacing="3">
+              <TextBlock Text="{StaticResource FirstRun_VslCardTitle}"
+                         FontSize="{StaticResource FsBodySm}" FontWeight="{StaticResource FwMedium}"
+                         Foreground="{DynamicResource Text1}" />
+              <TextBlock Text="{Binding FirstRun.VslSummaryText}" FontFamily="{DynamicResource FontMono}"
+                         FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+            </StackPanel>
+            <Button Grid.Column="1" VerticalAlignment="Center" Command="{Binding FirstRun.OpenAdoptionCommand}"
+                    Content="{StaticResource FirstRun_VslOpenAdoption}" />
+          </Grid>
+        </Border>
+
         <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="Transparent"
                 BorderBrush="{DynamicResource BorderDefault}" IsVisible="{Binding ShowSearchEmptyState}">
           <StackPanel HorizontalAlignment="Center" Spacing="12" Margin="32,48" MaxWidth="400">

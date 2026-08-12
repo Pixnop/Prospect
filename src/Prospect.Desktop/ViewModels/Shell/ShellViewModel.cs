@@ -3,11 +3,11 @@ using CommunityToolkit.Mvvm.Input;
 
 using Prospect.Core.Storage;
 using Prospect.Desktop.Services;
-using Prospect.Desktop.ViewModels.Common;
 using Prospect.Desktop.ViewModels.Downloads;
 using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Instance;
 using Prospect.Desktop.ViewModels.Mods;
+using Prospect.Desktop.ViewModels.Settings;
 using Prospect.Desktop.ViewModels.Versions;
 
 namespace Prospect.Desktop.ViewModels.Shell;
@@ -28,6 +28,7 @@ public sealed partial class ShellViewModel : ObservableObject
         VersionsViewModel versions,
         ModBrowserViewModel modBrowser,
         DownloadsViewModel downloads,
+        SettingsViewModel settings,
         Func<string, InstanceDetailViewModel> instanceDetailFactory,
         IOverlayService overlay,
         IToastService toasts,
@@ -37,6 +38,7 @@ public sealed partial class ShellViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(versions);
         ArgumentNullException.ThrowIfNull(modBrowser);
         ArgumentNullException.ThrowIfNull(downloads);
+        ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(instanceDetailFactory);
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(toasts);
@@ -46,21 +48,17 @@ public sealed partial class ShellViewModel : ObservableObject
         Versions = versions;
         ModBrowser = modBrowser;
         Downloads = downloads;
+        Settings = settings;
         _instanceDetailFactory = instanceDetailFactory;
         Overlay = overlay;
         Toasts = toasts;
         UseCustomTitlebar = ResolveUseCustomTitlebar(appEnvironment.CurrentOperatingSystem);
         Home.InstanceOpenRequested += (_, slug) => ShowInstanceDetail(slug);
 
-        var settingsPage = new PlaceholderPageViewModel(
-            "settings",
-            "Réglages",
-            "Bientôt disponible : préférences générales, jeu, réseau et comptes.");
-
         var homeNavItem = new NavItemViewModel("layers", "Accueil", home, Navigate);
         var modsNavItem = new NavItemViewModel("package", "Mods", modBrowser, ShowModBrowser);
         var versionsNavItem = new NavItemViewModel("hard-drive", "Versions", versions, Navigate);
-        SettingsNavItem = new NavItemViewModel("settings", "Réglages", settingsPage, Navigate);
+        SettingsNavItem = new NavItemViewModel("settings", "Réglages", settings, ShowSettings);
 
         LibraryNavItems = [homeNavItem, modsNavItem, versionsNavItem];
         _allNavItems.AddRange(LibraryNavItems);
@@ -77,6 +75,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
     /// <summary>Page « Navigateur de mods ».</summary>
     public ModBrowserViewModel ModBrowser { get; }
+
+    /// <summary>Page « Réglages » (docs/architecture.md : seule la section Générale existe pour l'instant).</summary>
+    public SettingsViewModel Settings { get; }
 
     /// <summary>Contenu du popover Téléchargements : une vue sur la file du DownloadManager.</summary>
     public DownloadsViewModel Downloads { get; }
@@ -152,6 +153,15 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         Navigate(page);
         _ = ModBrowser.InitializeCommand.ExecuteAsync(null);
+    }
+
+    // Même construction que ShowModBrowser : la détection VS Launcher doit être relancée à chaque
+    // entrée sur la page, pas seulement à la construction du conteneur (l'utilisateur a pu
+    // installer VS Launcher, ou changer de dossier, entre deux visites des Réglages).
+    private void ShowSettings(object page)
+    {
+        Navigate(page);
+        _ = Settings.InitializeCommand.ExecuteAsync(null);
     }
 
     // Dispose la page sortante si elle en a besoin (InstanceDetailViewModel se désabonne de

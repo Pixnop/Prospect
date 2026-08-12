@@ -6,12 +6,15 @@ using Prospect.Core.Http;
 using Prospect.Core.Instances;
 using Prospect.Core.Instances.Migrations;
 using Prospect.Core.Launching;
+using Prospect.Core.Migration;
 using Prospect.Core.ModDb;
 using Prospect.Core.Modpacks;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.Tests.TestDoubles;
+using Prospect.Desktop.ViewModels.FirstRun;
 using Prospect.Desktop.ViewModels.Home;
+using Prospect.Desktop.ViewModels.Migration;
 using Prospect.Desktop.ViewModels.Modpacks;
 using Prospect.Desktop.ViewModels.Wizard;
 
@@ -66,8 +69,30 @@ public class HomeViewModelTests
             new ImmediateUiDispatcher(),
             filePicker,
             WizardFactory(service, overlay, fileSystem),
-            ImportFactory(fileSystem, repository, service, overlay, clock));
+            ImportFactory(fileSystem, repository, service, overlay, clock),
+            FirstRunFactory(fileSystem, overlay, service, repository, clock));
         return (viewModel, service, repository, filePicker, fileSystem);
+    }
+
+    // Rien de spécifique à VS Launcher n'est exercé par les tests de ce fichier (tri/filtre de la
+    // grille) : un FirstRunViewModel réel, construit comme le ferait CompositionRoot, suffit à
+    // satisfaire le constructeur de HomeViewModel.
+    private static FirstRunViewModel FirstRunFactory(
+        MockFileSystem fileSystem, IOverlayService overlay, InstanceService service, IInstanceRepository repository, IClock clock)
+    {
+        var detector = new VslDetector(fileSystem, new SystemAppEnvironment());
+        var versions = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
+        var adoptionService = new VslAdoptionService(service, repository, versions, new JsonFileStore(fileSystem), fileSystem, clock);
+        Func<VslDetectionResult, AdoptVslViewModel> adoptFactory = detection => new AdoptVslViewModel(
+            detection,
+            adoptionService,
+            versions,
+            fileSystem,
+            overlay,
+            new RecordingToastService(),
+            new ImmediateUiDispatcher());
+
+        return new FirstRunViewModel(detector, adoptFactory, overlay);
     }
 
     private static (GameLauncher Launcher, RunningInstanceTracker Tracker) CreateLaunching(
@@ -257,7 +282,8 @@ public class HomeViewModelTests
             new ImmediateUiDispatcher(),
             new FakeFilePickerService(),
             WizardFactory(brokenService, brokenOverlay, fileSystem),
-            ImportFactory(fileSystem, brokenRepository, brokenService, brokenOverlay, brokenClock));
+            ImportFactory(fileSystem, brokenRepository, brokenService, brokenOverlay, brokenClock),
+            FirstRunFactory(fileSystem, brokenOverlay, brokenService, brokenRepository, brokenClock));
 
         await brokenViewModel.RefreshCommand.ExecuteAsync(null);
 

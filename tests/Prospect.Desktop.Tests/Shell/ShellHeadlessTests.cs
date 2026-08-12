@@ -6,10 +6,9 @@ using Avalonia.VisualTree;
 
 using Microsoft.Extensions.DependencyInjection;
 
-using Prospect.Desktop.ViewModels.Common;
 using Prospect.Desktop.ViewModels.Mods;
+using Prospect.Desktop.ViewModels.Settings;
 using Prospect.Desktop.ViewModels.Shell;
-using Prospect.Desktop.Views.Common;
 using Prospect.Desktop.Views.Home;
 using Prospect.Desktop.Views.Mods;
 
@@ -73,7 +72,7 @@ public class ShellHeadlessTests
 
         shellViewModel.SettingsNavItem.SelectCommand.Execute(null);
         window.Settle();
-        shellViewModel.CurrentPage.ShouldBeOfType<PlaceholderPageViewModel>();
+        shellViewModel.CurrentPage.ShouldBeOfType<SettingsViewModel>();
 
         shellViewModel.LibraryNavItems[0].SelectCommand.Execute(null);
         window.Settle();
