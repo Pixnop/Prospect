@@ -11,14 +11,14 @@ on:
         type: boolean
         default: true
 
-# Minimales par défaut ; le job release seul les élève à contents: write pour créer le brouillon
-# de release (voir plus bas).
-permissions:
-  contents: read
-
 jobs:
+  # Permissions déclarées au niveau de chaque job plutôt qu'une fois au niveau du workflow
+  # (SonarCloud githubactions:S8264) : le champ d'action du token reste lisible job par job, sans
+  # dépendre d'un défaut partagé qu'une future modification pourrait élargir sans qu'on le voie.
   package-linux:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Récupération du code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -110,6 +110,8 @@ jobs:
 
   package-windows:
     runs-on: windows-latest
+    permissions:
+      contents: read
     steps:
       - name: Récupération du code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -212,13 +214,14 @@ jobs:
 
       - name: Sommes de contrôle SHA-256
         working-directory: dist
-        run: sha256sum * > sha256sums.txt
+        run: sha256sum ./* > sha256sums.txt
 
       - name: Préparation de la note d'honnêteté
         run: |
           cat > release-notes.md <<'EOF'
-          This is the first published build of Prospect. Expect rough edges: some
-          flows are unpolished and error messages are still a work in progress.
+          This is a pre-release. Prospect is still on 0.x, which means rough edges
+          are expected: some flows are unpolished, and error messages are still a
+          work in progress.
 
           A few things worth knowing before you download:
 
@@ -235,18 +238,26 @@ jobs:
 
       # --draft : la publication finale reste un geste humain, jamais automatique. GH_REPO est
       # nécessaire : ce job ne fait pas de checkout (inutile pour attacher des artefacts déjà
-      # construits), donc gh n'a pas de dépôt git local d'où déduire la cible.
+      # construits), donc gh n'a pas de dépôt git local d'où déduire la cible. --prerelease tant
+      # que le tag reste en v0.x (SemVer : la série 0.x est un développement initial, l'API peut
+      # encore changer) ; le motif ne matche plus à partir de v1.0.0, qui redevient donc une
+      # release pleine sans qu'il faille retoucher ce fichier.
       - name: Création de la release (brouillon)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
+          PRERELEASE_FLAG=""
+          case "$GITHUB_REF_NAME" in
+            v0.*) PRERELEASE_FLAG="--prerelease" ;;
+          esac
           gh release create "$GITHUB_REF_NAME" \
             --draft \
             --verify-tag \
             --generate-notes \
             --notes-file release-notes.md \
             --title "Prospect $GITHUB_REF_NAME" \
+            $PRERELEASE_FLAG \
             dist/prospect-*-linux-x64.tar.gz \
             dist/prospect-*-win-x64.zip \
             dist/sha256sums.txt
