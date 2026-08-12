@@ -9,6 +9,8 @@ using Prospect.Core.Launching;
 using Prospect.Core.Migration;
 using Prospect.Core.ModDb;
 using Prospect.Core.Modpacks;
+using Prospect.Core.Settings;
+using Prospect.Core.Settings.Migrations;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.Tests.TestDoubles;
@@ -23,8 +25,11 @@ using Shouldly;
 namespace Prospect.Desktop.Tests.ViewModels.Settings;
 
 /// <summary>
-/// <see cref="SettingsViewModel"/> : détection au chemin par défaut, choix manuel d'un dossier,
-/// ouverture du dialogue d'adoption partagé, rafraîchissement de l'Accueil après une adoption.
+/// <see cref="SettingsViewModel"/> : sélection d'onglet, détection VS Launcher au chemin par
+/// défaut, choix manuel d'un dossier, ouverture du dialogue d'adoption partagé, rafraîchissement
+/// de l'Accueil après une adoption. Les sections Général/Jeu/Réseau/À propos ont leurs propres
+/// suites (<see cref="SettingsGeneralViewModelTests"/> et consorts) : ces tests-ci ne vérifient que
+/// la coordination du conteneur (onglets, VSL) et l'existence des quatre sous-ViewModels.
 /// </summary>
 public sealed class SettingsViewModelTests
 {
@@ -39,7 +44,9 @@ public sealed class SettingsViewModelTests
         FakeFilePickerService FilePicker,
         HomeViewModel Home,
         VslAdoptionService AdoptionService,
-        VslDetector Detector);
+        VslDetector Detector,
+        SettingsService Settings,
+        FakeExternalUrlOpener UrlOpener);
 
     private static Fixture CreateServices()
     {
@@ -52,6 +59,8 @@ public sealed class SettingsViewModelTests
         var gameVersions = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
         var adoptionService = new VslAdoptionService(instanceService, instanceRepository, gameVersions, store, fileSystem, clock);
         var detector = new VslDetector(fileSystem, environment);
+        var settings = new SettingsService(fileSystem, Paths, store, new SettingsMigrationPipeline([]));
+        var urlOpener = new FakeExternalUrlOpener();
 
         var overlay = new RecordingOverlayService();
         var filePicker = new FakeFilePickerService();
@@ -73,7 +82,7 @@ public sealed class SettingsViewModelTests
             _ => throw new InvalidOperationException("Non exercé par ces tests."),
             firstRun);
 
-        return new Fixture(fileSystem, environment, overlay, filePicker, home, adoptionService, detector);
+        return new Fixture(fileSystem, environment, overlay, filePicker, home, adoptionService, detector, settings, urlOpener);
     }
 
     private static Func<VslDetectionResult, AdoptVslViewModel> MakeAdoptFactory(
@@ -107,7 +116,15 @@ public sealed class SettingsViewModelTests
     }
 
     private static SettingsViewModel CreateViewModel(Fixture fixture)
-        => new(fixture.Detector, MakeAdoptFactory(fixture.FileSystem, fixture.AdoptionService, new FileSystemInstalledGameVersionRepository(fixture.FileSystem, Paths), fixture.Overlay), fixture.Overlay, fixture.FilePicker, fixture.Home);
+        => new(
+            fixture.Detector,
+            MakeAdoptFactory(fixture.FileSystem, fixture.AdoptionService, new FileSystemInstalledGameVersionRepository(fixture.FileSystem, Paths), fixture.Overlay),
+            fixture.Overlay,
+            fixture.FilePicker,
+            fixture.Home,
+            fixture.Settings,
+            Paths,
+            fixture.UrlOpener);
 
     private static void WriteConfigWithOneInstallation(MockFileSystem fileSystem, string root)
     {
@@ -126,11 +143,44 @@ public sealed class SettingsViewModelTests
         var fixture = CreateServices();
         Func<VslDetectionResult, AdoptVslViewModel> adoptFactory = _ => null!;
 
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(null!, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, null!, fixture.Overlay, fixture.FilePicker, fixture.Home));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, null!, fixture.FilePicker, fixture.Home));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, null!, fixture.Home));
-        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, null!));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(null!, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.Settings, Paths, fixture.UrlOpener));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, null!, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.Settings, Paths, fixture.UrlOpener));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, null!, fixture.FilePicker, fixture.Home, fixture.Settings, Paths, fixture.UrlOpener));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, null!, fixture.Home, fixture.Settings, Paths, fixture.UrlOpener));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, null!, fixture.Settings, Paths, fixture.UrlOpener));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, null!, Paths, fixture.UrlOpener));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.Settings, null!, fixture.UrlOpener));
+        Should.Throw<ArgumentNullException>(() => new SettingsViewModel(fixture.Detector, adoptFactory, fixture.Overlay, fixture.FilePicker, fixture.Home, fixture.Settings, Paths, null!));
+    }
+
+    [Fact]
+    public void Constructor_ExposesTheFourSectionViewModels()
+    {
+        var fixture = CreateServices();
+
+        var viewModel = CreateViewModel(fixture);
+
+        viewModel.General.ShouldNotBeNull();
+        viewModel.Game.ShouldNotBeNull();
+        viewModel.Network.ShouldNotBeNull();
+        viewModel.About.ShouldNotBeNull();
+        viewModel.SelectedTab.ShouldBe(SettingsTab.General);
+    }
+
+    [Theory]
+    [InlineData(SettingsTab.General)]
+    [InlineData(SettingsTab.Game)]
+    [InlineData(SettingsTab.Network)]
+    [InlineData(SettingsTab.Accounts)]
+    [InlineData(SettingsTab.About)]
+    public void SelectTab_ChangesSelectedTab(SettingsTab tab)
+    {
+        var fixture = CreateServices();
+        var viewModel = CreateViewModel(fixture);
+
+        viewModel.SelectTabCommand.Execute(tab);
+
+        viewModel.SelectedTab.ShouldBe(tab);
     }
 
     [Fact]

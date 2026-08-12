@@ -342,6 +342,85 @@ public sealed class ResponsiveRegressionTests
     }
 
     [AvaloniaFact]
+    public void Settings_GeneralTab_HoldsItsBoxesInTheLightTheme()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out _, out _);
+        var window = ResponsiveScenario.ShowWindow(provider, ThemeVariant.Light);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.SettingsNavItem.SelectCommand.Execute(null);
+        window.Settle();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Réglages, Général, thème clair");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void Settings_GameTab_HoldsItsBoxes()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out _, out _);
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.SettingsNavItem.SelectCommand.Execute(null);
+        shell.Settings.SelectTabCommand.Execute(SettingsTab.Game);
+        window.Settle();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Réglages, Jeu");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void Settings_NetworkTab_HoldsItsBoxes()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out _, out _);
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.SettingsNavItem.SelectCommand.Execute(null);
+        shell.Settings.SelectTabCommand.Execute(SettingsTab.Network);
+        window.Settle();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Réglages, Réseau");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void Settings_AccountsTab_HoldsItsBoxes()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out _, out _);
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.SettingsNavItem.SelectCommand.Execute(null);
+        shell.Settings.SelectTabCommand.Execute(SettingsTab.Accounts);
+        window.Settle();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Réglages, Comptes");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void Settings_AboutTab_HoldsItsBoxes()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out _, out _);
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.SettingsNavItem.SelectCommand.Execute(null);
+        shell.Settings.SelectTabCommand.Execute(SettingsTab.About);
+        window.Settle();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Réglages, À propos");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public async Task Home_EmptyWithVslDetected_HoldsItsBoxes()
     {
         using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);

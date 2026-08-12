@@ -66,6 +66,20 @@ public sealed partial class ShellViewModel : ObservableObject
 
         _currentPage = null!;
         Navigate(home);
+
+        // Angle mort corrigé (bug préexistant débusqué en préparant le chantier Réglages) : l'Accueil
+        // est la seule page dont la navigation initiale passe directement par Navigate() ci-dessus
+        // plutôt que par un ShowXxx dédié — ShowSettings et ShowModBrowser, eux, enchaînent toujours
+        // leur InitializeCommand juste après avoir navigué (voir plus bas). Sans l'appel qui suit,
+        // RIEN, nulle part dans l'application, n'appelait jamais HomeViewModel.RefreshCommand au
+        // démarrage réel : les tests headless appelaient tous ce rafraîchissement à la main avant
+        // d'affirmer quoi que ce soit, ce qui masquait totalement l'angle mort. Un utilisateur avec
+        // des instances déjà installées ouvrait donc l'application sur une grille vide. Fire-and-forget
+        // volontaire (même idiome que ShowSettings/ShowModBrowser plus bas) : le constructeur ne peut
+        // pas être asynchrone, et HomeViewModel.RefreshAsync se rejoint proprement si quelqu'un
+        // d'autre (test, ou un futur bouton Actualiser) appelle RefreshCommand pendant que ce premier
+        // scan tourne encore (voir la docstring de HomeViewModel.RefreshCommand).
+        _ = Home.RefreshCommand.ExecuteAsync(null);
     }
 
     public HomeViewModel Home { get; }

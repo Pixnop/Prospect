@@ -10,12 +10,21 @@ internal sealed class FakeExternalUrlOpener : IExternalUrlOpener
 {
     public List<Uri> Opened { get; } = [];
 
+    public List<string> OpenedFolders { get; } = [];
+
     /// <summary>Faux pour simuler l'absence de commande d'ouverture sur la machine.</summary>
     public bool Succeeds { get; set; } = true;
 
     public Task<bool> OpenAsync(Uri url, CancellationToken cancellationToken = default)
     {
         Opened.Add(url);
+
+        return Task.FromResult(Succeeds);
+    }
+
+    public Task<bool> OpenFolderAsync(string path, CancellationToken cancellationToken = default)
+    {
+        OpenedFolders.Add(path);
 
         return Task.FromResult(Succeeds);
     }

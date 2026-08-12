@@ -130,4 +130,39 @@ public class HomeAndWizardHeadlessTests
 
         window.Close();
     }
+
+    /// <summary>
+    /// Angle mort réel comblé ici : au vrai démarrage de l'application, rien n'appelait jamais
+    /// <see cref="HomeViewModel.RefreshCommand"/> — tous les autres tests de cette suite l'appellent
+    /// explicitement juste après avoir affiché la fenêtre, ce qui masquait le bug (un utilisateur
+    /// avec des instances existantes ouvrait l'app sur une grille vide). Ce test reproduit
+    /// exactement le chemin de démarrage réel (résoudre <see cref="MainWindow"/>, l'afficher) SANS
+    /// jamais appeler <c>RefreshCommand</c> à la main : si le déclenchement automatique régresse, la
+    /// grille reste vide et l'assertion finale échoue.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task RealStartup_ExistingInstances_AreVisibleWithoutManualRefresh()
+    {
+        using var provider = TestServiceProviderFactory.Create(out var fileSystem);
+        provider.SeedInstalledVersion(fileSystem, "1.20.4");
+        await provider.SeedTargetInstanceAsync("Vintage Survival", "1.20.4");
+
+        var home = provider.GetRequiredService<HomeViewModel>();
+        var window = provider.GetRequiredService<MainWindow>(); // résout ShellViewModel, comme le fait App.OnFrameworkInitializationCompleted au vrai démarrage.
+        window.Show();
+
+        // La preuve que le démarrage a déclenché le chargement tout seul : une exécution de
+        // RefreshCommand existe déjà, sans qu'on l'ait demandée. On la rejoint plutôt que d'en
+        // lancer une autre.
+        var startupRefresh = home.RefreshCommand.ExecutionTask.ShouldNotBeNull();
+        await startupRefresh;
+        window.Settle();
+
+        home.HasNoInstancesAtAll.ShouldBeFalse();
+        home.Instances.Count.ShouldBe(1);
+        home.Instances[0].Name.ShouldBe("Vintage Survival");
+        window.GetVisualDescendants().OfType<InstanceCardView>().ShouldNotBeEmpty();
+
+        window.Close();
+    }
 }

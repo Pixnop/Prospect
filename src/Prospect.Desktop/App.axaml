@@ -1,10 +1,11 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="using:Prospect.Desktop"
-             x:Class="Prospect.Desktop.App"
-             RequestedThemeVariant="Dark">
-             <!-- Le sombre est le thème par défaut du design ; le clair reste une variante
-                  secondaire accessible via les ThemeDictionaries des tokens. -->
+             x:Class="Prospect.Desktop.App">
+             <!-- RequestedThemeVariant n'est plus fixé ici : Initialize() (App.axaml.cs) pose une
+                  valeur de démarrage sûre (Sombre, l'ancien défaut codé en dur), immédiatement
+                  remplacée par ThemeService.ApplyStartupTheme() une fois le réglage persisté lu
+                  (OnFrameworkInitializationCompleted). Voir la docstring de ThemeService. -->
 
     <Application.DataTemplates>
         <!-- Résout n'importe quel ViewModel (page courante du shell, panneau modal, toast...)

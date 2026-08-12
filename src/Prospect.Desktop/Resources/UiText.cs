@@ -548,5 +548,9 @@ internal static class UiText
     {
         internal const string PickFolderTitle = "Dossier de VS Launcher";
         internal const string VslNotDetected = "Rien d'exploitable n'a été trouvé à cet emplacement.";
+
+        /// <summary>Libellé d'un choix du sélecteur de téléchargements simultanés (section Réseau).</summary>
+        internal static string ConcurrencyChoiceLabel(int count)
+            => count == 1 ? "1 téléchargement à la fois" : $"{count} téléchargements simultanés";
     }
 }
