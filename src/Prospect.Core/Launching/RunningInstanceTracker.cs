@@ -50,13 +50,20 @@ public sealed class RunningInstanceTracker
     private readonly object _gate = new();
     private readonly Dictionary<string, TrackedProcess> _tracked = new(StringComparer.Ordinal);
 
-    public RunningInstanceTracker(InstanceService instanceService, IClock clock)
+    private readonly IAppLog _log;
+
+    /// <summary>Construit le suivi.</summary>
+    /// <param name="instanceService">Service d'instances, pour le playtime et l'horodatage de lancement.</param>
+    /// <param name="clock">Horloge.</param>
+    /// <param name="log">Journal de diagnostic ; optionnel, voir la remarque d'<see cref="IAppLog"/>.</param>
+    public RunningInstanceTracker(InstanceService instanceService, IClock clock, IAppLog? log = null)
     {
         ArgumentNullException.ThrowIfNull(instanceService);
         ArgumentNullException.ThrowIfNull(clock);
 
         _instanceService = instanceService;
         _clock = clock;
+        _log = log ?? NullAppLog.Instance;
     }
 
     /// <summary>
@@ -168,6 +175,13 @@ public sealed class RunningInstanceTracker
         var stoppedUtc = _clock.UtcNow;
         var elapsedSeconds = Math.Max(0L, (long)(stoppedUtc - startedUtc).TotalSeconds);
         var status = new RunningInstanceStatus(slug, RunningInstanceState.Stopped, process.Id, startedUtc, exitCode, stoppedUtc);
+
+        // Le code de sortie est le premier fait qu'un rapport de plantage devrait pouvoir citer, et
+        // c'est aussi le seul que l'écran ne montre pas : un jeu qui se ferme tout seul laisse une
+        // fenêtre disparue et rien d'autre. Un code non nul est une anomalie, pas une information.
+        _log.Write(
+            exitCode == 0 ? AppLogLevel.Info : AppLogLevel.Warning,
+            $"Jeu quitté : instance « {slug} », pid {process.Id}, code {exitCode}, après {elapsedSeconds} s.");
 
         // Ordre strict exigé par le contrat de StatusChanged (voir sa docstring) : (1) playtime
         // persisté, (2) processus disposé, (3) évènement publié en dernier. Sans ça, un abonné

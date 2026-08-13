@@ -77,10 +77,19 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
         _compatibleReleases = [.. _allReleases.Where(release => !release.IsDeclaredIncompatible)];
         ReleaseCountText = UiText.Mods.ReleaseChoiceCount(_compatibleReleases.Length);
         HasIncompatibleReleases = _allReleases.Length > _compatibleReleases.Length;
-        _releases = _compatibleReleases;
 
-        // ApplyPlan présélectionne la release du plan, c'est-à-dire la plus récente compatible :
-        // le comportement d'avant le sélecteur, à l'identique tant qu'on n'y touche pas.
+        // Le dévoilement est POSÉ D'EMBLÉE quand il n'y a rien d'autre à voir : une fiche dont
+        // aucune release n'est déclarée compatible ouvrirait sinon sur un sélecteur vide, c'est-à-dire
+        // sur un dialogue qui montre un mod, un bouton Installer, et pas une seule version à
+        // installer. Le contrat « pas d'élargissement silencieux » est respecté à la lettre, parce
+        // que rien n'est silencieux ici : l'avertissement de non-compatibilité est affiché avec la
+        // liste, et c'est bien ce que le bouton de dévoilement aurait montré au premier clic. On
+        // épargne ce clic, on n'épargne pas l'information.
+        _showsAllReleases = _compatibleReleases.Length == 0 && _allReleases.Length > 0;
+        _releases = _showsAllReleases ? _allReleases : _compatibleReleases;
+
+        // ApplyPlan présélectionne la release du plan, c'est-à-dire la meilleure que le domaine ait
+        // su retenir : la plus récente compatible quand il y en a une, la meilleure publiée sinon.
         ApplyPlan(plan);
     }
 
@@ -108,8 +117,9 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
     public bool HasIncompatibleReleases { get; }
 
     /// <summary>
-    /// Vrai quand l'utilisateur a demandé à voir TOUTES les versions. Jamais l'état de départ : le
-    /// contrat est « pas d'élargissement silencieux », pas « pas d'élargissement ».
+    /// Vrai quand toutes les versions sont listées. L'état de départ est faux, SAUF quand aucune
+    /// release n'est déclarée compatible : voir le constructeur, qui explique pourquoi ouvrir sur
+    /// une liste vide serait pire qu'ouvrir sur la liste complète avec son avertissement.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ToggleAllReleasesText))]
@@ -222,9 +232,16 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
     internal Task ReloadCompletion { get; private set; } = Task.CompletedTask;
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Sur <see cref="_allReleases"/> et non sur <see cref="Releases"/> : chaque
+    /// <see cref="ModReleaseChoiceViewModel"/> est construit dès le constructeur, changelog analysé
+    /// compris, y compris ceux que le dévoilement n'a jamais montrés. Libérer la seule liste
+    /// AFFICHÉE laissait donc derrière soi tout ce qu'un dialogue fermé sans dévoilement avait
+    /// décodé.
+    /// </remarks>
     public void Dispose()
     {
-        foreach (var release in Releases)
+        foreach (var release in _allReleases)
         {
             release.Dispose();
         }

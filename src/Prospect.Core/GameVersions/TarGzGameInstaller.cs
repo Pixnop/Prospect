@@ -217,6 +217,18 @@ internal sealed class TarGzGameInstaller
         _fileSystem.Directory.Delete(staging, recursive: true);
     }
 
+    /// <summary>
+    /// Écrit une entrée régulière à sa destination, en créant ses répertoires parents.
+    /// </summary>
+    /// <remarks>
+    /// Une entrée régulière de zéro octet expose un <c>DataStream</c> NUL, et non un flux vide :
+    /// c'est une particularité de <see cref="TarReader"/>, pas une anomalie de l'archive. Sauter ces
+    /// entrées revenait à perdre des fichiers que l'archive contient bel et bien, et l'archive
+    /// client en porte un qui compte : <c>assets/version-&lt;version&gt;.txt</c>, dont le jeu vérifie
+    /// la PRÉSENCE au démarrage pour juger l'installation propre. Sans lui, il avertit que des
+    /// fichiers d'une version précédente subsistent, sur une installation pourtant neuve. Un fichier
+    /// vide est donc créé, comme le ferait <c>tar</c>.
+    /// </remarks>
     private async Task WriteFileAsync(TarEntry entry, string destination, CancellationToken cancellationToken)
     {
         var parent = _fileSystem.Path.GetDirectoryName(destination);
@@ -225,15 +237,13 @@ internal sealed class TarGzGameInstaller
             _fileSystem.Directory.CreateDirectory(parent);
         }
 
-        if (entry.DataStream is not { } data)
-        {
-            return;
-        }
-
         var file = _fileSystem.File.Create(destination);
         await using (file.ConfigureAwait(false))
         {
-            await data.CopyToAsync(file, cancellationToken).ConfigureAwait(false);
+            if (entry.DataStream is { } data)
+            {
+                await data.CopyToAsync(file, cancellationToken).ConfigureAwait(false);
+            }
         }
     }
 

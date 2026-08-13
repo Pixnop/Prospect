@@ -4,9 +4,10 @@ using Prospect.Core.Instances;
 namespace Prospect.Core.ModDb;
 
 /// <summary>
-/// Ce que la vérification a établi pour un mod installé, vis-à-vis du ModDB. Quatre états, pas
-/// trois : l'absence de nouvelle release et l'absence d'information ne sont pas la même chose
-/// (docs/research/moddb-api.md, piège absence-vs-à-jour de <c>/api/updates</c>).
+/// Ce que la vérification a établi pour un mod installé, vis-à-vis du ModDB. Cinq états, parce que
+/// chacun est un fait différent : l'absence de nouvelle release, l'absence d'information et le
+/// refus de compatibilité ne se confondent pas (docs/research/moddb-api.md, piège
+/// absence-vs-à-jour de <c>/api/updates</c>).
 /// </summary>
 public enum ModUpdateStatus
 {
@@ -15,6 +16,21 @@ public enum ModUpdateStatus
 
     /// <summary>Une release plus récente, compatible avec la version de jeu de l'instance, est disponible.</summary>
     UpdateAvailable,
+
+    /// <summary>
+    /// Le ModDB a signalé une release PLUS RÉCENTE, mais aucun de ses tags ne la rattache à la
+    /// version de jeu de l'instance.
+    /// </summary>
+    /// <remarks>
+    /// Ce verdict est né d'un défaut de terrain, et son absence était le défaut lui-même : ce cas
+    /// était rendu « à jour ». Sur une version de jeu fraîchement sortie, presque aucune release
+    /// n'est encore cochée pour elle — les tags sont des cases que l'auteur coche à la main, à
+    /// l'upload. Toutes les mises à jour réellement publiées repassaient donc en « à jour », et
+    /// « Vérifier les mises à jour » rendait invariablement le même verdict vide : le bouton avait
+    /// l'air de ne rien faire. Dire « rien de nouveau » quand le serveur vient de répondre le
+    /// contraire est le seul mensonge que cette énumération ne peut pas se permettre.
+    /// </remarks>
+    UpdateNotDeclaredForThisVersion,
 
     /// <summary>
     /// Absent de la réponse de <c>/api/updates</c> ET sans provenance ModDB : rien ne permet
@@ -29,7 +45,11 @@ public enum ModUpdateStatus
 /// <summary>État d'un mod installé à l'issue d'une vérification.</summary>
 /// <param name="Mod">Mod tel que vu par le dernier scan.</param>
 /// <param name="Status">Verdict.</param>
-/// <param name="AvailableRelease">Release proposée si <paramref name="Status"/> vaut <see cref="ModUpdateStatus.UpdateAvailable"/>.</param>
+/// <param name="AvailableRelease">
+/// Release signalée par le ModDB. Renseignée pour <see cref="ModUpdateStatus.UpdateAvailable"/>
+/// comme pour <see cref="ModUpdateStatus.UpdateNotDeclaredForThisVersion"/> : dans les deux cas il y
+/// a une version à nommer, et dans le second ses tags sont précisément ce qu'il faut montrer.
+/// </param>
 /// <param name="IsApproximateMatch">Vrai si la release n'a été retenue qu'en élargissant à la série mineure.</param>
 /// <param name="AnnouncedSizeBytes">Taille annoncée par le CDN pour <paramref name="AvailableRelease"/>, via <c>HEAD</c>.</param>
 public sealed record ModUpdateResult(
@@ -39,8 +59,18 @@ public sealed record ModUpdateResult(
     bool IsApproximateMatch = false,
     long? AnnouncedSizeBytes = null)
 {
-    /// <summary>Raccourci pour le seul état qui appelle une action.</summary>
+    /// <summary>Raccourci pour le seul état qui appelle une action en un clic.</summary>
     public bool HasUpdate => Status == ModUpdateStatus.UpdateAvailable;
+
+    /// <summary>
+    /// Vrai quand une release plus récente existe sans être déclarée pour cette version de jeu.
+    /// Actionnable aussi, mais pas d'un clic : elle passe par le dialogue d'installation et son
+    /// avertissement.
+    /// </summary>
+    public bool HasUndeclaredUpdate => Status == ModUpdateStatus.UpdateNotDeclaredForThisVersion;
+
+    /// <summary>Versions de jeu que l'auteur a réellement cochées sur la release signalée.</summary>
+    public IReadOnlyList<string> AvailableGameVersions => AvailableRelease?.CompatibleGameVersionTags ?? [];
 }
 
 /// <summary>Résultat d'une vérification pour une instance entière, daté.</summary>
@@ -53,6 +83,24 @@ public sealed record InstanceUpdateReport(IReadOnlyList<ModUpdateResult> Mods, D
 
     /// <summary>Vrai si au moins un mod a une mise à jour disponible.</summary>
     public bool HasUpdates => UpdateCount > 0;
+
+    /// <summary>Nombre de mods dont la release plus récente n'est pas déclarée pour cette version de jeu.</summary>
+    public int UndeclaredUpdateCount => Mods.Count(mod => mod.HasUndeclaredUpdate);
+
+    /// <summary>Vrai si au moins un mod est dans ce cas.</summary>
+    public bool HasUndeclaredUpdates => UndeclaredUpdateCount > 0;
+
+    /// <summary>
+    /// Résumé d'une ligne, pour le journal de diagnostic : ce qu'une vérification a réellement
+    /// conclu, verdict par verdict. C'est ce que « ça ne marche pas » doit pouvoir devenir dans un
+    /// rapport de terrain.
+    /// </summary>
+    public string Summary => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture,
+        $"{Mods.Count} mod(s) : {UpdateCount} à jour disponible, {UndeclaredUpdateCount} plus récent non déclaré, "
+        + $"{Mods.Count(mod => mod.Status == ModUpdateStatus.UpToDate)} à jour, "
+        + $"{Mods.Count(mod => mod.Status == ModUpdateStatus.UnknownToModDb)} inconnu du ModDB, "
+        + $"{Mods.Count(mod => mod.Status == ModUpdateStatus.Unidentifiable)} illisible");
 }
 
 /// <summary>
@@ -83,27 +131,35 @@ public sealed class ModUpdateChecker
     private readonly IInstalledModRepository _repository;
     private readonly IInstanceRepository _instances;
     private readonly IClock _clock;
+    private readonly IAppLog _log;
 
     /// <summary>Construit le vérificateur.</summary>
     /// <param name="client">Client ModDB.</param>
     /// <param name="repository">Mods installés de l'instance.</param>
     /// <param name="instances">Instances, pour connaître la version de jeu visée.</param>
     /// <param name="clock">Horloge, pour horodater le résultat.</param>
+    /// <param name="log">
+    /// Journal de diagnostic. Une vérification consigne son verdict COMPTÉ et, en cas d'échec, sa
+    /// raison : « ça ne marche pas » est un rapport que rien ne permettait d'instruire.
+    /// </param>
     public ModUpdateChecker(
         IModDbClient client,
         IInstalledModRepository repository,
         IInstanceRepository instances,
-        IClock clock)
+        IClock clock,
+        IAppLog log)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(instances);
         ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(log);
 
         _client = client;
         _repository = repository;
         _instances = instances;
         _clock = clock;
+        _log = log;
     }
 
     /// <summary>
@@ -119,20 +175,43 @@ public sealed class ModUpdateChecker
         ModCompatibilityMode mode = ModCompatibilityMode.ExactGameVersion,
         CancellationToken cancellationToken = default)
     {
-        var instance = await _instances.LoadAsync(slug, cancellationToken).ConfigureAwait(false);
-        var gameVersion = instance.Metadata.GameVersion;
-        var installed = await _repository.ScanAsync(slug, cancellationToken).ConfigureAwait(false);
+        _log.Write(AppLogLevel.Info, $"Mises à jour : vérification de « {slug} » demandée.");
 
-        var query = BuildQuery(installed);
-        var updates = await _client.GetUpdatesAsync(query, cancellationToken).ConfigureAwait(false);
-
-        var results = new List<ModUpdateResult>(installed.Count);
-        foreach (var mod in installed)
+        try
         {
-            results.Add(await EvaluateAsync(mod, updates, gameVersion, mode, cancellationToken).ConfigureAwait(false));
-        }
+            var instance = await _instances.LoadAsync(slug, cancellationToken).ConfigureAwait(false);
+            var gameVersion = instance.Metadata.GameVersion;
+            var installed = await _repository.ScanAsync(slug, cancellationToken).ConfigureAwait(false);
 
-        return new InstanceUpdateReport(results, _clock.UtcNow);
+            var query = BuildQuery(installed);
+            var updates = await _client.GetUpdatesAsync(query, cancellationToken).ConfigureAwait(false);
+
+            var results = new List<ModUpdateResult>(installed.Count);
+            foreach (var mod in installed)
+            {
+                results.Add(await EvaluateAsync(mod, updates, gameVersion, mode, cancellationToken).ConfigureAwait(false));
+            }
+
+            var report = new InstanceUpdateReport(results, _clock.UtcNow);
+            _log.Write(AppLogLevel.Info, $"Mises à jour : « {slug} » en {gameVersion}, {report.Summary}.");
+
+            return report;
+        }
+        catch (OperationCanceledException)
+        {
+            // Une annulation n'est pas un échec : elle vient de l'utilisateur ou de la fermeture
+            // d'un écran, et elle n'a rien à faire dans un journal de diagnostic.
+            throw;
+        }
+        catch (Exception exception)
+        {
+            // Large et RELANCÉ : le journal n'attrape rien, il ne fait que noter la raison au
+            // passage. C'est ce qui manquait pour instruire un « ça ne marche pas », y compris quand
+            // l'échec vient d'un chemin que l'appelant ne rattrape pas.
+            _log.Write(AppLogLevel.Error, $"Mises à jour : échec de la vérification de « {slug} » ({exception.GetType().Name}) : {exception.Message}");
+
+            throw;
+        }
     }
 
     // Pessimiste à dessein : si deux fichiers installés partagent le même modidstr (typiquement un
@@ -183,7 +262,18 @@ public sealed class ModUpdateChecker
         }
 
         var choice = ModReleaseSelector.Select([candidate], gameVersion, mode);
-        if (choice is null || choice.Release.Version <= version)
+        if (choice is null)
+        {
+            // Aucun tag ne rattache la candidate à cette version de jeu. Deux situations très
+            // différentes se cachaient ici sous le même verdict « à jour », et c'est la première qui
+            // faisait passer la vérification pour inopérante : le serveur vient de signaler une
+            // release PLUS RÉCENTE que celle installée. La compatibilité manque, la mise à jour non.
+            return candidate.Version > version
+                ? new ModUpdateResult(mod, ModUpdateStatus.UpdateNotDeclaredForThisVersion, candidate)
+                : new ModUpdateResult(mod, ModUpdateStatus.UpToDate);
+        }
+
+        if (choice.Release.Version <= version)
         {
             return new ModUpdateResult(mod, ModUpdateStatus.UpToDate);
         }

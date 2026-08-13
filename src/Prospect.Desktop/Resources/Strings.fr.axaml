@@ -51,7 +51,7 @@
   <x:String x:Key="Logs_Title">Journaux</x:String>
   <x:String x:Key="Logs_Refresh">Rafraîchir</x:String>
   <x:String x:Key="Logs_Export">Exporter les journaux…</x:String>
-  <x:String x:Key="Logs_SnapshotNotice">Instantané : rafraîchis pour relire le fichier.</x:String>
+  <x:String x:Key="Logs_SnapshotNotice">Relu automatiquement tant que cette page est ouverte.</x:String>
   <x:String x:Key="Logs_PathLabel">Fichier</x:String>
   <x:String x:Key="Logs_EmptyTitle">Aucun journal pour l'instant</x:String>
   <x:String x:Key="Logs_EmptyDescription">Prospect n'a encore rien écrit dans son journal. Installe une version ou lance une instance, puis reviens ici.</x:String>
@@ -232,7 +232,7 @@
   <x:String x:Key="Mods_Offline_Title">ModDB injoignable</x:String>
   <x:String x:Key="Mods_Offline_Description">La connexion au dépôt officiel a échoué. Les mods déjà installés restent utilisables hors ligne.</x:String>
   <x:String x:Key="Mods_ShowMore">Afficher plus</x:String>
-  <x:String x:Key="Mods_Tags_ScrollHint">Fais défiler la rangée pour voir toutes les catégories.</x:String>
+  <x:String x:Key="Mods_Tags_ScrollHint">Molette ou barre pour faire défiler la rangée et voir toutes les catégories.</x:String>
 
   <!-- ── Fiche d'un mod ──────────────────────────────────────────────────────────── -->
   <x:String x:Key="Mods_Detail_Versions">Versions</x:String>
@@ -266,6 +266,7 @@
   <x:String x:Key="Mods_Tab_CancelUpdateAll">Annuler</x:String>
   <x:String x:Key="Mods_Row_UpdateAvailable">mise à jour</x:String>
   <x:String x:Key="Mods_Row_UnknownToModDb">inconnu du ModDB</x:String>
+  <x:String x:Key="Mods_Row_UndeclaredUpdate">plus récente non déclarée</x:String>
   <x:String x:Key="Mods_Row_Update">Mettre à jour</x:String>
   <x:String x:Key="Mods_UpdatePlan_Confirm">Mettre à jour</x:String>
 

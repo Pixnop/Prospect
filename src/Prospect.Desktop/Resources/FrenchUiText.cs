@@ -691,6 +691,32 @@ internal sealed class FrenchModsText : ModsText
         _ => $"{count} mises à jour disponibles",
     };
 
+    internal override string CheckVerdict(int updateCount, int undeclaredCount, int modCount)
+    {
+        if (modCount == 0)
+        {
+            return "Aucun mod à vérifier.";
+        }
+
+        var found = (updateCount, undeclaredCount) switch
+        {
+            (0, 0) => "tout est à jour",
+            (0, 1) => "1 version plus récente existe, non déclarée pour ta version du jeu",
+            (0, _) => $"{undeclaredCount} versions plus récentes existent, non déclarées pour ta version du jeu",
+            (1, 0) => "1 mise à jour disponible",
+            (_, 0) => $"{updateCount} mises à jour disponibles",
+            (1, 1) => "1 mise à jour disponible, et 1 version plus récente non déclarée",
+            (1, _) => $"1 mise à jour disponible, et {undeclaredCount} versions plus récentes non déclarées",
+            (_, 1) => $"{updateCount} mises à jour disponibles, et 1 version plus récente non déclarée",
+            _ => $"{updateCount} mises à jour disponibles, et {undeclaredCount} versions plus récentes non déclarées",
+        };
+
+        return modCount == 1 ? $"1 mod vérifié : {found}." : $"{modCount} mods vérifiés : {found}.";
+    }
+
+    internal override string UndeclaredUpdateReason(string version, IReadOnlyList<string> taggedVersions)
+        => $"{version} est publiée, déclarée pour {CompatibleVersions(taggedVersions)}";
+
     internal override string UpdatePlanTitle(string modName) => $"Mettre à jour « {modName} » ?";
 
     internal override string UpdatePlanMessage(string currentVersion, string targetVersion)

@@ -116,4 +116,15 @@ internal static class TarGzSamples
     }
 
     public static byte[] Text(string value) => System.Text.Encoding.UTF8.GetBytes(value);
+
+    /// <summary>
+    /// Contenu d'un fichier de zéro octet, distinct du <see langword="null"/> qui dénote un dossier.
+    /// </summary>
+    /// <remarks>
+    /// Relu par <see cref="TarReader"/>, une entrée régulière vide expose un <c>DataStream</c> NUL,
+    /// exactement comme une entrée sans données. C'est ce piège-là que la fixture doit reproduire,
+    /// et c'est pourquoi le tableau vide mérite un nom plutôt qu'un <c>Text("")</c> qui passerait
+    /// pour une inattention.
+    /// </remarks>
+    public static byte[] Empty => [];
 }

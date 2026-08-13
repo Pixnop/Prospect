@@ -1,5 +1,6 @@
 using System.IO.Abstractions;
 
+using Prospect.Core.Common;
 using Prospect.Core.Instances;
 using Prospect.Core.Storage;
 
@@ -23,6 +24,7 @@ public sealed class FileSystemInstalledModRepository : IInstalledModRepository
     private readonly ModArchiveReader _archiveReader;
     private readonly IModStateConvention _convention;
     private readonly JsonFileStore _jsonFileStore;
+    private readonly IAppLog _log;
 
     /// <summary>Construit le repository.</summary>
     /// <param name="fileSystem">Système de fichiers abstrait.</param>
@@ -30,12 +32,14 @@ public sealed class FileSystemInstalledModRepository : IInstalledModRepository
     /// <param name="archiveReader">Lecteur de <c>modinfo.json</c>.</param>
     /// <param name="convention">Convention d'activation, voir <see cref="IModStateConvention"/>.</param>
     /// <param name="jsonFileStore">Écritures atomiques du fichier de provenance.</param>
+    /// <param name="log">Journal de diagnostic ; optionnel, voir la remarque d'<see cref="IAppLog"/>.</param>
     public FileSystemInstalledModRepository(
         IFileSystem fileSystem,
         IInstanceRepository instances,
         ModArchiveReader archiveReader,
         IModStateConvention convention,
-        JsonFileStore jsonFileStore)
+        JsonFileStore jsonFileStore,
+        IAppLog? log = null)
     {
         ArgumentNullException.ThrowIfNull(fileSystem);
         ArgumentNullException.ThrowIfNull(instances);
@@ -48,6 +52,7 @@ public sealed class FileSystemInstalledModRepository : IInstalledModRepository
         _archiveReader = archiveReader;
         _convention = convention;
         _jsonFileStore = jsonFileStore;
+        _log = log ?? NullAppLog.Instance;
     }
 
     /// <inheritdoc />
@@ -93,6 +98,10 @@ public sealed class FileSystemInstalledModRepository : IInstalledModRepository
         }
 
         _fileSystem.File.Move(installedMod.FilePath, target, overwrite: true);
+        _log.Write(
+            AppLogLevel.Info,
+            $"Mod {(enabled ? "activé" : "désactivé")} : « {installedMod.FileName} » dans « {slug} ».");
+
         var provenance = await LoadProvenanceAsync(slug, cancellationToken).ConfigureAwait(false);
 
         return Describe(target, provenance);
@@ -107,6 +116,8 @@ public sealed class FileSystemInstalledModRepository : IInstalledModRepository
         {
             _fileSystem.File.Delete(installedMod.FilePath);
         }
+
+        _log.Write(AppLogLevel.Info, $"Mod désinstallé : « {installedMod.FileName} » de « {slug} ».");
 
         var document = await ReadDocumentAsync(slug, cancellationToken).ConfigureAwait(false);
         var remaining = document.Mods

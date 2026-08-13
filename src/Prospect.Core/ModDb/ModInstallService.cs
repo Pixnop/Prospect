@@ -71,6 +71,7 @@ public sealed class ModInstallService
     private readonly ModArchiveReader _archiveReader;
     private readonly IFileSystem _fileSystem;
     private readonly IClock _clock;
+    private readonly IAppLog _log;
 
     /// <summary>Construit le service.</summary>
     /// <param name="client">Client ModDB.</param>
@@ -87,7 +88,8 @@ public sealed class ModInstallService
         IInstanceRepository instances,
         ModArchiveReader archiveReader,
         IFileSystem fileSystem,
-        IClock clock)
+        IClock clock,
+        IAppLog? log = null)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(downloads);
@@ -104,6 +106,7 @@ public sealed class ModInstallService
         _archiveReader = archiveReader;
         _fileSystem = fileSystem;
         _clock = clock;
+        _log = log ?? NullAppLog.Instance;
     }
 
     /// <summary>
@@ -124,7 +127,7 @@ public sealed class ModInstallService
     /// </param>
     /// <param name="progress">Avancement du téléchargement.</param>
     /// <param name="cancellationToken">Annulation.</param>
-    /// <exception cref="ModReleaseNotFoundException">Aucune release compatible avec la version de l'instance.</exception>
+    /// <exception cref="ModReleaseNotFoundException">La fiche ne publie aucune release.</exception>
     /// <exception cref="ModDbApiException">Mod inconnu du ModDB.</exception>
     /// <exception cref="ModDbUnavailableException">ModDB injoignable.</exception>
     /// <exception cref="DownloadFailedException">Téléchargement impossible.</exception>
@@ -180,8 +183,26 @@ public sealed class ModInstallService
         // doit pouvoir tomber sur n'importe laquelle.
         var candidates = ModReleaseSelector.SelectAll(detail.Releases, gameVersion, mode, includeIncompatible: true);
         var automatic = ModReleaseSelector.Automatic(candidates, mode);
+
+        // Trois recours, du plus sûr au plus franc. La release explicitement choisie ; à défaut la
+        // meilleure que la sélection automatique accepte ; à défaut la meilleure PUBLIÉE, quelle que
+        // soit sa compatibilité déclarée.
+        //
+        // Ce troisième recours est ce qui manquait, et son absence se voyait à un endroit précis :
+        // le docteur d'instance propose « Installer "carryonlib" », dont aucune release ne coche la
+        // version de l'instance, et la préparation échouait avant même d'ouvrir le dialogue. Le mod
+        // devenait donc impossible à installer par ce chemin, alors que le MÊME mod, atteint comme
+        // dépendance d'un autre, se voyait proposé « quand même » depuis toujours (voir
+        // BuildFallbackItemAsync). La règle vaut maintenant pour le mod principal comme pour ses
+        // dépendances : on ne refuse pas d'ouvrir, on ouvre en le disant. Le plan qui en sort porte
+        // sa compatibilité réelle, le dialogue l'affiche en avertissement, et la provenance écrite
+        // ensuite garde la trace du choix (ModProvenance.DeclaredIncompatible).
+        //
+        // Ce qui reste une erreur, et c'en est une vraie : une fiche SANS AUCUNE release. Il n'y a
+        // alors rien à proposer, ni compatible ni pas.
         var choice = (releaseId is { } wanted ? candidates.FirstOrDefault(candidate => candidate.Release.ReleaseId == wanted) : null)
             ?? (automatic.Count > 0 ? automatic[0] : null)
+            ?? (candidates.Count > 0 ? candidates[0] : null)
             ?? throw new ModReleaseNotFoundException(detail.Name, gameVersion);
 
         var primary = await BuildItemAsync(detail.ModId, detail.Name, choice, cancellationToken).ConfigureAwait(false);
@@ -226,9 +247,9 @@ public sealed class ModInstallService
     /// <param name="plan">Plan produit par <see cref="PrepareAsync"/>.</param>
     /// <param name="selectedDependencies">
     /// Identifiants des dépendances à installer. <see langword="null"/> ou vide n'en installe
-    /// aucune : c'est un choix explicite de l'utilisateur, jamais un défaut implicite. Les
-    /// dépendances de <see cref="ModInstallPlan.InstallableAnyway"/> obéissent à la même liste,
-    /// mais l'écran ne les coche jamais d'avance.
+    /// aucune : c'est le choix que l'écran a remonté, jamais une supposition d'ici. Les dépendances
+    /// de <see cref="ModInstallPlan.InstallableAnyway"/> obéissent à la même liste ; l'écran les
+    /// coche d'avance comme les autres, et c'est à lui que la décision appartient.
     /// </param>
     /// <param name="progress">Avancement du téléchargement.</param>
     /// <param name="cancellationToken">Annulation.</param>
@@ -674,9 +695,9 @@ public sealed class ModInstallService
             }
 
             // Et la fiche a beau n'avoir aucune release déclarée compatible, elle a des releases :
-            // celle du haut est proposée en dernier recours, décochée, avec ses vrais tags. Sans
-            // ça, une dépendance dont l'auteur a juste oublié de cocher la dernière version du jeu
-            // rendrait le mod qui en dépend impossible à installer.
+            // celle du haut est proposée en dernier recours, avec ses vrais tags et l'avertissement
+            // qui va avec. Sans ça, une dépendance dont l'auteur a juste oublié de cocher la
+            // dernière version du jeu rendrait le mod qui en dépend impossible à installer.
             var fallback = await BuildFallbackItemAsync(detail, gameVersion, cancellationToken).ConfigureAwait(false);
             unresolved.Add(new UnresolvedModDependency(issue.ModIdString, ModDependencyResolution.NoCompatibleRelease, detail.Name)
             {
@@ -698,7 +719,13 @@ public sealed class ModInstallService
         _fileSystem.Directory.CreateDirectory(modsDirectory);
 
         var target = _fileSystem.Path.Combine(modsDirectory, item.TargetFileName);
+        var replaces = _fileSystem.File.Exists(target);
         _fileSystem.File.Copy(archivePath, target, overwrite: true);
+
+        _log.Write(
+            AppLogLevel.Info,
+            $"Mod {(replaces ? "remplacé" : "installé")} : « {item.ModIdString} » {item.Version} dans « {slug} »"
+            + $"{(item.IsDeclaredIncompatible ? ", sans compatibilité déclarée" : string.Empty)}.");
 
         await _repository.SaveProvenanceAsync(
             slug,

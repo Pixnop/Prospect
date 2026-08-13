@@ -4,7 +4,9 @@ using Prospect.Core.Common;
 using Prospect.Core.Instances;
 using Prospect.Core.Instances.Migrations;
 using Prospect.Core.ModDb;
+using Prospect.Core.Settings;
 using Prospect.Core.Storage;
+using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.Tests.TestDoubles;
 using Prospect.Desktop.ViewModels.Mods;
@@ -57,12 +59,12 @@ public sealed class InstanceModsTabViewModelTests
             record.Slug);
     }
 
-    private static void SeedMod(Fixture fixture, string fileName, string modId, string name, string? dependency = null)
+    private static void SeedMod(Fixture fixture, string fileName, string modId, string name, string? dependency = null, string version = "1.0.0")
         => ModDbDoubles.SeedMod(
             fixture.FileSystem,
             fixture.Mods.GetModsDirectory(fixture.Slug),
             fileName,
-            ModDbDoubles.ModInfo(modId, name, "1.0.0", dependency));
+            ModDbDoubles.ModInfo(modId, name, version, dependency));
 
     [Fact]
     public async Task RefreshAsync_NoMods_ShowsTheEmptyState()
@@ -310,6 +312,64 @@ public sealed class InstanceModsTabViewModelTests
 
         fixture.Toasts.Shown.ShouldContain(toast => toast.Title == "Vérification impossible");
         fixture.Tab.Mods.ShouldHaveSingleItem().HasUpdateAvailable.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Une vérification qui ne trouve rien doit quand même RENDRE UN VERDICT. Sans lui, elle laisse
+    /// l'écran exactement dans l'état où elle l'a trouvé, et un bouton qui ne change rien passe pour
+    /// un bouton cassé : c'est le « ça ne fonctionne pas » remonté du terrain.
+    /// </summary>
+    [Fact]
+    public async Task CheckUpdatesAsync_NothingToReport_StillSaysSoOutLoud()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.11.1.zip", "configlib", "Config lib", version: "1.11.1");
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+
+        fixture.Tab.HasCheckVerdict.ShouldBeFalse("rien n'a encore été vérifié");
+
+        await fixture.Tab.CheckUpdatesCommand.ExecuteAsync(null);
+
+        fixture.Tab.HasCheckVerdict.ShouldBeTrue();
+        fixture.Tab.CheckVerdictText.ShouldContain("1 mod vérifié");
+    }
+
+    /// <summary>
+    /// Le cas de terrain : le ModDB signale une release plus récente, dont les tags s'arrêtent avant
+    /// la version de l'instance. Elle ne repasse plus pour « à jour ».
+    /// </summary>
+    [Fact]
+    public async Task CheckUpdatesAsync_ANewerReleaseNotDeclaredForThisVersion_IsBadgedAndCounted()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip", "configlib", "Config lib");
+
+        // Instance en 1.21.3, release plus récente taguée pour une autre série.
+        fixture.Server.UpdatesJson = ConfigLibUpdateJson.Replace(@"""tags"": [""1.21.3""]", @"""tags"": [""1.20.4""]", StringComparison.Ordinal);
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+
+        await fixture.Tab.CheckUpdatesCommand.ExecuteAsync(null);
+
+        var row = fixture.Tab.Mods.ShouldHaveSingleItem();
+        row.HasUpdateAvailable.ShouldBeFalse("pas de mise à jour d'un clic");
+        row.HasUndeclaredUpdate.ShouldBeTrue();
+        row.UndeclaredUpdateText.ShouldContain("1.11.1");
+        row.UndeclaredUpdateText.ShouldContain("1.20.4");
+
+        fixture.Tab.UndeclaredUpdateCount.ShouldBe(1);
+        fixture.Tab.CheckVerdictText.ShouldContain("non déclarée");
+    }
+
+    /// <summary>Le verdict existe aussi en anglais, avec la même grammaire de comptage.</summary>
+    [Fact]
+    public void CheckVerdict_ReadsInEnglishToo()
+    {
+        var english = UiText.TableFor(ProspectSettings.English).Mods;
+
+        english.CheckVerdict(0, 0, 3).ShouldBe("3 mods checked: everything is up to date.");
+        english.CheckVerdict(0, 1, 3).ShouldBe("3 mods checked: 1 newer release exists, not declared for your game version.");
+        english.CheckVerdict(2, 1, 4).ShouldBe("4 mods checked: 2 updates available, and 1 newer release not declared.");
+        english.CheckVerdict(0, 0, 0).ShouldBe("No mod to check.");
     }
 
     // ── Mise à jour d'un mod ─────────────────────────────────────────────────────

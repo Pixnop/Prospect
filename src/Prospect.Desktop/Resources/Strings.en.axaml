@@ -39,7 +39,7 @@
   <x:String x:Key="Logs_Title">Logs</x:String>
   <x:String x:Key="Logs_Refresh">Refresh</x:String>
   <x:String x:Key="Logs_Export">Export logs…</x:String>
-  <x:String x:Key="Logs_SnapshotNotice">Snapshot: refresh to read the file again.</x:String>
+  <x:String x:Key="Logs_SnapshotNotice">Re-read automatically while this page is open.</x:String>
   <x:String x:Key="Logs_PathLabel">File</x:String>
   <x:String x:Key="Logs_EmptyTitle">No log yet</x:String>
   <x:String x:Key="Logs_EmptyDescription">Prospect has not written anything to its log yet. Install a version or launch an instance, then come back.</x:String>
@@ -218,7 +218,7 @@
   <x:String x:Key="Mods_Offline_Title">ModDB unreachable</x:String>
   <x:String x:Key="Mods_Offline_Description">The connection to the official repository failed. Mods you already installed still work offline.</x:String>
   <x:String x:Key="Mods_ShowMore">Show more</x:String>
-  <x:String x:Key="Mods_Tags_ScrollHint">Scroll the row to see every category.</x:String>
+  <x:String x:Key="Mods_Tags_ScrollHint">Wheel or bar to scroll the row and see every category.</x:String>
 
   <!-- ── Fiche d'un mod ──────────────────────────────────────────────────────────── -->
   <x:String x:Key="Mods_Detail_Versions">Versions</x:String>
@@ -252,6 +252,7 @@
   <x:String x:Key="Mods_Tab_CancelUpdateAll">Cancel</x:String>
   <x:String x:Key="Mods_Row_UpdateAvailable">update</x:String>
   <x:String x:Key="Mods_Row_UnknownToModDb">unknown to ModDB</x:String>
+  <x:String x:Key="Mods_Row_UndeclaredUpdate">newer, not declared</x:String>
   <x:String x:Key="Mods_Row_Update">Update</x:String>
   <x:String x:Key="Mods_UpdatePlan_Confirm">Update</x:String>
 

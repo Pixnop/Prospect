@@ -110,11 +110,23 @@ public sealed class GameInstallService
     /// fichiers avant de les effacer (voir <see cref="Storage.DirectoryDeleter"/>).
     /// </remarks>
     /// <exception cref="Storage.DirectoryDeleteFailedException">Il reste des fichiers sur le disque.</exception>
-    public Task UninstallAsync(
+    public async Task UninstallAsync(
         GameVersion version,
         IProgress<Storage.DirectoryDeleteProgress>? progress = null,
         CancellationToken cancellationToken = default)
-        => _repository.RemoveAsync(version, progress, cancellationToken);
+    {
+        try
+        {
+            await _repository.RemoveAsync(version, progress, cancellationToken).ConfigureAwait(false);
+            _log.Write(AppLogLevel.Info, $"Version {version} désinstallée.");
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _log.Write(AppLogLevel.Error, $"Version {version} : échec de la désinstallation ({exception.GetType().Name}) : {exception.Message}");
+
+            throw;
+        }
+    }
 
     /// <summary>
     /// Le fichier que cette machine installerait pour cette entrée du catalogue, ou

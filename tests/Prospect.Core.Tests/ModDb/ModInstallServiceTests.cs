@@ -93,15 +93,64 @@ public sealed class ModInstallServiceTests
         plan.GameVersion.ShouldBe(GameVersion.Parse("1.21.3"));
     }
 
+    /// <summary>
+    /// Aucune release déclarée pour cette version de jeu : le plan s'ouvre QUAND MÊME, sur la
+    /// meilleure release publiée, marquée pour ce qu'elle est.
+    /// </summary>
+    /// <remarks>
+    /// Refuser de préparer fermait la seule porte : le docteur d'instance propose « Installer
+    /// "carryonlib" », un mod dont aucune release ne coche la version courante, et l'échec de
+    /// préparation empêchait le dialogue de s'ouvrir. Rien n'est installé en douce pour autant — le
+    /// verdict de compatibilité voyage avec le plan, l'écran l'affiche, et c'est un clic de plus qui
+    /// installe.
+    /// </remarks>
     [Fact]
-    public async Task PrepareAsync_NoReleaseForThatGameVersion_IsReportedRatherThanInstallingSomethingElse()
+    public async Task PrepareAsync_NoReleaseForThatGameVersion_StillPlansTheBestPublishedOneAndFlagsIt()
     {
         var harness = Create("1.19.8");
+
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, cancellationToken: CancellationToken.None);
+
+        plan.Primary.IsDeclaredIncompatible.ShouldBeTrue();
+        plan.Primary.Version.ShouldBe(ModVersion.Parse("1.12.0"));
+        plan.Primary.Release.CompatibleGameVersionTags.ShouldNotContain("1.19.8");
+
+        // Et le sélecteur du dialogue a bien de quoi travailler : toutes les releases publiées y
+        // sont, chacune avec son verdict.
+        plan.AvailableReleases.ShouldNotBeEmpty();
+        plan.AvailableReleases.ShouldAllBe(choice => choice.IsDeclaredIncompatible);
+    }
+
+    /// <summary>
+    /// Une fiche SANS AUCUNE release reste une erreur : il n'y a rien à proposer, ni compatible ni
+    /// pas. C'est le seul cas qui lève encore.
+    /// </summary>
+    [Fact]
+    public async Task PrepareAsync_AModWithoutAnyReleaseAtAll_IsStillReportedAsAnError()
+    {
+        var harness = Create("1.21.3");
+        harness.Server.PublishesNoRelease = true;
 
         var exception = await Should.ThrowAsync<ModReleaseNotFoundException>(
             () => harness.Service.PrepareAsync(Slug, 1783, cancellationToken: CancellationToken.None));
 
-        exception.GameVersion.ShouldBe(GameVersion.Parse("1.19.8"));
+        exception.GameVersion.ShouldBe(GameVersion.Parse("1.21.3"));
+    }
+
+    /// <summary>
+    /// Le cas de terrain exact : une release taguée sur la même série mineure que l'instance, mais
+    /// pas sur sa version. Elle est retenue, et signalée comme SUPPOSÉE et non comme non déclarée.
+    /// </summary>
+    [Fact]
+    public async Task PrepareAsync_OnlyTheSameMinorSeriesIsTagged_PlansItAsApproximateRatherThanRefusing()
+    {
+        var harness = Create("1.21.9");
+
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, cancellationToken: CancellationToken.None);
+
+        plan.Primary.IsApproximateMatch.ShouldBeTrue();
+        plan.Primary.IsDeclaredIncompatible.ShouldBeFalse();
+        plan.Primary.Version.ShouldBe(ModVersion.Parse("1.11.1"));
     }
 
     [Fact]
@@ -666,6 +715,9 @@ public sealed class ModInstallServiceTests
         /// <summary>Vrai pour livrer moins d'octets que le <c>HEAD</c> n'en annonce.</summary>
         public bool TruncateDownloads { get; set; }
 
+        /// <summary>Vrai pour servir la fiche de Config lib sans la moindre release publiée.</summary>
+        public bool PublishesNoRelease { get; set; }
+
         public HttpResponseMessage Respond(HttpRequestMessage request)
         {
             var url = request.RequestUri!;
@@ -733,7 +785,24 @@ public sealed class ModInstallServiceTests
             """;
         }
 
-        private const string ConfigLibJson = """
+        private string ConfigLibJson => PublishesNoRelease ? ConfigLibWithoutAnyReleaseJson : ConfigLibWithReleasesJson;
+
+        /// <summary>
+        /// Une fiche bien publiée mais SANS AUCUNE release. Rare, et c'est justement le seul cas où
+        /// la préparation d'un plan n'a rien à proposer, donc le seul qui doive encore échouer.
+        /// </summary>
+        private const string ConfigLibWithoutAnyReleaseJson = """
+        {
+          "statuscode": "200",
+          "mod": {
+            "modid": 1783, "assetid": 9551, "name": "Config lib", "text": "<p>lib</p>", "author": "Maltiez",
+            "urlalias": null, "logofile": null, "downloads": 627953, "side": "both", "type": "mod",
+            "tags": ["Utility"], "lastreleased": null, "releases": []
+          }
+        }
+        """;
+
+        private const string ConfigLibWithReleasesJson = """
         {
           "statuscode": "200",
           "mod": {

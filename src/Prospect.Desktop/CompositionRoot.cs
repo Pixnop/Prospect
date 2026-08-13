@@ -241,11 +241,14 @@ public static class CompositionRoot
     // d'inactivité par lecture.
     private static void AddGameVersions(IServiceCollection services, HttpMessageHandler? httpMessageHandler)
     {
+        // Le journal est passé EXPLICITEMENT dans les fabriques écrites à la main : ailleurs c'est
+        // le conteneur qui résout le paramètre optionnel, ici personne ne le ferait à sa place.
         services.AddSingleton<IGameVersionCatalog>(provider => new HttpGameVersionCatalog(
             CreateHttpClient(httpMessageHandler, TimeSpan.FromSeconds(30)),
             provider.GetRequiredService<JsonFileStore>(),
             provider.GetRequiredService<AppPaths>(),
-            provider.GetRequiredService<IClock>()));
+            provider.GetRequiredService<IClock>(),
+            log: provider.GetRequiredService<IAppLog>()));
 
         // DownloadManager est un singleton construit une seule fois, paresseusement, à la première
         // résolution : le parallélisme choisi par l'utilisateur (Réglages, section Réseau) doit
@@ -266,7 +269,8 @@ public static class CompositionRoot
                 provider.GetRequiredService<IFileSystem>(),
                 provider.GetRequiredService<AppPaths>(),
                 provider.GetRequiredService<IClock>(),
-                options: options);
+                options: options,
+                log: provider.GetRequiredService<IAppLog>());
         });
 
         services.AddSingleton<IInstalledGameVersionRepository, FileSystemInstalledGameVersionRepository>();

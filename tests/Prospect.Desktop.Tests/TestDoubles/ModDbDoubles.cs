@@ -71,7 +71,7 @@ internal static class ModDbDoubles
         AppPaths paths,
         IClock clock,
         HttpMessageHandler? handler = null)
-        => new(CreateClient(fileSystem, paths, clock, handler), mods, instances, clock);
+        => new(CreateClient(fileSystem, paths, clock, handler), mods, instances, clock, NullAppLog.Instance);
 
     /// <summary>Le vrai <see cref="ModLogoCache"/>, adossé au même gestionnaire HTTP factice que le reste du domaine.</summary>
     public static IModLogoCache CreateLogoCache(HttpMessageHandler? handler = null)

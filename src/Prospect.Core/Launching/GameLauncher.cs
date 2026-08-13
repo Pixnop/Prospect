@@ -39,6 +39,7 @@ public sealed class GameLauncher
     private readonly IInstalledGameVersionRepository _installedVersions;
     private readonly IDotnetLocator _dotnetLocator;
     private readonly RunningInstanceTracker _tracker;
+    private readonly IAppLog _log;
     private readonly IGameLaunchStrategy _strategy;
     private readonly IProcessRunner _processRunner;
     private readonly IFileSystem _fileSystem;
@@ -60,7 +61,8 @@ public sealed class GameLauncher
         IClock clock,
         VsAccountService accounts,
         ClientSettingsSessionWriter clientSettings,
-        InstanceBackupService backups)
+        InstanceBackupService backups,
+        IAppLog? log = null)
     {
         ArgumentNullException.ThrowIfNull(instances);
         ArgumentNullException.ThrowIfNull(installedVersions);
@@ -87,6 +89,7 @@ public sealed class GameLauncher
         _accounts = accounts;
         _clientSettings = clientSettings;
         _backups = backups;
+        _log = log ?? NullAppLog.Instance;
     }
 
     /// <summary>
@@ -191,6 +194,10 @@ public sealed class GameLauncher
         WireLogCapture(process, logPath);
 
         var status = await _tracker.TrackStartedAsync(slug, process, cancellationToken).ConfigureAwait(false);
+
+        _log.Write(
+            AppLogLevel.Info,
+            $"Jeu lancé : instance « {slug} » en {instance.Metadata.GameVersion}, pid {status.ProcessId}, exécutable « {executablePath} ».");
 
         return new LaunchOutcome(status, autoBackupFailed);
     }

@@ -33,6 +33,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
     private readonly RetryPolicy _retryPolicy;
     private readonly DownloadOptions _options;
     private readonly SemaphoreSlim _slots;
+    private readonly IAppLog _log;
     private readonly List<DownloadOperation> _operations = [];
     private readonly Lock _gate = new();
 
@@ -51,7 +52,8 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         AppPaths appPaths,
         IClock clock,
         RetryPolicy? retryPolicy = null,
-        DownloadOptions? options = null)
+        DownloadOptions? options = null,
+        IAppLog? log = null)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(fileSystem);
@@ -65,6 +67,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         _retryPolicy = retryPolicy ?? new RetryPolicy(RetryOptions.Default);
         _options = options ?? DownloadOptions.Default;
         _slots = new SemaphoreSlim(_options.MaxParallelDownloads, _options.MaxParallelDownloads);
+        _log = log ?? NullAppLog.Instance;
     }
 
     /// <inheritdoc />
@@ -95,6 +98,11 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         var operation = new DownloadOperation(request.DisplayName, request.FileName, operationCancellation.Cancel);
         Add(operation);
 
+        // Le journal ne consigne que les DEUX BOUTS d'un transfert, jamais son avancement : un
+        // téléchargement de six cents mégaoctets publie des milliers de rapports de progression, et
+        // les écrire ferait sauter le plafond du fichier avant la fin de l'installation.
+        _log.Write(AppLogLevel.Info, $"Téléchargement démarré : « {request.FileName} » depuis {request.Mirrors[0].Host}.");
+
         var token = operationCancellation.Token;
         try
         {
@@ -115,6 +123,8 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
             operation.SetState(DownloadState.Completed);
             Finish(operation);
 
+            _log.Write(AppLogLevel.Info, $"Téléchargement terminé : « {request.FileName} », {DescribeSize(path)}.");
+
             return path;
         }
         catch (OperationCanceledException)
@@ -122,12 +132,14 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
             DeleteQuietly(GetPartialPath(request.FileName));
             operation.SetState(DownloadState.Canceled);
             Finish(operation);
+            _log.Write(AppLogLevel.Info, $"Téléchargement annulé : « {request.FileName} ».");
             throw;
         }
         catch (DownloadFailedException exception)
         {
             operation.Fail(exception.Message);
             Finish(operation);
+            _log.Write(AppLogLevel.Error, $"Téléchargement échoué : « {request.FileName} » : {exception.Message}");
             throw;
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException or TimeoutException or UnauthorizedAccessException)
@@ -135,6 +147,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
             var failure = DownloadFailedException.ForFile(request.FileName, exception);
             operation.Fail(failure.Message);
             Finish(operation);
+            _log.Write(AppLogLevel.Error, $"Téléchargement échoué : « {request.FileName} » : {failure.Message}");
 
             throw failure;
         }
@@ -434,6 +447,24 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
     private string GetTargetPath(string fileName) => _fileSystem.Path.Combine(_appPaths.DownloadsCacheDirectory, fileName);
 
     private string GetPartialPath(string fileName) => GetTargetPath(fileName) + PartialSuffix;
+
+    /// <summary>
+    /// Taille du fichier posé, en octets, pour la ligne de journal de fin. Ne lève jamais : une
+    /// taille illisible ne doit pas transformer un téléchargement réussi en échec.
+    /// </summary>
+    private string DescribeSize(string path)
+    {
+        try
+        {
+            return string.Create(
+                System.Globalization.CultureInfo.InvariantCulture,
+                $"{_fileSystem.FileInfo.New(path).Length} octets");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return "taille illisible";
+        }
+    }
 
     private void DeleteQuietly(string path)
     {

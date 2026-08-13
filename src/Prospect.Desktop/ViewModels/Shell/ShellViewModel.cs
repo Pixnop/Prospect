@@ -249,14 +249,10 @@ public sealed partial class ShellViewModel : ObservableObject
         _ = ModBrowser.InitializeCommand.ExecuteAsync(null);
     }
 
-    // Même construction, pour la même raison : un journal lu une fois pour toutes à la construction
-    // du conteneur serait déjà périmé à la première ouverture de la page. C'est la relecture à
-    // l'entrée qui rend le bouton Rafraîchir un confort et non une obligation.
-    private void ShowLogs(object page)
-    {
-        Navigate(page);
-        Logs.RefreshCommand.Execute(null);
-    }
+    // Les Journaux n'ont plus besoin d'un déclencheur à eux : la page est une ILivePage, donc
+    // Navigate lui dit elle-même quand elle devient visible, et sa relecture périodique commence par
+    // une lecture immédiate. C'est la seule des cinq entrées qui n'a rien à ajouter ici.
+    private void ShowLogs(object page) => Navigate(page);
 
     // Même construction que ShowModBrowser : la détection VS Launcher doit être relancée à chaque
     // entrée sur la page, pas seulement à la construction du conteneur (l'utilisateur a pu
@@ -295,14 +291,38 @@ public sealed partial class ShellViewModel : ObservableObject
         _ = Versions.RefreshCommand.ExecuteAsync(null);
     }
 
-    // Dispose la page sortante si elle en a besoin (InstanceDetailViewModel se désabonne de
-    // RunningInstanceTracker) : sans ça, chaque instance ouverte puis quittée resterait suivie
-    // indéfiniment par le tracker, qui est un singleton pour toute la durée de l'application.
+    /// <summary>
+    /// Change de page, et c'est le seul endroit qui le fasse. Deux traitements de sortie, pour deux
+    /// natures de page différentes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Les pages JETABLES sont disposées (<c>InstanceDetailViewModel</c> se désabonne de
+    /// <c>RunningInstanceTracker</c>) : sans ça, chaque instance ouverte puis quittée resterait
+    /// suivie indéfiniment par le tracker, qui est un singleton pour toute la durée de
+    /// l'application.
+    /// </para>
+    /// <para>
+    /// Les pages VIVANTES (<see cref="ILivePage"/>) voient leur travail de fond arrêté puis
+    /// redémarré. Les deux mécanismes ne sont pas interchangeables et il vaut mieux dire pourquoi :
+    /// une page vivante du shell est un singleton du conteneur, donc la disposer en la quittant
+    /// rendrait le même objet disposé à la visite suivante. Une page peut être les deux ; l'ordre
+    /// ci-dessous arrête toujours avant de disposer.
+    /// </para>
+    /// </remarks>
     private void Navigate(object page)
     {
-        if (!ReferenceEquals(CurrentPage, page) && CurrentPage is IDisposable outgoing)
+        if (!ReferenceEquals(CurrentPage, page))
         {
-            outgoing.Dispose();
+            if (CurrentPage is ILivePage leaving)
+            {
+                leaving.StopLiveRefresh();
+            }
+
+            if (CurrentPage is IDisposable outgoing)
+            {
+                outgoing.Dispose();
+            }
         }
 
         CurrentPage = page;
@@ -310,6 +330,11 @@ public sealed partial class ShellViewModel : ObservableObject
         foreach (var item in _allNavItems)
         {
             item.IsActive = ReferenceEquals(item.Page, page);
+        }
+
+        if (page is ILivePage entering)
+        {
+            entering.StartLiveRefresh();
         }
     }
 

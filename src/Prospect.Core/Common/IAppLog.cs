@@ -23,11 +23,45 @@ public enum AppLogLevel
 /// journal de lancement d'une instance que <c>GameLauncher</c> écrit déjà par instance.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Il existe pour une raison précise et étroite : un défaut rapporté depuis une machine
 /// d'utilisateur ne se diagnostique que sur pièce. Le cas fondateur est l'installeur Windows, dont
 /// on ne peut pas savoir, depuis un rapport, si les arguments de silence sont bien arrivés ni où
 /// l'installation a réellement atterri. Ce n'est donc pas une trace de développement à semer
 /// partout : on y écrit ce qu'un rapport de terrain devrait pouvoir citer.
+/// </para>
+/// <para>
+/// CE QUI S'Y ÉCRIT, et la règle vaut pour toute évolution : les FAITS d'une session que
+/// l'utilisateur pourrait décrire au téléphone. Le catalogue relu, un téléchargement commencé,
+/// fini ou échoué avec son nom et sa taille, une version installée ou retirée, une instance créée,
+/// dupliquée ou supprimée, un lancement avec son pid et la sortie du jeu avec son code, un mod
+/// posé, remplacé, activé ou retiré, une vérification de mises à jour avec son verdict compté, et
+/// toute erreur qu'on a montrée à l'utilisateur. Jamais un secret (mot de passe, jeton, session),
+/// jamais une ligne par image ni par octet : ce qui se répète à la fréquence d'une boucle n'est
+/// pas un fait, c'est du bruit qui écrase le fichier (voir le plafond de
+/// <see cref="FileAppLog.MaxSizeBytes"/>). Un avancement de téléchargement se résume à ses deux
+/// bouts, pas à ses mille rapports intermédiaires.
+/// </para>
+/// <para>
+/// COMMENT IL S'INJECTE. C'est un port TRANSVERSE, présent dans presque tous les services du
+/// domaine, et c'est le seul du projet qui s'autorise un paramètre de constructeur OPTIONNEL, en
+/// dernière position, avec <see cref="NullAppLog.Instance"/> pour repli. Il reste REQUIS là où il
+/// l'a toujours été, c'est-à-dire dans les services dont il est une raison d'être et dont les
+/// appels se comptent sur les doigts d'une main (<c>GameInstallService</c>,
+/// <c>WindowsGameInstallStrategy</c>, <c>ModUpdateChecker</c>) : quand un service existe en partie
+/// pour ce qu'il consigne, l'oublier doit être une erreur de compilation.
+/// </para>
+/// <para>
+/// Il est optionnel partout où il a été ajouté EN NOMBRE, sur des services déjà construits par
+/// dizaines dans la suite de tests et pour qui un journal n'est presque jamais le sujet
+/// (<c>InstanceService</c>, <c>GameLauncher</c>, <c>DownloadManager</c>...). L'imposer là aurait
+/// ajouté un argument mécanique à quatre-vingts appels sans rendre un seul test plus vrai. Le
+/// conteneur résout ce paramètre comme les autres, donc la production en reçoit toujours un vrai,
+/// et les fabriques écrites à la main dans la composition root le passent explicitement. La
+/// contrepartie est nommée pour qu'elle ne se perde pas : un service dont le journal manquerait
+/// n'écrirait rien SANS SE PLAINDRE, et c'est pourquoi <c>AppLogWiringTests</c> vérifie que le
+/// conteneur livre bien un <see cref="FileAppLog"/> à chacun d'eux.
+/// </para>
 /// </remarks>
 public interface IAppLog
 {

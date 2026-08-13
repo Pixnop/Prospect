@@ -5,6 +5,7 @@ using Prospect.Core.Instances;
 using Prospect.Core.Instances.Migrations;
 using Prospect.Core.ModDb;
 using Prospect.Core.Storage;
+using Prospect.Desktop.Resources;
 using Prospect.Desktop.Tests.TestDoubles;
 using Prospect.Desktop.ViewModels.Mods;
 
@@ -204,7 +205,8 @@ public sealed class ModInstallPlanDialogViewModelTests
         RecordingOverlayService Overlay,
         IInstalledModRepository Mods,
         FakeModDbHandler Handler,
-        string Slug);
+        string Slug,
+        ModInstallService InstallService);
 
     private static async Task<Fixture> CreateAsync()
     {
@@ -221,9 +223,10 @@ public sealed class ModInstallPlanDialogViewModelTests
 
         var mods = ModDbDoubles.CreateRepository(fileSystem, instances, Paths);
         var overlay = new RecordingOverlayService();
+        var installService = ModDbDoubles.CreateInstallService(fileSystem, instances, mods, Paths, clock, handler);
         var browser = new ModBrowserViewModel(
             ModDbDoubles.CreateClient(fileSystem, Paths, clock, handler),
-            ModDbDoubles.CreateInstallService(fileSystem, instances, mods, Paths, clock, handler),
+            installService,
             mods,
             instances,
             new FakeExternalUrlOpener(),
@@ -233,7 +236,25 @@ public sealed class ModInstallPlanDialogViewModelTests
 
         await browser.InitializeCommand.ExecuteAsync(null);
 
-        return new Fixture(browser, overlay, mods, handler, record.Slug);
+        return new Fixture(browser, overlay, mods, handler, record.Slug, installService);
+    }
+
+    /// <summary>
+    /// Ouvre le dialogue sur un mod désigné par son <c>modid</c> textuel, comme le fait le docteur
+    /// d'instance quand il propose d'installer une dépendance manquante.
+    /// </summary>
+    private static async Task<ModInstallPlanDialogViewModel> OpenByIdentifierAsync(Fixture fixture, string modIdString)
+    {
+        var plan = await fixture.InstallService.PrepareAsync(fixture.Slug, modIdString, cancellationToken: CancellationToken.None);
+
+        return new ModInstallPlanDialogViewModel(
+            plan,
+            "Homestead",
+            (_, _) => Task.CompletedTask,
+            releaseId => fixture.InstallService.PrepareAsync(fixture.Slug, modIdString, releaseId: releaseId, cancellationToken: CancellationToken.None),
+            fixture.Overlay,
+            new FakeExternalUrlOpener(),
+            new FakeModLogoCache());
     }
 
     private static async Task<ModInstallPlanDialogViewModel> OpenAsync(Fixture fixture)
@@ -515,6 +536,86 @@ public sealed class ModInstallPlanDialogViewModelTests
         // Le bandeau ambré n'est pas rendu deux fois : quand il y a des cases, il vit juste
         // au-dessus d'elles, jamais en plus dans un bloc à part.
         dialog.HasNoCompatibleReleaseWithoutOffer.ShouldBeFalse();
+    }
+
+    // ── Mod PRINCIPAL sans release compatible ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Le chemin du docteur d'instance : « Installer "carryonlib" » ouvre un plan dont le mod
+    /// PRINCIPAL n'a aucune release déclarée pour la version de l'instance.
+    /// </summary>
+    /// <remarks>
+    /// Ce chemin ne menait nulle part. La préparation refusait de produire un plan, donc le dialogue
+    /// ne s'ouvrait pas, donc le mod que le docteur venait de désigner comme manquant était
+    /// impossible à installer — alors que le MÊME mod, atteint comme dépendance de <c>carryon</c>,
+    /// se voyait proposé « installer quand même » depuis toujours. Le dialogue s'ouvre désormais
+    /// d'emblée sur toutes les versions, puisque la liste des compatibles serait vide, et il porte
+    /// l'avertissement qui dit pour quelles versions l'auteur a réellement déclaré la sienne.
+    /// </remarks>
+    [Fact]
+    public async Task APlanWhoseMainModHasNoCompatibleRelease_OpensOnAllVersionsWithTheWarning()
+    {
+        var fixture = await CreateAsync();
+
+        // Une fiche publiée dont aucune release ne touche la série 1.21 de l'instance.
+        fixture.Handler.CarryOnLibGameVersions = ["1.19.8"];
+
+        var dialog = await OpenByIdentifierAsync(fixture, "carryonlib");
+
+        // Le dévoilement est déjà posé : sans lui, le sélecteur serait vide.
+        dialog.ShowsAllReleases.ShouldBeTrue();
+        dialog.HasReleaseChoice.ShouldBeTrue();
+        dialog.ToggleAllReleasesText.ShouldBe(UiText.Mods.ShowCompatibleReleasesOnly);
+
+        // Une release sélectionnable, et c'est la meilleure publiée.
+        var release = dialog.Releases.ShouldHaveSingleItem();
+        release.IsDeclaredIncompatible.ShouldBeTrue();
+        dialog.SelectedRelease.ShouldNotBeNull().ReleaseId.ShouldBe(release.ReleaseId);
+
+        // Et l'avertissement, avec les versions réellement taguées.
+        dialog.ShowIncompatibleWarning.ShouldBeTrue();
+        dialog.IncompatibleWarning.ShouldContain("1.19.8");
+        dialog.ShowApproximateWarning.ShouldBeFalse("« non déclarée » n'est pas « supposée »");
+    }
+
+    /// <summary>Et l'installation aboutit vraiment : le dialogue n'est pas qu'un constat.</summary>
+    [Fact]
+    public async Task APlanWhoseMainModHasNoCompatibleRelease_CanStillBeConfirmed()
+    {
+        var fixture = await CreateAsync();
+        fixture.Handler.CarryOnLibGameVersions = ["1.19.8"];
+
+        var plan = await fixture.InstallService.PrepareAsync(fixture.Slug, "carryonlib", cancellationToken: CancellationToken.None);
+        await fixture.InstallService.ApplyAsync(fixture.Slug, plan, cancellationToken: CancellationToken.None);
+
+        var installed = await fixture.Mods.ScanAsync(fixture.Slug, CancellationToken.None);
+        var mod = installed.ShouldHaveSingleItem();
+        mod.Identity.ShouldBe("carryonlib");
+
+        // La provenance garde la trace du choix : c'est elle qui saura, plus tard, que ce fichier a
+        // été posé sans compatibilité déclarée.
+        mod.Provenance.ShouldNotBeNull().DeclaredIncompatible.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Le cas voisin, et il ne doit PAS se confondre avec le précédent : une release taguée sur la
+    /// même série mineure que l'instance est supposée compatible, pas non déclarée. Le dialogue
+    /// s'ouvre alors normalement, sur la liste des compatibles.
+    /// </summary>
+    [Fact]
+    public async Task APlanWhoseMainModIsOnlyTaggedForTheSameMinorSeries_OpensNormallyAndSaysApproximate()
+    {
+        var fixture = await CreateAsync();
+
+        // 1.21.0 est de la même série que la 1.21.3 de l'instance, sans être cette version-là.
+        fixture.Handler.CarryOnLibGameVersions = ["1.21.0"];
+
+        var dialog = await OpenByIdentifierAsync(fixture, "carryonlib");
+
+        dialog.ShowsAllReleases.ShouldBeFalse();
+        dialog.ShowApproximateWarning.ShouldBeTrue();
+        dialog.ShowIncompatibleWarning.ShouldBeFalse();
+        dialog.Releases.ShouldHaveSingleItem().IsDeclaredIncompatible.ShouldBeFalse();
     }
 
     /// <summary>Une dépendance ordinaire, elle, était déjà cochée d'avance et le reste.</summary>

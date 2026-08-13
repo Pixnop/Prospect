@@ -629,6 +629,19 @@ internal abstract class ModsText
 
     internal abstract string UpdatesAvailableTitle(int count);
 
+    /// <summary>
+    /// Verdict d'une vérification de mises à jour, en une phrase. Il existe parce qu'une
+    /// vérification qui ne trouve rien ne changeait rien à l'écran, ce qui se lit comme un bouton
+    /// sans effet.
+    /// </summary>
+    internal abstract string CheckVerdict(int updateCount, int undeclaredCount, int modCount);
+
+    /// <summary>
+    /// Ligne d'un mod dont une release PLUS RÉCENTE existe sans être déclarée pour la version de jeu
+    /// de l'instance : la version disponible, et les versions que l'auteur a réellement cochées.
+    /// </summary>
+    internal abstract string UndeclaredUpdateReason(string version, IReadOnlyList<string> taggedVersions);
+
     internal abstract string UpdatePlanTitle(string modName);
 
     internal abstract string UpdatePlanMessage(string currentVersion, string targetVersion);

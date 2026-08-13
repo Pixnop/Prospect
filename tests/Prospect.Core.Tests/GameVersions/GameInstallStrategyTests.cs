@@ -32,11 +32,19 @@ public sealed class GameInstallStrategyTests
     /// un dossier racine <c>vintagestory/</c>. C'est cette fixture-là qui manquait, et c'est
     /// pourquoi le défaut a traversé toute la suite sans être vu.
     /// </summary>
+    /// <remarks>
+    /// Elle porte en PERMANENCE un fichier vide, <c>assets/version-1.22.6.txt</c>, parce que
+    /// l'archive réelle en porte un et qu'il pèse zéro octet. Une fixture dont tous les fichiers ont
+    /// du contenu ne peut pas voir le défaut du 2026-08-13 (fichiers vides jamais matérialisés), et
+    /// ce fichier-là n'est pas décoratif : le jeu s'appuie sur sa présence pour juger l'installation
+    /// propre.
+    /// </remarks>
     private static byte[] RealLinuxArchive() => TarGzSamples.Create(
         ("vintagestory/", null),
         ("vintagestory/Mods/", null),
         ("vintagestory/Vintagestory", TarGzSamples.Text("#!/bin/sh")),
         ("vintagestory/Vintagestory.dll", TarGzSamples.Text("IL")),
+        ("vintagestory/assets/version-1.22.6.txt", TarGzSamples.Empty),
         ("vintagestory/assets/game/lang/fr.json", TarGzSamples.Text("{}")));
 
     [Fact]
@@ -57,6 +65,66 @@ public sealed class GameInstallStrategyTests
         // toute installation Linux.
         fileSystem.Directory.Exists(fileSystem.Path.Combine(TargetDirectory, "vintagestory")).ShouldBeFalse();
         fileSystem.Directory.GetDirectories(TargetDirectory).Length.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// Un fichier de zéro octet est un FICHIER, pas une absence : il doit se retrouver sur le disque.
+    /// </summary>
+    /// <remarks>
+    /// Le cas n'est pas théorique et il n'est pas cosmétique. L'archive client porte un
+    /// <c>assets/version-&lt;version&gt;.txt</c> vide, et le jeu s'appuie sur sa présence pour juger
+    /// qu'une installation est propre : sans lui, il ouvre au démarrage un avertissement affirmant
+    /// que des fichiers d'une version précédente traînent, sur une installation pourtant neuve.
+    /// </remarks>
+    [Fact]
+    public async Task LinuxStrategy_ZeroByteFile_IsMaterialisedInsteadOfBeingSkipped()
+    {
+        var fileSystem = WithArchive(RealLinuxArchive());
+        var strategy = new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions());
+
+        await strategy.InstallAsync(ArchivePath, TargetDirectory, cancellationToken: CancellationToken.None);
+
+        var marker = fileSystem.Path.Combine(TargetDirectory, "assets", "version-1.22.6.txt");
+        fileSystem.File.Exists(marker).ShouldBeTrue();
+        fileSystem.File.ReadAllBytes(marker).ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Le même fichier vide, mais dans un dossier que rien d'autre ne peuple : ses parents doivent
+    /// être créés pour lui, exactement comme pour un fichier qui a du contenu.
+    /// </summary>
+    [Fact]
+    public async Task LinuxStrategy_ZeroByteFileAlone_InItsFolder_GetsItsParentsCreated()
+    {
+        var archive = TarGzSamples.Create(
+            ("Vintagestory", TarGzSamples.Text("#!/bin/sh")),
+            ("assets/version-1.22.6.txt", TarGzSamples.Empty));
+        var fileSystem = WithArchive(archive);
+        var strategy = new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions());
+
+        await strategy.InstallAsync(ArchivePath, TargetDirectory, cancellationToken: CancellationToken.None);
+
+        fileSystem.File.Exists(fileSystem.Path.Combine(TargetDirectory, "assets", "version-1.22.6.txt")).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Un fichier vide compte comme une entrée écrite : il fait partie du relevé de topologie qui
+    /// décide de l'aplatissement, sans quoi une archive dont le dossier racine ne contiendrait que
+    /// des fichiers vides ne serait pas aplatie.
+    /// </summary>
+    [Fact]
+    public async Task LinuxStrategy_RootFolderHoldingOnlyEmptyFiles_IsStillFlattened()
+    {
+        var archive = TarGzSamples.Create(
+            ("vintagestory/", null),
+            ("vintagestory/assets/version-1.22.6.txt", TarGzSamples.Empty));
+        var fileSystem = WithArchive(archive);
+        var strategy = new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions());
+
+        await strategy.InstallAsync(ArchivePath, TargetDirectory, cancellationToken: CancellationToken.None);
+
+        fileSystem.File.Exists(fileSystem.Path.Combine(TargetDirectory, "assets", "version-1.22.6.txt")).ShouldBeTrue();
+        fileSystem.Directory.Exists(fileSystem.Path.Combine(TargetDirectory, "vintagestory")).ShouldBeFalse();
     }
 
     /// <summary>
@@ -236,6 +304,7 @@ public sealed class GameInstallStrategyTests
             ("Vintage Story.app/", null),
             ("Vintage Story.app/Info.plist", TarGzSamples.Text("<plist/>")),
             ("Vintage Story.app/Vintagestory", TarGzSamples.Text("mach-o")),
+            ("Vintage Story.app/assets/version-1.22.6.txt", TarGzSamples.Empty),
             ("Vintage Story.app/assets/game/lang/fr.json", TarGzSamples.Text("{}")));
         var fileSystem = WithArchive(archive);
         var permissions = new RecordingUnixFilePermissions();
@@ -245,6 +314,7 @@ public sealed class GameInstallStrategyTests
         fileSystem.File.ReadAllText(fileSystem.Path.Combine(TargetDirectory, "Vintagestory")).ShouldBe("mach-o");
         fileSystem.File.Exists(fileSystem.Path.Combine(TargetDirectory, "Info.plist")).ShouldBeTrue();
         fileSystem.File.Exists(fileSystem.Path.Combine(TargetDirectory, "assets", "game", "lang", "fr.json")).ShouldBeTrue();
+        fileSystem.File.Exists(fileSystem.Path.Combine(TargetDirectory, "assets", "version-1.22.6.txt")).ShouldBeTrue();
         fileSystem.Directory.Exists(fileSystem.Path.Combine(TargetDirectory, "Vintage Story.app")).ShouldBeFalse();
         permissions.Modes.Values.ShouldAllBe(mode => mode == Mode755);
     }
