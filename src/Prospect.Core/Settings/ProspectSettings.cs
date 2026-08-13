@@ -16,8 +16,11 @@ namespace Prospect.Core.Settings;
 /// </remarks>
 public sealed record ProspectSettings
 {
-    /// <summary>Seule langue dont l'interface dispose réellement aujourd'hui.</summary>
+    /// <summary>Français, la voix d'origine de l'interface, et le repli de toute valeur inconnue.</summary>
     public const string French = "fr";
+
+    /// <summary>Anglais.</summary>
+    public const string English = "en";
 
     /// <summary>
     /// Version courante du schéma de <c>prospect.json</c>. Un document au schéma inférieur passe
@@ -37,9 +40,11 @@ public sealed record ProspectSettings
     public ThemePreference Theme { get; init; } = ThemePreference.Dark;
 
     /// <summary>
-    /// Langue de l'UI. Seul <see cref="French"/> est une valeur active aujourd'hui (l'anglais
-    /// arrivera avec la traduction de l'app) ; le champ existe déjà, structure prête, pour ne pas
-    /// avoir à migrer le schéma le jour où une deuxième langue existera.
+    /// Langue de l'UI, <see cref="French"/> ou <see cref="English"/>. Appliquée AU DÉMARRAGE et
+    /// jamais à chaud (docs/architecture.md, section « Langue de l'interface ») : écrire ce champ
+    /// ne retraduit pas la fenêtre ouverte, il décide de ce que la PROCHAINE ouverture affichera.
+    /// Toute valeur inconnue relue du disque retombe sur <see cref="French"/>, voir
+    /// <see cref="NormalizeLanguage"/>.
     /// </summary>
     public string Language { get; init; } = French;
 
@@ -61,6 +66,39 @@ public sealed record ProspectSettings
     public static ProspectSettings CreateDefault() => new() { SchemaVersion = CurrentSchemaVersion };
 
     /// <summary>
+    /// La langue correspondant à <paramref name="language"/>, ou <see cref="French"/> pour toute
+    /// valeur absente, vide ou inconnue.
+    /// </summary>
+    /// <remarks>
+    /// Repli déterministe, jamais une exception : un <c>prospect.json</c> modifié à la main, ou
+    /// écrit par un Prospect plus récent qui connaîtrait une troisième langue, doit démarrer dans
+    /// une langue lisible plutôt que refuser de s'ouvrir. Le repli est le français parce que c'est
+    /// la voix d'origine du produit, celle dont les textes existent forcément. La comparaison
+    /// ignore la casse et les espaces autour, mais rien de plus : la valeur stockée est
+    /// l'énumération de Prospect (<c>fr</c>, <c>en</c>), pas un nom de culture, donc <c>en-US</c>
+    /// est bien une valeur inconnue et non un synonyme d'anglais.
+    /// </remarks>
+    public static string NormalizeLanguage(string? language)
+        => string.Equals(language?.Trim(), English, StringComparison.OrdinalIgnoreCase) ? English : French;
+
+    /// <summary>
+    /// Langue par défaut déduite de la culture d'interface du système (voir
+    /// <see cref="Common.IUiCulture"/>) : français si <paramref name="uiCultureName"/> commence par
+    /// <c>fr</c> (« fr », « fr-FR », « fr-CA »…), anglais dans tous les autres cas.
+    /// </summary>
+    /// <remarks>
+    /// Volontairement binaire, à l'image du produit : Prospect n'a que deux langues, donc toute
+    /// culture qui n'est pas française lit l'anglais, qui est le choix le moins mauvais pour
+    /// quelqu'un dont la langue n'est traduite ni d'un côté ni de l'autre. N'est consulté qu'à la
+    /// CRÉATION des réglages (aucun fichier sur disque, voir <see cref="SettingsService.LoadAsync"/>) :
+    /// un réglage déjà persisté n'est jamais réécrit par cette détection.
+    /// </remarks>
+    public static string LanguageForCulture(string? uiCultureName)
+        => uiCultureName is not null && uiCultureName.StartsWith("fr", StringComparison.OrdinalIgnoreCase)
+            ? French
+            : English;
+
+    /// <summary>
     /// Copie avec ses valeurs réparées : bornes de <see cref="Downloads"/> respectées (voir
     /// <see cref="DownloadPreferences.Clamped"/>), et tout champ de référence absent du JSON
     /// d'origine ramené à son défaut documenté plutôt que laissé à <see langword="null"/>.
@@ -75,11 +113,14 @@ public sealed record ProspectSettings
     /// désérialise avec <see cref="Downloads"/> ou <see cref="Language"/> à <see langword="null"/>
     /// malgré leur défaut affiché juste au-dessus, un piège général à ce mécanisme de sérialisation
     /// et non spécifique à ce type. Appelée après toute lecture disque ou mutation
-    /// (<see cref="SettingsService"/>).
+    /// (<see cref="SettingsService"/>). C'est aussi le seul endroit qui ramène
+    /// <see cref="Language"/> à une valeur que l'interface sait rendre (voir
+    /// <see cref="NormalizeLanguage"/>) : toute évolution de forme des réglages passe par ici, un
+    /// initialiseur de propriété <c>init</c> ne suffit jamais.
     /// </remarks>
     public ProspectSettings Normalized() => this with
     {
-        Language = Language ?? French,
+        Language = NormalizeLanguage(Language),
         Downloads = (Downloads ?? DownloadPreferences.Default).Clamped(),
     };
 }

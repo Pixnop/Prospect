@@ -42,6 +42,54 @@ public class ProspectSettingsTests
         normalized.Language.ShouldBe("fr");
     }
 
+    [Theory]
+    [InlineData("en", ProspectSettings.English)]
+    [InlineData("EN", ProspectSettings.English)]
+    [InlineData(" en ", ProspectSettings.English)]
+    [InlineData("fr", ProspectSettings.French)]
+    [InlineData("FR", ProspectSettings.French)]
+    [InlineData(null, ProspectSettings.French)]
+    [InlineData("", ProspectSettings.French)]
+    // Une langue qu'un Prospect plus récent connaîtrait, ou une faute de frappe : repli, jamais
+    // une exception.
+    [InlineData("de", ProspectSettings.French)]
+    // Un nom de culture n'est PAS la valeur stockée : la langue est l'énumération de Prospect.
+    [InlineData("en-US", ProspectSettings.French)]
+    public void NormalizeLanguage_FallsBackToFrenchForAnythingItDoesNotKnow(string? language, string expected)
+    {
+        ProspectSettings.NormalizeLanguage(language).ShouldBe(expected);
+    }
+
+    [Fact]
+    public void Normalized_UnknownLanguageFromDisk_IsRepairedToFrench()
+    {
+        var settings = ProspectSettings.CreateDefault() with { Language = "kl" };
+
+        settings.Normalized().Language.ShouldBe(ProspectSettings.French);
+    }
+
+    [Fact]
+    public void Normalized_English_IsKept()
+    {
+        var settings = ProspectSettings.CreateDefault() with { Language = ProspectSettings.English };
+
+        settings.Normalized().Language.ShouldBe(ProspectSettings.English);
+    }
+
+    [Theory]
+    [InlineData("fr", ProspectSettings.French)]
+    [InlineData("fr-FR", ProspectSettings.French)]
+    [InlineData("fr-BE", ProspectSettings.French)]
+    [InlineData("FR-fr", ProspectSettings.French)]
+    [InlineData("en-GB", ProspectSettings.English)]
+    [InlineData("es-ES", ProspectSettings.English)]
+    [InlineData("", ProspectSettings.English)]
+    [InlineData(null, ProspectSettings.English)]
+    public void LanguageForCulture_MapsFrenchCulturesToFrenchAndEverythingElseToEnglish(string? cultureName, string expected)
+    {
+        ProspectSettings.LanguageForCulture(cultureName).ShouldBe(expected);
+    }
+
     [Fact]
     public void RecordEquality_SameValues_AreEqual()
     {

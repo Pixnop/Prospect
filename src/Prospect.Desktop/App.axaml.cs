@@ -29,6 +29,15 @@ public partial class App : Application
         // aucune variante déterministe tant que rien d'autre ne l'a posée : la plateforme headless
         // rapporte Clair par défaut, à l'opposé du sombre historique de l'app.
         RequestedThemeVariant = ThemeVariant.Dark;
+
+        // Même raison, même moment, pour l'autre valeur qui dépend d'un réglage pas encore lu : les
+        // textes. Le français est la valeur de démarrage sûre (voix d'origine du produit et repli
+        // documenté de toute langue inconnue), remplacé aussitôt par LanguageService.ApplyStartupLanguage
+        // si le réglage dit l'anglais — avant qu'aucune vue n'existe, donc avant qu'aucun
+        // {StaticResource} ne se résolve. Sans elle, un test headless (qui ne passe jamais par
+        // OnFrameworkInitializationCompleted, voir TestServiceProviderFactory) n'aurait aucun
+        // dictionnaire de textes du tout.
+        LanguageService.MergeStringsDictionary(this, ProspectSettings.French);
     }
 
     public override void OnFrameworkInitializationCompleted()
@@ -48,6 +57,12 @@ public partial class App : Application
             var settings = _serviceProvider.GetRequiredService<SettingsService>();
             settings.LoadAsync().GetAwaiter().GetResult();
             _serviceProvider.GetRequiredService<ThemeService>().ApplyStartupTheme();
+
+            // Même contrainte d'ordre que le thème, en plus stricte : la langue doit être posée
+            // avant la première vue, parce qu'un {StaticResource} se résout à la construction du
+            // contrôle et ne se relit jamais. C'est aussi la seule fixation de UiText de toute la
+            // durée de vie du processus (voir sa remarque sur l'entorse assumée).
+            _serviceProvider.GetRequiredService<LanguageService>().ApplyStartupLanguage();
 
             // Même moment, même raison, même blocage assumé : la session de compte doit être relue
             // avant la première fenêtre pour que la section Comptes et la checklist de premier

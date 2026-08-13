@@ -3,6 +3,7 @@ using System.IO.Abstractions.TestingHelpers;
 using Prospect.Core.Settings;
 using Prospect.Core.Settings.Migrations;
 using Prospect.Core.Storage;
+using Prospect.Desktop.Tests.TestDoubles;
 using Prospect.Desktop.ViewModels.Settings;
 
 using Shouldly;
@@ -18,7 +19,7 @@ public sealed class SettingsNetworkViewModelTests
     private static readonly AppPaths Paths = new(new SystemAppEnvironment(), "/data/prospect");
 
     private static SettingsService CreateSettingsService(MockFileSystem fileSystem)
-        => new(fileSystem, Paths, new JsonFileStore(fileSystem), new SettingsMigrationPipeline([]));
+        => new(fileSystem, Paths, new JsonFileStore(fileSystem), new SettingsMigrationPipeline([]), new FakeUiCulture());
 
     [Fact]
     public void Constructor_NullSettings_ThrowsArgumentNullException()

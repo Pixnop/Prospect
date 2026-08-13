@@ -29,9 +29,10 @@
                 <ResourceInclude Source="avares://Prospect.Desktop/Styles/Tokens/Typography.axaml" />
                 <ResourceInclude Source="avares://Prospect.Desktop/Styles/Icons.axaml" />
 
-                <!-- Textes UI centralisés (voir Resources/Strings.axaml pour le partage des rôles
-                     avec Resources/UiText.cs). -->
-                <ResourceInclude Source="avares://Prospect.Desktop/Resources/Strings.axaml" />
+                <!-- Les textes UI ne sont PAS inclus ici : le dictionnaire dépend de la langue
+                     réglée, donc Initialize() (App.axaml.cs) fusionne le français comme valeur de
+                     démarrage sûre, immédiatement remplacé par LanguageService.ApplyStartupLanguage()
+                     une fois le réglage persisté lu. Voir Resources/Strings.fr.axaml. -->
 
                 <!-- Contrôles ensuite : leurs ControlThemes consomment les tokens ci-dessus. -->
                 <ResourceInclude Source="avares://Prospect.Desktop/Styles/Controls/Button.axaml" />

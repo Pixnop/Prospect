@@ -10,6 +10,7 @@ using Prospect.Core.Settings;
 using Prospect.Core.Settings.Migrations;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Services;
+using Prospect.Desktop.Tests.TestDoubles;
 using Prospect.Desktop.ViewModels.Settings;
 using Prospect.Desktop.ViewModels.Shell;
 using Prospect.Desktop.Views.Settings;
@@ -168,7 +169,7 @@ public sealed class SettingsHeadlessTests
         // « Relecture » : un second SettingsService sur le MÊME fichier factice, comme au
         // redémarrage réel de l'application.
         var appPaths = provider.GetRequiredService<AppPaths>();
-        var reloaded = new SettingsService(fileSystem, appPaths, new JsonFileStore(fileSystem), new SettingsMigrationPipeline([]));
+        var reloaded = new SettingsService(fileSystem, appPaths, new JsonFileStore(fileSystem), new SettingsMigrationPipeline([]), new FakeUiCulture());
         await reloaded.LoadAsync();
 
         reloaded.Current.Theme.ShouldBe(ThemePreference.Light);

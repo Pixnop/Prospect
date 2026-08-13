@@ -1,0 +1,803 @@
+using System.Globalization;
+
+using Prospect.Core.Diagnostics;
+using Prospect.Core.GameVersions;
+using Prospect.Core.Instances;
+using Prospect.Core.ModDb;
+using Prospect.Core.Modpacks;
+using Prospect.Core.Runtime;
+using Prospect.Core.Settings;
+
+namespace Prospect.Desktop.Resources;
+
+/// <summary>
+/// Table française, la voix d'origine du produit (design/readme.md, « Content fundamentals » :
+/// tutoiement, casse de phrase, registre minier discret, jamais d'emoji). C'est aussi la table de
+/// repli : toute langue inconnue relue du disque revient ici (voir
+/// <see cref="ProspectSettings.NormalizeLanguage"/>).
+/// </summary>
+internal sealed class FrenchUiText : UiTextTable
+{
+    private readonly FrenchModsText _mods = new();
+
+    public FrenchUiText() => Instance = new FrenchInstanceText(new FrenchInstanceBackupsText(), new FrenchDoctorText(_mods));
+
+    internal override string Language => ProspectSettings.French;
+
+    internal override ShellText Shell { get; } = new FrenchShellText();
+
+    internal override WizardText Wizard { get; } = new FrenchWizardText();
+
+    internal override DialogsText Dialogs { get; } = new FrenchDialogsText();
+
+    internal override ToastsText Toasts { get; } = new FrenchToastsText();
+
+    internal override HomeText Home { get; } = new FrenchHomeText();
+
+    internal override DownloadsText Downloads { get; } = new FrenchDownloadsText();
+
+    internal override VersionsText Versions { get; } = new FrenchVersionsText();
+
+    internal override BrokenInstancesText BrokenInstances { get; } = new FrenchBrokenInstancesText();
+
+    internal override InstanceText Instance { get; }
+
+    internal override AccountText Account { get; } = new FrenchAccountText();
+
+    internal override ModsText Mods => _mods;
+
+    internal override ModpacksText Modpacks { get; } = new FrenchModpacksText();
+
+    internal override MigrationText Migration { get; } = new FrenchMigrationText();
+
+    internal override SettingsText Settings { get; } = new FrenchSettingsText();
+
+    internal override FirstRunText FirstRun { get; } = new FrenchFirstRunText();
+
+    internal override TimeText Time { get; } = new FrenchTimeText();
+}
+
+internal sealed class FrenchShellText : ShellText
+{
+    internal override string NavHome => "Accueil";
+
+    internal override string NavMods => "Mods";
+
+    internal override string NavVersions => "Versions";
+
+    internal override string NavSettings => "Réglages";
+}
+
+internal sealed class FrenchWizardText : WizardText
+{
+    internal override string NameRequired => "Le nom de l'instance ne peut pas être vide.";
+
+    internal override string VersionInstalled => "installée";
+
+    internal override string InstallCanceled => "Installation annulée. L'instance n'a pas été créée.";
+
+    internal override string SummaryNoVersion => "Choisis une version du jeu à l'étape précédente.";
+
+    internal override IReadOnlyList<string> StepLabels { get; } = ["Nom", "Version", "Icône", "Résumé"];
+
+    internal override string IconLabel(string iconChoiceKey) => iconChoiceKey switch
+    {
+        "package" => "Caisse",
+        "star" => "Étoile",
+        "hard-drive" => "Disque",
+        "image" => "Image",
+        _ => "Par défaut",
+    };
+
+    internal override string VersionToDownload(string displaySize) => $"{displaySize} à télécharger";
+
+    internal override string SummaryAlreadyInstalled(string version)
+        => $"La version {version} est déjà installée, rien à télécharger. L'instance sera prête immédiatement.";
+
+    internal override string SummaryWillDownload(string version)
+        => $"La version {version} sera téléchargée et installée avant la création de l'instance.";
+}
+
+internal sealed class FrenchDialogsText : DialogsText
+{
+    internal override string RenameEmptyError => "Le nom de l'instance ne peut pas être vide.";
+
+    internal override string DuplicateEmptyError => "Le nom de la copie ne peut pas être vide.";
+
+    internal override string DeleteBackupMessage
+        => "Cette sauvegarde sera supprimée définitivement. Les autres sauvegardes de l'instance ne sont pas concernées.";
+
+    internal override string DuplicateSuggestedName(string sourceName) => $"{sourceName} (copie)";
+
+    internal override string DuplicateProgressLabel(int filesCopied, int totalFiles)
+        => totalFiles == 0 ? "Préparation de la copie…" : $"Copie des fichiers ({filesCopied}/{totalFiles})";
+
+    internal override string DeleteTitle(string instanceName) => $"Supprimer « {instanceName} » ?";
+
+    internal override string DeleteMessage(string instanceName)
+        => $"Toutes les données de « {instanceName} » seront supprimées définitivement, mondes et mods compris. Cette action est irréversible.";
+
+    internal override string RestoreBackupTitle(string instanceName) => $"Restaurer « {instanceName} » ?";
+
+    internal override string RestoreBackupMessage(string instanceName, string dateText)
+        => $"L'état actuel de « {instanceName} » sera d'abord sauvegardé par sécurité, puis remplacé par la sauvegarde du {dateText}. Mondes, configs et mods reviendront exactement à cet état.";
+
+    internal override string DeleteBackupTitle(string dateText) => $"Supprimer la sauvegarde du {dateText} ?";
+}
+
+internal sealed class FrenchToastsText : ToastsText
+{
+    internal override string InstanceCreatedTitle => "Instance créée";
+
+    internal override string InstanceRenamedTitle => "Instance renommée";
+
+    internal override string InstanceDuplicatedTitle => "Instance dupliquée";
+
+    internal override string InstanceDeletedTitle => "Instance supprimée";
+
+    internal override string VersionInstalledTitle => "Version installée";
+
+    internal override string VersionUninstalledTitle => "Version désinstallée";
+
+    internal override string LaunchSettingsSavedTitle => "Réglages de lancement enregistrés";
+
+    internal override string ModpackExportedTitle => "Modpack exporté";
+
+    internal override string BackupCreatedTitle => "Sauvegarde créée";
+
+    internal override string BackupRestoredTitle => "Sauvegarde restaurée";
+
+    internal override string BackupDeletedTitle => "Sauvegarde supprimée";
+
+    internal override string AutoBackupFailedTitle => "Sauvegarde automatique ratée";
+
+    internal override string AutoBackupFailedMessage
+        => "Le lancement continue, mais aucune sauvegarde n'a été prise avant. Vérifie l'espace disque disponible.";
+}
+
+internal sealed class FrenchHomeText : HomeText
+{
+    internal override string NoSearchResults(string query) => $"Aucune instance ne correspond à « {query} ».";
+
+    internal override string UpdatesBadge(int count) => count == 1 ? "1 mise à jour" : $"{count} mises à jour";
+}
+
+internal sealed class FrenchDownloadsText : DownloadsText
+{
+    internal override string Queued => "en attente";
+
+    internal override string Verifying => "vérification de l'empreinte";
+
+    internal override string GenericFailure => "Échec du téléchargement.";
+
+    internal override string Summary(int running, int queued) => (running, queued) switch
+    {
+        (0, 0) => string.Empty,
+        (_, 0) => $"{running} en cours",
+        (0, _) => $"{queued} en attente",
+        _ => $"{running} en cours · {queued} en attente",
+    };
+}
+
+internal sealed class FrenchVersionsText : VersionsText
+{
+    internal override string StaleCatalog
+        => "Le catalogue n'a pas pu être actualisé. Les versions affichées viennent du dernier relevé connu.";
+
+    internal override string UnavailableCatalog
+        => "Le catalogue est injoignable. Seules les versions déjà installées sont affichées.";
+
+    internal override string Subtitle(int installedCount, string totalSize) => installedCount switch
+    {
+        0 => "Aucune version installée · dossier partagé entre les instances",
+        1 => $"1 installée · {totalSize} · dossier partagé entre les instances",
+        _ => $"{installedCount} installées · {totalSize} · dossier partagé entre les instances",
+    };
+
+    internal override string InstalledOn(DateTimeOffset installedUtc)
+        => $"installée le {installedUtc.ToLocalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}";
+
+    internal override string PhaseLabel(GameInstallPhase phase) => phase switch
+    {
+        GameInstallPhase.Downloading => "Téléchargement",
+        GameInstallPhase.Verifying => "Vérification",
+        GameInstallPhase.Installing => "Installation",
+        GameInstallPhase.Completed => "Terminé",
+        _ => string.Empty,
+    };
+
+    internal override string BrokenReason(GameInstallBrokenReason reason) => reason switch
+    {
+        GameInstallBrokenReason.MissingCompletionMarker => "installation interrompue, à réinstaller",
+        GameInstallBrokenReason.UnreadableVersionName => "nom de dossier illisible",
+        _ => "raison inconnue",
+    };
+
+    internal override string UninstallTitle(string version) => $"Désinstaller la version {version} ?";
+
+    internal override string UninstallMessage(string version)
+        => $"Les fichiers de la version {version} seront supprimés du dossier partagé. Tu pourras la réinstaller depuis le catalogue.";
+
+    internal override string UninstallDependents(IReadOnlyList<string> instanceNames)
+    {
+        var quoted = instanceNames.Select(name => $"« {name} »").ToArray();
+        var joined = quoted.Length == 1
+            ? quoted[0]
+            : $"{string.Join(", ", quoted[..^1])} et {quoted[^1]}";
+
+        return quoted.Length == 1
+            ? $"L'instance {joined} utilise cette version et ne pourra plus être lancée."
+            : $"Les instances {joined} utilisent cette version et ne pourront plus être lancées.";
+    }
+}
+
+internal sealed class FrenchBrokenInstancesText : BrokenInstancesText
+{
+    internal override string Reason(InstanceBrokenReason reason) => reason switch
+    {
+        InstanceBrokenReason.MissingMetadataFile => "fichier instance.json manquant",
+        InstanceBrokenReason.CorruptedMetadataFile => "fichier instance.json illisible",
+        InstanceBrokenReason.UnsupportedSchemaVersion => "version de schéma non prise en charge",
+        _ => "raison inconnue",
+    };
+}
+
+internal sealed class FrenchInstanceText(InstanceBackupsText backups, DoctorText doctor) : InstanceText(backups, doctor)
+{
+    internal override string VersionNotInstalledTitle => "Version non installée";
+
+    internal override string RuntimeMissingTitle => "Runtime .NET manquant";
+
+    internal override string MacNotSupportedTitle => "macOS non pris en charge";
+
+    internal override string AlreadyRunningTitle => "Session déjà en cours";
+
+    internal override string GenericLaunchErrorTitle => "Lancement impossible";
+
+    internal override string EnvVarsInvalidLine => "Chaque ligne doit être au format CLE=valeur.";
+
+    internal override string StopConfirmTitle(string instanceName) => $"Arrêter « {instanceName} » ?";
+
+    internal override string StopConfirmMessage(string instanceName)
+        => $"Le jeu de « {instanceName} » va s'arrêter immédiatement. Toute progression non sauvegardée sera perdue.";
+}
+
+internal sealed class FrenchInstanceBackupsText : InstanceBackupsText
+{
+    internal override string CreateFailedTitle => "Sauvegarde impossible";
+
+    internal override string KeepCountChoiceLabel(int count)
+        => count == 1 ? "1 sauvegarde conservée" : $"{count} sauvegardes conservées";
+
+    internal override string CreateProgress(int filesProcessed, int totalFiles)
+        => totalFiles == 0 ? "Préparation de la sauvegarde…" : $"Sauvegarde en cours ({filesProcessed}/{totalFiles})";
+
+    internal override string AutoBackupProgress(int filesProcessed, int totalFiles)
+        => totalFiles == 0 ? "Sauvegarde automatique…" : $"Sauvegarde automatique ({filesProcessed}/{totalFiles})…";
+}
+
+internal sealed class FrenchDoctorText(ModsText mods) : DoctorText(mods)
+{
+    internal override string InstallAction => "Installer";
+
+    internal override string ReinstallAction => "Réinstaller";
+
+    internal override string OpenModsAction => "Voir les mods";
+
+    internal override string AllClearTitle => "Tout est en ordre";
+
+    internal override string AllClearDescription => "Aucun problème détecté sur les cinq vérifications locales.";
+
+    internal override string CompatibilityUnknown
+        => "Compatibilité de version de jeu inconnue : lance une vérification des mises à jour pour en savoir plus.";
+
+    internal override string RuntimeIndeterminate
+        => "Le runtime requis par cette version n'a pas pu être déterminé. Le lancement le confirmera si besoin.";
+
+    internal override string ErrorsGroupTitle(int count) => count == 1 ? "1 point à corriger" : $"{count} points à corriger";
+
+    internal override string WarningsGroupTitle(int count) => count == 1 ? "1 point à surveiller" : $"{count} points à surveiller";
+
+    internal override string GameVersionMessage(GameVersionDoctorResult result) => result.Status switch
+    {
+        GameVersionDoctorStatus.Missing => $"La version {result.Version} n'est pas installée.",
+        GameVersionDoctorStatus.Incomplete
+            => $"L'installation de la version {result.Version} est incomplète, probablement interrompue en cours de route.",
+        _ => string.Empty,
+    };
+
+    internal override string RuntimeMessage(RuntimeCheckResult runtime) => runtime.Availability switch
+    {
+        RuntimeAvailability.Missing
+            => $"Le runtime .NET {runtime.Requirement.FrameworkName} {runtime.Requirement.Version} est requis mais n'est pas installé.",
+        RuntimeAvailability.Indeterminate => RuntimeIndeterminate,
+        _ => string.Empty,
+    };
+
+    internal override string CompatibilityMessage(ModCompatibilityDoctorResult compatibility, string gameVersionText)
+    {
+        if (compatibility.Severity != InstanceDoctorSeverity.Warning)
+        {
+            return string.Empty;
+        }
+
+        if (compatibility.IsWhollyUnknown)
+        {
+            return CompatibilityUnknown;
+        }
+
+        var uncertain = compatibility.ApproximateCount + compatibility.UnknownCount;
+
+        return uncertain == 1
+            ? $"1 mod dont la compatibilité avec {gameVersionText} n'est pas confirmée. Lance une vérification des mises à jour pour en savoir plus."
+            : $"{uncertain} mods dont la compatibilité avec {gameVersionText} n'est pas confirmée. Lance une vérification des mises à jour pour en savoir plus.";
+    }
+
+    internal override string DiskSpaceLow(string availableText)
+        => $"Espace disque faible : {availableText} restants sur le volume de Prospect.";
+
+    protected override string UnidentifiedMessage(string modDisplayName, ModInfoProblem problem)
+        => $"« {modDisplayName} » n'a pas pu être identifié ({Mods.UnidentifiedReason(problem)}).";
+
+    protected override string DependencyIssueMessage(string modDisplayName, ModDependencyIssue dependency) => dependency.Status switch
+    {
+        ModDependencyStatus.Missing => $"« {modDisplayName} » a besoin de {dependency.ModIdString}, absent de l'instance.",
+        ModDependencyStatus.Disabled => $"« {modDisplayName} » a besoin de {dependency.ModIdString}, présent mais désactivé.",
+        ModDependencyStatus.TooOld
+            => $"« {modDisplayName} » a besoin de {dependency.ModIdString} {dependency.Requirement} au minimum, version installée trop ancienne.",
+        _ => $"« {modDisplayName} » a besoin de {dependency.ModIdString}.",
+    };
+}
+
+internal sealed class FrenchAccountText : AccountText
+{
+    internal override string InvalidCredentials => "Adresse ou mot de passe incorrect.";
+
+    internal override string InvalidTwoFactorCode
+        => "Ce code n'est pas le bon. Il change toutes les trente secondes, retape le dernier affiché.";
+
+    internal override string Refused
+        => "La connexion a été refusée. Vérifie ton compte sur vintagestory.at, puis réessaie.";
+
+    internal override string ServiceUnavailable
+        => "Le service de compte de Vintage Story ne répond pas. Vérifie ta connexion et réessaie.";
+
+    internal override string UnknownPlayerName => "ce compte";
+
+    internal override string SignOutConfirmMessage
+        => "Ta session sera effacée de cet ordinateur. Le jeu démarrera sans multijoueur tant que tu ne te reconnecteras pas.";
+
+    internal override string SignOutConfirmTitle(string playerName) => $"Déconnecter « {playerName} » ?";
+
+    internal override string SignedInSubtitle(string playerName) => $"Connecté en tant que {playerName}.";
+}
+
+internal sealed class FrenchModsText : ModsText
+{
+    internal override string AllVersions => "Toutes les versions";
+
+    internal override string UnknownVersion => "version inconnue";
+
+    internal override string ProvenanceManual => "manuel";
+
+    internal override string EmptyResultsTitle => "Aucun mod ne correspond";
+
+    internal override string EnabledTitle => "Mod activé";
+
+    internal override string DisabledTitle => "Mod désactivé";
+
+    internal override string UninstalledTitle => "Mod retiré";
+
+    internal override string FileGoneTitle => "Fichier introuvable";
+
+    internal override string InstallFailedTitle => "Installation impossible";
+
+    internal override string NoCompatibleReleaseTitle => "Aucune version compatible";
+
+    internal override string DetailUnavailableTitle => "Fiche indisponible";
+
+    internal override string PickInstanceTitle => "Choisis une instance";
+
+    internal override string PickInstanceMessage => "Sélectionne l'instance de destination avant d'installer un mod.";
+
+    internal override string StaleCatalog
+        => "L'index n'a pas pu être actualisé. Les mods affichés viennent du dernier relevé connu.";
+
+    internal override string OfflineEmptyTitle => "Aucun résultat hors ligne";
+
+    internal override string OfflineEmptyDescription
+        => "L'index des mods est mis en cache localement mais il a expiré. Reconnecte-toi pour parcourir ModDB.";
+
+    internal override string CheckUpdatesFailedTitle => "Vérification impossible";
+
+    internal override string UpdateFailedTitle => "Mise à jour impossible";
+
+    protected override CultureInfo NumberCulture { get; } = CultureInfo.GetCultureInfo("fr-FR");
+
+    internal override string Subtitle(int indexedCount) => indexedCount switch
+    {
+        0 => "ModDB officiel",
+        1 => "ModDB officiel · 1 mod indexé",
+        _ => $"ModDB officiel · {FormatCount(indexedCount)} mods indexés",
+    };
+
+    internal override string ShownCount(int shown, int total)
+        => shown >= total
+            ? total switch
+            {
+                0 => string.Empty,
+                1 => "1 mod",
+                _ => $"{FormatCount(total)} mods",
+            }
+            : $"{FormatCount(shown)} sur {FormatCount(total)} mods affichés";
+
+    internal override string ByAuthor(string author)
+        => string.IsNullOrWhiteSpace(author) ? "auteur inconnu" : $"par {author}";
+
+    internal override string EmptyResultsDescription(string query)
+        => string.IsNullOrWhiteSpace(query)
+            ? "Aucun mod ne correspond aux filtres actifs."
+            : $"Aucun mod ne correspond à « {query.Trim()} ».";
+
+    internal override string DetailMeta(string author, int downloads)
+        => $"{ByAuthor(author)} · {FormatCount(downloads)} téléchargements";
+
+    internal override string CompatibleVersions(IReadOnlyList<string> tags) => tags.Count switch
+    {
+        0 => "aucune version de jeu déclarée",
+        1 => tags[0],
+        <= 3 => string.Join(", ", tags),
+        _ => $"{string.Join(", ", tags.Take(3))} et {tags.Count - 3} autres",
+    };
+
+    internal override string SideLabel(ModDbSide side) => side switch
+    {
+        ModDbSide.Client => "client",
+        ModDbSide.Server => "serveur",
+        ModDbSide.Both => "client et serveur",
+        _ => string.Empty,
+    };
+
+    internal override string SideLabel(ModSide? side) => side switch
+    {
+        ModSide.Client => "client",
+        ModSide.Server => "serveur",
+        ModSide.Universal => "universel",
+        _ => string.Empty,
+    };
+
+    internal override string RowAuthor(IReadOnlyList<string> authors) => authors.Count switch
+    {
+        0 => "auteur inconnu",
+        1 => $"par {authors[0]}",
+        _ => $"par {authors[0]} et {authors.Count - 1} autre{(authors.Count > 2 ? "s" : string.Empty)}",
+    };
+
+    internal override string UnidentifiedReason(ModInfoProblem problem) => problem switch
+    {
+        ModInfoProblem.MissingModInfo => "aucun modinfo.json dans l'archive",
+        ModInfoProblem.MalformedJson => "modinfo.json illisible",
+        ModInfoProblem.MissingIdentity => "modinfo.json sans identifiant ni nom",
+        ModInfoProblem.UnreadableArchive => "archive illisible",
+        _ => string.Empty,
+    };
+
+    internal override string InstalledSummary(int total, int enabled) => total switch
+    {
+        0 => string.Empty,
+        1 => enabled == 1 ? "1 mod installé" : "1 mod installé, désactivé",
+        _ => enabled == total ? $"{total} mods installés" : $"{total} mods installés · {total - enabled} désactivés",
+    };
+
+    internal override string PlanTitle(string modName) => $"Installer « {modName} » ?";
+
+    internal override string PlanMessage(string version, string instanceName)
+        => $"La version {version} sera ajoutée à « {instanceName} ».";
+
+    internal override string ApproximateWarning(string gameVersion)
+        => $"Aucune version n'est déclarée compatible avec {gameVersion} : celle-ci est proposée parce qu'elle cible la même série. L'auteur ne l'a pas confirmée, elle peut ne pas fonctionner.";
+
+    internal override string DependencyReason(ModDependencyIssue? issue) => issue?.Status switch
+    {
+        ModDependencyStatus.Missing when issue.ReportedByModDb && issue.Requirement.IsAny => "signalée par le ModDB",
+        ModDependencyStatus.Missing => "absente de l'instance",
+        ModDependencyStatus.TooOld => $"version installée trop ancienne, {issue.Requirement} au minimum",
+        _ => string.Empty,
+    };
+
+    internal override string UnresolvedDependencies(IReadOnlyList<string> identifiers)
+        => identifiers.Count == 0
+            ? string.Empty
+            : $"Introuvable{(identifiers.Count > 1 ? "s" : string.Empty)} sur le ModDB : {string.Join(", ", identifiers)}. À installer à la main si le mod en a besoin.";
+
+    internal override string DisabledDependencies(IReadOnlyList<string> identifiers)
+        => identifiers.Count == 0
+            ? string.Empty
+            : $"Présent{(identifiers.Count > 1 ? "s" : string.Empty)} mais désactivé{(identifiers.Count > 1 ? "s" : string.Empty)} : {string.Join(", ", identifiers)}. Réactive-les depuis l'onglet Mods de l'instance.";
+
+    internal override string InstalledTitle(string modName) => $"{modName} installé";
+
+    internal override string InstalledMessage(int count, string instanceName)
+        => count > 1 ? $"{count} mods ajoutés à « {instanceName} »" : $"Ajouté à « {instanceName} »";
+
+    internal override string UninstallTitle(string modName) => $"Retirer « {modName} » ?";
+
+    internal override string UninstallMessage(string fileName)
+        => $"Le fichier {fileName} sera supprimé du dossier Mods de l'instance. Tu pourras le réinstaller depuis le ModDB.";
+
+    internal override string UninstallDependents(IReadOnlyList<string> modNames)
+    {
+        if (modNames.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var quoted = modNames.Select(name => $"« {name} »").ToArray();
+        var joined = quoted.Length == 1
+            ? quoted[0]
+            : $"{string.Join(", ", quoted[..^1])} et {quoted[^1]}";
+
+        return quoted.Length == 1
+            ? $"Le mod {joined} en dépend et risque de ne plus fonctionner."
+            : $"Les mods {joined} en dépendent et risquent de ne plus fonctionner.";
+    }
+
+    internal override string LastCheckedLabel(string relativeCheckedText) => $"Dernière vérification : {relativeCheckedText}";
+
+    internal override string UpdatesAvailableTitle(int count) => count switch
+    {
+        0 => string.Empty,
+        1 => "1 mise à jour disponible",
+        _ => $"{count} mises à jour disponibles",
+    };
+
+    internal override string UpdatePlanTitle(string modName) => $"Mettre à jour « {modName} » ?";
+
+    internal override string UpdatePlanMessage(string currentVersion, string targetVersion)
+        => $"La version {currentVersion} sera remplacée par la {targetVersion}.";
+
+    internal override string UpdateDependentsNote(IReadOnlyList<string> modNames)
+    {
+        if (modNames.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var quoted = modNames.Select(name => $"« {name} »").ToArray();
+        var joined = quoted.Length == 1
+            ? quoted[0]
+            : $"{string.Join(", ", quoted[..^1])} et {quoted[^1]}";
+
+        return quoted.Length == 1
+            ? $"{joined} dépend de ce mod."
+            : $"{joined} dépendent de ce mod.";
+    }
+
+    internal override string UpdatedTitle(string modName) => $"{modName} mis à jour";
+
+    internal override string UpdatedMessage(string targetVersion) => $"Version {targetVersion} installée.";
+
+    internal override string BulkUpdateDoneTitle(int count) => count switch
+    {
+        0 => "Aucune mise à jour appliquée",
+        1 => "1 mod mis à jour",
+        _ => $"{count} mods mis à jour",
+    };
+
+    internal override string BulkUpdateFailures(IReadOnlyList<BulkUpdateFailure> failures)
+        => failures.Count == 0
+            ? string.Empty
+            : $"Échec pour {string.Join(", ", failures.Select(failure => failure.ModName))}.";
+}
+
+internal sealed class FrenchModpacksText : ModpacksText
+{
+    internal override string ExportPickerTitle => "Exporter le modpack";
+
+    internal override string ImportPickerTitle => "Choisir un modpack à importer";
+
+    internal override string ImportModConfigNotice
+        => "Les réglages des mods (ModConfig) de ce pack seront repris dans la nouvelle instance.";
+
+    internal override string InstallingGameVersionPhase => "Installation de la version du jeu";
+
+    internal override string ExportTitle(string instanceName) => $"Exporter « {instanceName} »";
+
+    internal override string ExportedToastDescription(int modsExported) => modsExported switch
+    {
+        0 => "Aucun mod dans le manifest.",
+        1 => "1 mod dans le manifest.",
+        _ => $"{modsExported} mods dans le manifest.",
+    };
+
+    internal override string ExportSkippedSectionTitle(int count)
+        => count == 1 ? "1 mod laissé de côté" : $"{count} mods laissés de côté";
+
+    internal override string ExportSkipReason(ModpackExportSkipReason reason) => reason switch
+    {
+        ModpackExportSkipReason.UnreadableModInfo => "aucun modinfo.json lisible dans l'archive",
+        ModpackExportSkipReason.MissingVersion => "version illisible",
+        _ => "raison inconnue",
+    };
+
+    internal override string ImportPreviewSubtitle(string gameVersion, int modCount) => modCount switch
+    {
+        0 => gameVersion,
+        1 => $"{gameVersion} · 1 mod",
+        _ => $"{gameVersion} · {modCount} mods",
+    };
+
+    internal override string ImportGameVersionWarning(string gameVersion, string displaySize)
+        => string.IsNullOrEmpty(displaySize)
+            ? $"La version {gameVersion} du jeu n'est pas installée. Elle sera téléchargée avant l'import."
+            : $"La version {gameVersion} du jeu n'est pas installée : {displaySize} à télécharger avant l'import.";
+
+    internal override string InstallingModsPhase(int completedMods, int totalMods, string? currentModId)
+        => string.IsNullOrEmpty(currentModId)
+            ? $"Mods {completedMods}/{totalMods}"
+            : $"Mods {completedMods}/{totalMods} · {currentModId}";
+
+    internal override string ReportGroupTitle(ModpackModImportStatus status, int count) => status switch
+    {
+        ModpackModImportStatus.Installed => count == 1 ? "1 mod installé" : $"{count} mods installés",
+        ModpackModImportStatus.NotFound => count == 1 ? "1 mod introuvable sur le ModDB" : $"{count} mods introuvables sur le ModDB",
+        ModpackModImportStatus.VersionMissing => count == 1 ? "1 version indisponible" : $"{count} versions indisponibles",
+        ModpackModImportStatus.Sha256Mismatch => count == 1 ? "1 empreinte invalide" : $"{count} empreintes invalides",
+        ModpackModImportStatus.NetworkFailure => count == 1 ? "1 échec réseau" : $"{count} échecs réseau",
+        _ => string.Empty,
+    };
+
+    internal override string ReportRowDetail(ModpackImportModReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        return report.Status switch
+        {
+            ModpackModImportStatus.Installed => report.InstalledVersion?.ToString() ?? string.Empty,
+            ModpackModImportStatus.VersionMissing when report.SuggestedVersion is { } suggestion
+                => $"demandé {report.RequestedVersion} · plus proche compatible : {suggestion}",
+            ModpackModImportStatus.VersionMissing => $"demandé {report.RequestedVersion}",
+            ModpackModImportStatus.NetworkFailure => report.Detail ?? string.Empty,
+            _ => string.Empty,
+        };
+    }
+
+    internal override string ImportedToastTitle(string instanceName) => $"« {instanceName} » importée";
+
+    internal override string ImportedToastDescription(int installedCount, int totalCount) => totalCount switch
+    {
+        0 => "Aucun mod dans ce pack.",
+        _ when installedCount == totalCount => $"{installedCount}/{totalCount} mods installés.",
+        _ => $"{installedCount}/{totalCount} mods installés, voir le rapport pour le reste.",
+    };
+}
+
+internal sealed class FrenchMigrationText : MigrationText
+{
+    internal override string Starting => "Préparation…";
+
+    internal override string CompletedToastTitle => "Adoption terminée";
+
+    internal override string ModCount(int count) => count switch
+    {
+        0 => "aucun mod",
+        1 => "1 mod",
+        _ => $"{count} mods",
+    };
+
+    internal override string DetectionSummary(int installationCount, int gameVersionCount)
+    {
+        var installations = installationCount switch
+        {
+            0 => "aucune installation",
+            1 => "1 installation",
+            _ => $"{installationCount} installations",
+        };
+
+        var engines = gameVersionCount switch
+        {
+            0 => "aucun moteur",
+            1 => "1 moteur",
+            _ => $"{gameVersionCount} moteurs",
+        };
+
+        return $"{installations} et {engines} détectés";
+    }
+
+    internal override string AdoptingInstallationsPhase(int completedItems, int totalItems, string? currentItemLabel)
+        => string.IsNullOrEmpty(currentItemLabel)
+            ? $"Installations {completedItems}/{totalItems}"
+            : $"Installations {completedItems}/{totalItems} · {currentItemLabel}";
+
+    internal override string AdoptingEnginesPhase(int completedItems, int totalItems, string? currentItemLabel)
+        => string.IsNullOrEmpty(currentItemLabel)
+            ? $"Moteurs {completedItems}/{totalItems}"
+            : $"Moteurs {completedItems}/{totalItems} · {currentItemLabel}";
+
+    internal override string FilesCopied(int filesCopied, int totalFiles) => $"{filesCopied}/{totalFiles} fichiers";
+
+    internal override string CompletedToastDescription(int adoptedInstallations, int adoptedEngines)
+        => (adoptedInstallations, adoptedEngines) switch
+        {
+            (0, 0) => "Rien n'a été adopté, voir le rapport.",
+            (_, 0) => adoptedInstallations == 1 ? "1 instance créée." : $"{adoptedInstallations} instances créées.",
+            (0, _) => adoptedEngines == 1 ? "1 moteur adopté." : $"{adoptedEngines} moteurs adoptés.",
+            _ => $"{adoptedInstallations} instance(s) créée(s), {adoptedEngines} moteur(s) adopté(s).",
+        };
+
+    internal override string InstallationsAdoptedGroupTitle(int count)
+        => count == 1 ? "1 instance créée" : $"{count} instances créées";
+
+    internal override string InstallationsSkippedGroupTitle(int count)
+        => count == 1 ? "1 installation ignorée" : $"{count} installations ignorées";
+
+    internal override string InstallationsFailedGroupTitle(int count)
+        => count == 1 ? "1 installation en échec" : $"{count} installations en échec";
+
+    internal override string EnginesAdoptedGroupTitle(int count)
+        => count == 1 ? "1 moteur adopté" : $"{count} moteurs adoptés";
+
+    internal override string EnginesSkippedGroupTitle(int count)
+        => count == 1 ? "1 moteur ignoré" : $"{count} moteurs ignorés";
+
+    internal override string EnginesFailedGroupTitle(int count)
+        => count == 1 ? "1 moteur en échec" : $"{count} moteurs en échec";
+}
+
+internal sealed class FrenchSettingsText : SettingsText
+{
+    internal override string PickFolderTitle => "Dossier de VS Launcher";
+
+    internal override string VslNotDetected => "Rien d'exploitable n'a été trouvé à cet emplacement.";
+
+    internal override string ConcurrencyChoiceLabel(int count)
+        => count == 1 ? "1 téléchargement à la fois" : $"{count} téléchargements simultanés";
+}
+
+internal sealed class FrenchFirstRunText : FirstRunText
+{
+    internal override string DataFolderTitle => "Dossier de données";
+
+    internal override string GameVersionTitle => "Version du jeu";
+
+    internal override string VslDetectedTitle => "Installations VS Launcher détectées";
+
+    internal override string AccountTitle => "Compte Vintage Story";
+
+    internal override string AccountSignedOut => "Facultatif : utile seulement pour jouer en multijoueur.";
+
+    internal override string AccountSignInAction => "Se connecter";
+
+    internal override string InstallVersionAction => "Installer";
+
+    internal override string AdoptAction => "Adopter";
+
+    internal override string NoVersionInstalled => "aucune installée";
+
+    internal override string InstalledVersionsSummary(int count, string mostRecentVersion) => count switch
+    {
+        1 => $"{mostRecentVersion} installée",
+        _ => $"{count} versions installées, dont {mostRecentVersion}",
+    };
+}
+
+internal sealed class FrenchTimeText : TimeText
+{
+    private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
+
+    internal override string Never => "jamais";
+
+    internal override string Today => "aujourd'hui";
+
+    internal override string Yesterday => "hier";
+
+    internal override string NeverPlayed => "jamais joué";
+
+    internal override string PlayedUnderAnHour => "joué < 1 h";
+
+    internal override string DaysAgo(int days) => $"il y a {days} jours";
+
+    internal override string AbsoluteDate(DateTime utcValue) => utcValue.ToString("d MMMM yyyy", French);
+
+    internal override string PlayedHours(long hours) => $"joué {hours} h";
+}

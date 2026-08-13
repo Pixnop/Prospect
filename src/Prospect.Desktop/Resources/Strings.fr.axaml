@@ -2,15 +2,23 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
   <!--
-    Dictionnaire centralisé des textes UI STATIQUES (design/readme.md, section « Content
-    fundamentals » : tutoiement, casse de phrase, boutons à l'infinitif, jamais d'emoji). Chaque
-    vue consomme ces clés en XAML via {StaticResource Xyz} plutôt que d'écrire du texte en dur.
+    Dictionnaire centralisé des textes UI STATIQUES, version FRANÇAISE (design/readme.md, section
+    « Content fundamentals » : tutoiement, casse de phrase, boutons à l'infinitif, jamais d'emoji).
+    Chaque vue consomme ces clés en XAML via {StaticResource Xyz} plutôt que d'écrire du texte en
+    dur.
+
+    Strings.en.axaml porte EXACTEMENT les mêmes clés, dans le même ordre, et une seule des deux
+    est fusionnée dans Application.Resources au démarrage selon la langue réglée (voir
+    Services/LanguageService.cs et docs/architecture.md, section « Langue de l'interface »).
+    L'égalité stricte des deux jeux de clés est vérifiée par un test
+    (StringsDictionaryParityTests) : une clé ajoutée d'un seul côté fait échouer la suite en la
+    nommant, plutôt que de laisser une vue chercher une ressource absente à l'exécution.
 
     Les messages que calcule un ViewModel (confirmation nommant une instance, erreur de
     validation, texte de toast interpolé...) ne vivent volontairement PAS ici : un ViewModel doit
     rester constructible et testable sans qu'une Application Avalonia tourne (docs/architecture.md,
     MVVM strict), or {StaticResource} n'existe que si le système de ressources est initialisé.
-    Ce texte dynamique vit dans Resources/UiText.cs (classe C# simple), documentée avec le même
+    Ce texte dynamique vit dans Resources/UiText.cs (tables C# par langue), documenté avec le même
     partage des rôles. Les deux ensembles ne se recouvrent jamais : chaque texte n'existe qu'à un
     seul endroit, choisi selon qui le lit (une vue en XAML, ou un ViewModel en C#).
   -->
@@ -294,7 +302,9 @@
   <x:String x:Key="Settings_ThemeLight">Clair</x:String>
   <x:String x:Key="Settings_ThemeSystem">Suivre le système</x:String>
   <x:String x:Key="Settings_LanguageLabel">Langue</x:String>
-  <x:String x:Key="Settings_LanguageLockedHint">L'anglais arrivera avec la traduction de l'app.</x:String>
+  <x:String x:Key="Settings_LanguageFrench">Français</x:String>
+  <x:String x:Key="Settings_LanguageEnglish">English</x:String>
+  <x:String x:Key="Settings_LanguageRestartHint">Le changement prend effet au redémarrage de Prospect.</x:String>
 
   <!-- Jeu -->
   <x:String x:Key="Settings_GameSectionTitle">Emplacement des données</x:String>

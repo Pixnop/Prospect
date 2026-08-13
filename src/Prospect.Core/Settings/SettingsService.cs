@@ -2,6 +2,7 @@ using System.IO.Abstractions;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
+using Prospect.Core.Common;
 using Prospect.Core.Settings.Migrations;
 using Prospect.Core.Storage;
 
@@ -29,22 +30,26 @@ public sealed class SettingsService
     private readonly AppPaths _appPaths;
     private readonly JsonFileStore _jsonFileStore;
     private readonly SettingsMigrationPipeline _migrationPipeline;
+    private readonly IUiCulture _uiCulture;
 
     public SettingsService(
         IFileSystem fileSystem,
         AppPaths appPaths,
         JsonFileStore jsonFileStore,
-        SettingsMigrationPipeline migrationPipeline)
+        SettingsMigrationPipeline migrationPipeline,
+        IUiCulture uiCulture)
     {
         ArgumentNullException.ThrowIfNull(fileSystem);
         ArgumentNullException.ThrowIfNull(appPaths);
         ArgumentNullException.ThrowIfNull(jsonFileStore);
         ArgumentNullException.ThrowIfNull(migrationPipeline);
+        ArgumentNullException.ThrowIfNull(uiCulture);
 
         _fileSystem = fileSystem;
         _appPaths = appPaths;
         _jsonFileStore = jsonFileStore;
         _migrationPipeline = migrationPipeline;
+        _uiCulture = uiCulture;
 
         // Valeurs saines avant même le premier LoadAsync : un ViewModel construit avant que
         // App.OnFrameworkInitializationCompleted n'ait fini de charger (ou un test qui ne charge
@@ -69,11 +74,21 @@ public sealed class SettingsService
     /// quoi que ce soit qui dépend du thème ne construise sa première fenêtre (voir
     /// <c>Prospect.Desktop.App.OnFrameworkInitializationCompleted</c>).
     /// </summary>
+    /// <remarks>
+    /// L'absence de fichier est aussi le SEUL moment où la langue par défaut se déduit de la
+    /// culture du système (<see cref="ProspectSettings.LanguageForCulture"/>) : dès qu'un
+    /// <c>prospect.json</c> existe, c'est lui qui décide, la détection ne repasse jamais par-dessus
+    /// un choix persisté. Rien n'est écrit sur disque pour autant — persister une déduction la
+    /// transformerait en décision que l'utilisateur n'a pas prise, alors que la première vraie
+    /// modification de réglage l'écrira de toute façon.
+    /// </remarks>
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
         var path = _appPaths.SettingsFilePath;
         if (!_fileSystem.File.Exists(path))
         {
+            Current = Current with { Language = ProspectSettings.LanguageForCulture(_uiCulture.Name) };
+
             return;
         }
 

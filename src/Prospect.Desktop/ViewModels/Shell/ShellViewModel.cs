@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Prospect.Core.Storage;
+using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.ViewModels.Downloads;
 using Prospect.Desktop.ViewModels.Home;
@@ -58,10 +59,10 @@ public sealed partial class ShellViewModel : ObservableObject
         Settings.FirstRun.NavigateToAccountSettingsRequested += (_, _) => ShowAccountSettings();
         Settings.FirstRun.VslAdopted += (_, _) => Home.RefreshCommand.Execute(null);
 
-        var homeNavItem = new NavItemViewModel("layers", "Accueil", home, Navigate);
-        var modsNavItem = new NavItemViewModel("package", "Mods", modBrowser, ShowModBrowser);
-        var versionsNavItem = new NavItemViewModel("hard-drive", "Versions", versions, Navigate);
-        SettingsNavItem = new NavItemViewModel("settings", "Réglages", settings, ShowSettings);
+        var homeNavItem = new NavItemViewModel("layers", UiText.Shell.NavHome, home, Navigate);
+        var modsNavItem = new NavItemViewModel("package", UiText.Shell.NavMods, modBrowser, ShowModBrowser);
+        var versionsNavItem = new NavItemViewModel("hard-drive", UiText.Shell.NavVersions, versions, Navigate);
+        SettingsNavItem = new NavItemViewModel("settings", UiText.Shell.NavSettings, settings, ShowSettings);
 
         LibraryNavItems = [homeNavItem, modsNavItem, versionsNavItem];
         _allNavItems.AddRange(LibraryNavItems);

@@ -65,7 +65,7 @@ public sealed class FirstRunScreenViewModelTests
         var instanceService = new InstanceService(instanceRepository, fileSystem, clock);
         var gameVersions = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
         var adoptionService = new VslAdoptionService(instanceService, instanceRepository, gameVersions, store, fileSystem, clock);
-        var settings = new SettingsService(fileSystem, Paths, store, new SettingsMigrationPipeline([]));
+        var settings = new SettingsService(fileSystem, Paths, store, new SettingsMigrationPipeline([]), new FakeUiCulture());
         var secretStore = new MemorySecretStore();
         var accounts = new VsAccountService(new VsAccountClient(new HttpClient()), secretStore);
 

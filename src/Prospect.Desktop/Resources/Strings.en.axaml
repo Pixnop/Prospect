@@ -1,0 +1,347 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Dictionnaire centralisé des textes UI STATIQUES, version ANGLAISE. Miroir strict de
+    Strings.fr.axaml : mêmes clés, même ordre, mêmes sections. Voir l'en-tête du fichier français
+    pour le partage des rôles avec Resources/UiText.cs et le mécanisme de choix au démarrage.
+
+    L'anglais s'écrit comme un ORIGINAL, pas comme un décalque du français : même sobriété, même
+    adresse directe au joueur, mais des tournures anglaises. Les noms propres (Prospect, Vintage
+    Story, ModDB, Anego Studios), les chemins et les formats techniques ne se traduisent pas.
+  -->
+
+  <x:String x:Key="App_Title">Prospect</x:String>
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Nav_Bibliotheque">Library</x:String>
+  <x:String x:Key="Nav_Accueil">Home</x:String>
+  <x:String x:Key="Nav_Mods">Mods</x:String>
+  <x:String x:Key="Nav_Versions">Versions</x:String>
+  <x:String x:Key="Nav_Reglages">Settings</x:String>
+  <x:String x:Key="Nav_Telechargements">Downloads</x:String>
+
+  <!-- ── Titlebar ────────────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Titlebar_Minimize">Minimize</x:String>
+  <x:String x:Key="Titlebar_Maximize">Maximize</x:String>
+  <x:String x:Key="Titlebar_Restore">Restore</x:String>
+  <x:String x:Key="Titlebar_Close">Close</x:String>
+
+  <!-- ── Popover téléchargements ─────────────────────────────────────────────────── -->
+  <x:String x:Key="Downloads_Title">Downloads</x:String>
+  <x:String x:Key="Downloads_EmptyTitle">No downloads</x:String>
+  <x:String x:Key="Downloads_EmptyDescription">Game versions and mods you download will show up here.</x:String>
+  <x:String x:Key="Downloads_Close">Close</x:String>
+  <x:String x:Key="Downloads_Cancel">Cancel</x:String>
+
+  <!-- ── Accueil ─────────────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Home_Title">Instances</x:String>
+  <x:String x:Key="Home_SearchPlaceholder">Filter instances…</x:String>
+  <x:String x:Key="Home_SortLastLaunched">Last launched</x:String>
+  <x:String x:Key="Home_SortName">Name</x:String>
+  <x:String x:Key="Home_NewInstance">New instance</x:String>
+  <x:String x:Key="Home_ImportModpack">Import a modpack</x:String>
+  <x:String x:Key="Home_EmptyTitle">No instances</x:String>
+  <x:String x:Key="Home_EmptyDescription">An instance keeps a game version, its mods and its saves to itself. Create your first one to get started.</x:String>
+  <x:String x:Key="Home_NoResultsTitle">Nothing found</x:String>
+  <x:String x:Key="Home_ClearFilter">Clear the filter</x:String>
+  <x:String x:Key="Home_BrokenSectionTitle">Instances that would not load</x:String>
+
+  <!-- ── Carte d'instance ────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Card_Play">Play</x:String>
+  <x:String x:Key="Card_Stop">Stop</x:String>
+  <x:String x:Key="Card_Launching">Starting…</x:String>
+  <x:String x:Key="Card_Playing">Running</x:String>
+  <x:String x:Key="Card_Actions">Actions</x:String>
+  <x:String x:Key="Card_Rename">Rename</x:String>
+  <x:String x:Key="Card_Duplicate">Duplicate</x:String>
+  <x:String x:Key="Card_Delete">Delete</x:String>
+  <x:String x:Key="Card_NewInstance">New instance</x:String>
+
+  <!-- ── Wizard ──────────────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Wizard_Title">New instance</x:String>
+  <x:String x:Key="Wizard_Cancel">Cancel</x:String>
+  <x:String x:Key="Wizard_Previous">Back</x:String>
+  <x:String x:Key="Wizard_Next">Next</x:String>
+  <x:String x:Key="Wizard_Create">Create the instance</x:String>
+
+  <x:String x:Key="Wizard_Step1_NameLabel">Instance name</x:String>
+  <x:String x:Key="Wizard_Step1_NamePlaceholder">Vintage survival</x:String>
+  <x:String x:Key="Wizard_Step1_SlugPrefix">The folder will be created under instances/</x:String>
+
+  <x:String x:Key="Wizard_Step2_VersionLabel">Game version</x:String>
+  <x:String x:Key="Wizard_Step2_Loading">Reading the catalog…</x:String>
+  <x:String x:Key="Wizard_Step2_Empty">No version available. Check your connection, or install one from the Versions screen.</x:String>
+  <x:String x:Key="Wizard_Step2_ChannelAll">All channels</x:String>
+  <x:String x:Key="Wizard_Step2_ChannelStable">Stable channel</x:String>
+  <x:String x:Key="Wizard_Step2_ChannelUnstable">Unstable channel</x:String>
+  <x:String x:Key="Wizard_Step2_ChannelPre">Pre channel</x:String>
+  <x:String x:Key="Wizard_CancelInstall">Cancel the install</x:String>
+
+  <x:String x:Key="Wizard_Step3_Title">Instance icon</x:String>
+  <x:String x:Key="Wizard_Step3_Description">Pick one of the built-in icons, or keep the default. Custom icons will come later.</x:String>
+
+  <x:String x:Key="Wizard_Step4_Name">Name</x:String>
+  <x:String x:Key="Wizard_Step4_Version">Version</x:String>
+  <x:String x:Key="Wizard_Step4_Icon">Icon</x:String>
+  <x:String x:Key="Wizard_Step4_Location">Location</x:String>
+  <x:String x:Key="Wizard_Step4_Note">The instance folder is created right away, ready for mods and saves.</x:String>
+
+  <!-- ── Dialogues de carte ──────────────────────────────────────────────────────── -->
+  <x:String x:Key="Dialog_Cancel">Cancel</x:String>
+
+  <x:String x:Key="Dialog_Rename_Title">Rename the instance</x:String>
+  <x:String x:Key="Dialog_Rename_Label">Instance name</x:String>
+  <x:String x:Key="Dialog_Rename_Confirm">Rename</x:String>
+
+  <x:String x:Key="Dialog_Duplicate_Title">Duplicate the instance</x:String>
+  <x:String x:Key="Dialog_Duplicate_Label">Name of the copy</x:String>
+  <x:String x:Key="Dialog_Duplicate_Confirm">Duplicate</x:String>
+  <x:String x:Key="Dialog_Duplicate_CancelCopy">Cancel the copy</x:String>
+
+  <x:String x:Key="Dialog_Delete_Confirm">Delete the instance</x:String>
+
+  <!-- ── Écran Versions ──────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Versions_Title">Game versions</x:String>
+  <x:String x:Key="Versions_CheckForUpdates">Check for new releases</x:String>
+  <x:String x:Key="Versions_SearchPlaceholder">Filter by version…</x:String>
+  <x:String x:Key="Versions_FilterAll">All</x:String>
+  <x:String x:Key="Versions_FilterInstalled">Installed</x:String>
+  <x:String x:Key="Versions_FilterAvailable">Available</x:String>
+  <x:String x:Key="Versions_ShowUnstable">Show unstable and pre</x:String>
+  <x:String x:Key="Versions_InstalledSection">Installed</x:String>
+  <x:String x:Key="Versions_AvailableSection">Available</x:String>
+  <x:String x:Key="Versions_BrokenSection">Installs that cannot be used</x:String>
+  <x:String x:Key="Versions_Install">Install</x:String>
+  <x:String x:Key="Versions_Uninstall">Uninstall</x:String>
+  <x:String x:Key="Versions_CancelInstall">Cancel</x:String>
+  <x:String x:Key="Versions_InstalledBadge">installed</x:String>
+  <x:String x:Key="Versions_EmptyTitle">No versions</x:String>
+  <x:String x:Key="Versions_EmptyDescription">No version matches the current filter. Widen it, or check the catalog for new releases.</x:String>
+
+  <!-- ── Dialogue de désinstallation ─────────────────────────────────────────────── -->
+  <x:String x:Key="Dialog_Uninstall_Confirm">Uninstall</x:String>
+
+  <!-- ── Pages placeholder ───────────────────────────────────────────────────────── -->
+  <x:String x:Key="Placeholder_Mods_Title">Mod browser</x:String>
+  <x:String x:Key="Placeholder_Mods_Description">Coming soon: search and install mods from the official ModDB.</x:String>
+
+  <!-- ── Page de détail d'instance ───────────────────────────────────────────────── -->
+  <x:String x:Key="Instance_Back">Instances</x:String>
+  <x:String x:Key="Instance_Play">Play</x:String>
+  <x:String x:Key="Instance_Stop">Stop</x:String>
+  <x:String x:Key="Instance_Launching">Starting…</x:String>
+  <x:String x:Key="Instance_Playing">Running</x:String>
+  <x:String x:Key="Instance_MoreActions">More actions</x:String>
+  <x:String x:Key="Instance_Export">Export</x:String>
+  <x:String x:Key="Instance_CheckInstance">Check the instance</x:String>
+  <x:String x:Key="Instance_Rename">Rename</x:String>
+  <x:String x:Key="Instance_Duplicate">Duplicate</x:String>
+  <x:String x:Key="Instance_Delete">Delete</x:String>
+  <x:String x:Key="Instance_InstallAction">Install</x:String>
+
+  <!-- ── Docteur d'instance (diagnostic local hors ligne) ───────────────────────────── -->
+  <x:String x:Key="InstanceDoctor_Title">Instance checkup</x:String>
+  <x:String x:Key="InstanceDoctor_Subtitle">Runs locally: nothing downloaded, no network call.</x:String>
+  <x:String x:Key="InstanceDoctor_Close">Close</x:String>
+
+  <x:String x:Key="Tab_Mods">Mods</x:String>
+  <x:String x:Key="Tab_Worlds">Worlds</x:String>
+  <x:String x:Key="Tab_Journal">Log</x:String>
+  <x:String x:Key="Tab_Options">Options</x:String>
+
+  <x:String x:Key="Instance_Mods_Title">Mods</x:String>
+  <x:String x:Key="Instance_Mods_Description">Coming soon: install and manage this instance's mods from the official ModDB.</x:String>
+
+  <x:String x:Key="Instance_Worlds_EmptyTitle">No worlds</x:String>
+  <x:String x:Key="Instance_Worlds_EmptyDescription">Worlds created in this instance will show up here after the first launch.</x:String>
+
+  <x:String x:Key="Instance_Journal_Refresh">Refresh</x:String>
+  <x:String x:Key="Instance_Journal_EmptyTitle">No log</x:String>
+  <x:String x:Key="Instance_Journal_EmptyDescription">This instance has never been launched. The log of its last run will show up here.</x:String>
+  <x:String x:Key="Instance_Journal_RunningNotice">The game is running: refresh to see the lines written since.</x:String>
+
+  <x:String x:Key="Instance_Options_Title">Instance options</x:String>
+  <x:String x:Key="Instance_Options_Description">Launch arguments and environment variables that belong to this instance only.</x:String>
+  <x:String x:Key="Instance_Options_ExtraArgsLabel">Launch arguments</x:String>
+  <x:String x:Key="Instance_Options_ExtraArgsHint">One argument per line, added after --dataPath.</x:String>
+  <x:String x:Key="Instance_Options_EnvLabel">Environment variables</x:String>
+  <x:String x:Key="Instance_Options_EnvHint">One variable per line, as KEY=value.</x:String>
+  <x:String x:Key="Instance_Options_MesaGlThread">Enable MESA_GLTHREAD (smoother on Mesa drivers, Linux)</x:String>
+  <x:String x:Key="Instance_Options_Save">Save</x:String>
+  <x:String x:Key="Instance_Options_ApplyNote">Changes take effect at the next launch.</x:String>
+
+  <!-- ── Sauvegardes (bloc de l'onglet Options) ─────────────────────────────────── -->
+  <x:String x:Key="Instance_Backups_Title">Backups</x:String>
+  <x:String x:Key="Instance_Backups_Description">A full archive of the data folder (worlds, configs, mods), kept outside it and never carried along by a duplicate.</x:String>
+  <x:String x:Key="Instance_Backups_AutoToggle">Back up automatically before every launch</x:String>
+  <x:String x:Key="Instance_Backups_KeepCountLabel">Backups to keep</x:String>
+  <x:String x:Key="Instance_Backups_CreateNow">Back up now</x:String>
+  <x:String x:Key="Instance_Backups_EmptyTitle">No backups</x:String>
+  <x:String x:Key="Instance_Backups_EmptyDescription">Take your first backup, or turn on automatic backups before every launch.</x:String>
+  <x:String x:Key="Instance_Backups_Restore">Restore</x:String>
+  <x:String x:Key="Instance_Backups_Delete">Delete</x:String>
+
+  <!-- ── Dialogues de sauvegarde ─────────────────────────────────────────────────── -->
+  <x:String x:Key="Dialog_RestoreBackup_Confirm">Restore the backup</x:String>
+  <x:String x:Key="Dialog_DeleteBackup_Confirm">Delete the backup</x:String>
+
+  <!-- ── Dialogue d'arrêt ────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Dialog_Stop_Confirm">Stop the game</x:String>
+  <x:String x:Key="Dialog_Close">Close</x:String>
+
+  <!-- ── Navigateur de mods ──────────────────────────────────────────────────────── -->
+  <x:String x:Key="Mods_Title">Mod browser</x:String>
+  <x:String x:Key="Mods_Refresh">Refresh the index</x:String>
+  <x:String x:Key="Mods_Retry">Try again</x:String>
+  <x:String x:Key="Mods_SearchPlaceholder">Search for a mod…</x:String>
+  <x:String x:Key="Mods_ClearSearch">Clear the search</x:String>
+  <x:String x:Key="Mods_Install">Install</x:String>
+  <x:String x:Key="Mods_OpenOnModDb">Open on ModDB</x:String>
+  <x:String x:Key="Mods_OpenFailed">Your browser could not be opened. Copy the address below to get there by hand.</x:String>
+  <x:String x:Key="Mods_Sort_Downloads">Downloads</x:String>
+  <x:String x:Key="Mods_Sort_Updated">Updated</x:String>
+  <x:String x:Key="Mods_Sort_Trending">Trending</x:String>
+  <x:String x:Key="Mods_Sort_Name">Name</x:String>
+  <x:String x:Key="Mods_Offline_Title">ModDB unreachable</x:String>
+  <x:String x:Key="Mods_Offline_Description">The connection to the official repository failed. Mods you already installed still work offline.</x:String>
+  <x:String x:Key="Mods_ShowMore">Show more</x:String>
+  <x:String x:Key="Mods_Tags_ScrollHint">Scroll the row to see every category.</x:String>
+
+  <!-- ── Fiche d'un mod ──────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Mods_Detail_Versions">Versions</x:String>
+  <x:String x:Key="Mods_Detail_SourceNote">The description and screenshots come from the official ModDB page. Prospect shows the text without its markup; open the page for the full version.</x:String>
+
+  <!-- ── Confirmation d'installation ─────────────────────────────────────────────── -->
+  <x:String x:Key="Mods_Plan_Confirm">Install</x:String>
+  <x:String x:Key="Mods_Plan_FileName">file:</x:String>
+  <x:String x:Key="Mods_Plan_Dependencies">Missing dependencies</x:String>
+
+  <!-- ── Onglet Mods d'une instance ──────────────────────────────────────────────── -->
+  <x:String x:Key="Mods_Tab_Browse">Browse ModDB</x:String>
+  <x:String x:Key="Mods_Tab_Rescan">Rescan</x:String>
+  <x:String x:Key="Mods_Tab_EmptyTitle">No mods installed</x:String>
+  <x:String x:Key="Mods_Tab_EmptyDescription">Install mods from the official ModDB, or drop their .zip files straight into the instance's Mods folder.</x:String>
+  <x:String x:Key="Mods_Row_Unidentified">unidentified</x:String>
+  <x:String x:Key="Mods_Row_Toggle">Enable or disable</x:String>
+  <x:String x:Key="Mods_Row_Remove">Remove</x:String>
+  <x:String x:Key="Mods_Uninstall_Confirm">Remove the mod</x:String>
+
+  <!-- ── Détection et application des mises à jour (feature 4b) ─────────────────── -->
+  <x:String x:Key="Mods_Tab_CheckUpdates">Check for updates</x:String>
+  <x:String x:Key="Mods_Tab_UpdateAll">Update all</x:String>
+  <x:String x:Key="Mods_Tab_CancelUpdateAll">Cancel</x:String>
+  <x:String x:Key="Mods_Row_UpdateAvailable">update</x:String>
+  <x:String x:Key="Mods_Row_UnknownToModDb">unknown to ModDB</x:String>
+  <x:String x:Key="Mods_Row_Update">Update</x:String>
+  <x:String x:Key="Mods_UpdatePlan_Confirm">Update</x:String>
+
+  <!-- ── Dialogue d'export de modpack ────────────────────────────────────────────── -->
+  <x:String x:Key="Dialog_Export_FormatLabel">Format</x:String>
+  <x:String x:Key="Dialog_Export_FormatManifestOnly">Manifest only (.json)</x:String>
+  <x:String x:Key="Dialog_Export_FormatArchive">Archive (.zip)</x:String>
+  <x:String x:Key="Dialog_Export_IncludeModConfig">Include mod settings (ModConfig)</x:String>
+  <x:String x:Key="Dialog_Export_Confirm">Export</x:String>
+  <x:String x:Key="Dialog_Export_Close">Close</x:String>
+  <x:String x:Key="Dialog_Export_SkippedNotice">Without a readable modinfo.json, or without a usable version, these mods cannot travel in the manifest.</x:String>
+  <x:String x:Key="Dialog_Export_ErrorTitle">Export failed</x:String>
+
+  <!-- ── Dialogue d'import de modpack ────────────────────────────────────────────── -->
+  <x:String x:Key="Dialog_Import_PreviewTitle">Modpack preview</x:String>
+  <x:String x:Key="Dialog_Import_InstanceNameLabel">Instance name</x:String>
+  <x:String x:Key="Dialog_Import_Confirm">Import</x:String>
+  <x:String x:Key="Dialog_Import_Cancel">Cancel</x:String>
+  <x:String x:Key="Dialog_Import_CancelImport">Cancel the import</x:String>
+  <x:String x:Key="Dialog_Import_ReportTitle">Import report</x:String>
+  <x:String x:Key="Dialog_Import_Close">Close</x:String>
+  <x:String x:Key="Dialog_Import_ErrorTitle">Import failed</x:String>
+
+  <!-- ── Dialogue d'adoption VS Launcher ─────────────────────────────────────────── -->
+  <x:String x:Key="Dialog_AdoptVsl_Title">Adopt your VS Launcher installs</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_Cancel">Cancel</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_Confirm">Adopt</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_CancelAdoption">Cancel the adoption</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_Close">Close</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_InstallationsSectionTitle">Installs</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_EnginesSectionTitle">Engines</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_EnginesNotice">These files are copied from VS Launcher exactly as they are, with no fresh verification (none of the checksum a download gets). If in doubt, uninstall the version and download it again from the Versions screen.</x:String>
+
+  <!-- ── Réglages ────────────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Settings_Title">Settings</x:String>
+  <x:String x:Key="Settings_GeneralSectionTitle">General</x:String>
+  <x:String x:Key="Settings_VslCardTitle">VS Launcher</x:String>
+  <x:String x:Key="Settings_VslPickFolder">Choose a folder…</x:String>
+  <x:String x:Key="Settings_VslOpenAdoption">Adopt your VS Launcher installs</x:String>
+  <x:String x:Key="Settings_VslDetecting">Looking for installs…</x:String>
+
+  <!-- Onglets -->
+  <x:String x:Key="Settings_Tab_General">General</x:String>
+  <x:String x:Key="Settings_Tab_Game">Game</x:String>
+  <x:String x:Key="Settings_Tab_Network">Network</x:String>
+  <x:String x:Key="Settings_Tab_Accounts">Account</x:String>
+  <x:String x:Key="Settings_Tab_About">About</x:String>
+
+  <!-- Général : apparence -->
+  <x:String x:Key="Settings_AppearanceSectionTitle">Appearance</x:String>
+  <x:String x:Key="Settings_ThemeLabel">Theme</x:String>
+  <x:String x:Key="Settings_ThemeDark">Dark</x:String>
+  <x:String x:Key="Settings_ThemeLight">Light</x:String>
+  <x:String x:Key="Settings_ThemeSystem">Follow the system</x:String>
+  <x:String x:Key="Settings_LanguageLabel">Language</x:String>
+  <!-- Les deux noms de langue restent dans LEUR propre langue des deux côtés : quelqu'un qui
+       cherche l'anglais dans une interface française cherche « English », pas « Anglais ». -->
+  <x:String x:Key="Settings_LanguageFrench">Français</x:String>
+  <x:String x:Key="Settings_LanguageEnglish">English</x:String>
+  <x:String x:Key="Settings_LanguageRestartHint">Takes effect the next time you start Prospect.</x:String>
+
+  <!-- Jeu -->
+  <x:String x:Key="Settings_GameSectionTitle">Where the data lives</x:String>
+  <x:String x:Key="Settings_GameDataPathLabel">Data folder</x:String>
+  <x:String x:Key="Settings_GameOpenFolder">Open the folder</x:String>
+  <x:String x:Key="Settings_GameRelocateHint">Instances, game versions and cache all live under this folder. Moving it is not possible yet.</x:String>
+
+  <!-- Réseau -->
+  <x:String x:Key="Settings_NetworkSectionTitle">Downloads</x:String>
+  <x:String x:Key="Settings_NetworkConcurrencyLabel">Simultaneous downloads</x:String>
+  <x:String x:Key="Settings_NetworkConcurrencyHint">Applies to game versions and mods alike.</x:String>
+
+  <!-- Comptes -->
+  <x:String x:Key="Settings_AccountsSectionTitle">Vintage Story account</x:String>
+  <x:String x:Key="Settings_AccountsIntro">Signing in only matters for multiplayer: your session is written into each instance at launch, and the game authenticates itself with it. Downloading and playing solo never needs it.</x:String>
+  <x:String x:Key="Settings_AccountsEmailLabel">Account email</x:String>
+  <x:String x:Key="Settings_AccountsPasswordLabel">Password</x:String>
+  <x:String x:Key="Settings_AccountsPasswordHint">Your password is used to obtain the session, then forgotten: Prospect keeps it nowhere.</x:String>
+  <x:String x:Key="Settings_AccountsSignIn">Sign in</x:String>
+  <x:String x:Key="Settings_AccountsSigningIn">Signing in…</x:String>
+  <x:String x:Key="Settings_AccountsTwoFactorTitle">Verification code</x:String>
+  <x:String x:Key="Settings_AccountsTwoFactorLabel">Six-digit code</x:String>
+  <x:String x:Key="Settings_AccountsTwoFactorHint">Your account asks for two-factor authentication. Open your code app and type in the one it shows.</x:String>
+  <x:String x:Key="Settings_AccountsTwoFactorSubmit">Submit the code</x:String>
+  <x:String x:Key="Settings_AccountsTwoFactorCancel">Cancel</x:String>
+  <x:String x:Key="Settings_AccountsSignedInTitle">Signed in</x:String>
+  <x:String x:Key="Settings_AccountsSignedInHint">The multiplayer session is written into each instance the moment you launch the game.</x:String>
+  <x:String x:Key="Settings_AccountsSignOut">Sign out</x:String>
+
+  <!-- Déconnexion du compte -->
+  <x:String x:Key="Dialog_SignOut_Confirm">Sign out</x:String>
+
+  <!-- À propos -->
+  <x:String x:Key="Settings_AboutDescription">An independent launcher for Vintage Story. Isolated instances, several game versions side by side, and a built-in ModDB browser. Not affiliated with Anego Studios.</x:String>
+  <x:String x:Key="Settings_AboutLicenseLabel">License</x:String>
+  <x:String x:Key="Settings_AboutRepository">GitHub repository</x:String>
+  <x:String x:Key="Settings_AboutWebsite">Official site</x:String>
+
+  <!-- ── Rappel de premier lancement (Accueil, état vide) ───────────────────────── -->
+  <x:String x:Key="FirstRun_VslCardTitle">Coming from VS Launcher?</x:String>
+  <x:String x:Key="FirstRun_VslOpenAdoption">Adopt your VS Launcher installs</x:String>
+
+  <!-- ── Écran de premier lancement ─────────────────────────────────────────────── -->
+  <x:String x:Key="FirstRun_Description">Before you create your first instance, let's make sure everything is ready: the data folder, a game version installed, and your account if you mean to play multiplayer.</x:String>
+  <x:String x:Key="FirstRun_StartButton">Get started</x:String>
+  <x:String x:Key="FirstRun_SkipButton">Skip</x:String>
+
+  <!-- ── Réglages, section Général : revoir le premier lancement ─────────────────── -->
+  <x:String x:Key="Settings_FirstRunSectionTitle">First launch</x:String>
+  <x:String x:Key="Settings_ReplayFirstRun">Go through the first launch again</x:String>
+
+</ResourceDictionary>

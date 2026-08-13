@@ -65,6 +65,7 @@ public static class CompositionRoot
         // Effets de bord du Core.
         services.AddSingleton(fileSystem);
         services.AddSingleton<IClock, SystemClock>();
+        services.AddSingleton<IUiCulture, SystemUiCulture>();
         services.AddSingleton<IAppEnvironment, SystemAppEnvironment>();
         services.AddSingleton<IProcessRunner, SystemProcessRunner>();
         services.AddSingleton<IUnixFilePermissions, SystemUnixFilePermissions>();
@@ -109,6 +110,7 @@ public static class CompositionRoot
         // quelle plutôt que redemandée à un Current statique depuis ThemeService.
         services.AddSingleton(_ => Application.Current!);
         services.AddSingleton<ThemeService>();
+        services.AddSingleton<LanguageService>();
 
         // Cache des logos du navigateur de mods : un délai plus court que celui du catalogue, une
         // vignette décorative ne justifie pas d'attendre aussi longtemps qu'un appel API (voir

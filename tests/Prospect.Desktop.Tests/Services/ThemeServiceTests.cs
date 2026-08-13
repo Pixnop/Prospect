@@ -8,6 +8,7 @@ using Prospect.Core.Settings;
 using Prospect.Core.Settings.Migrations;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Services;
+using Prospect.Desktop.Tests.TestDoubles;
 
 using Shouldly;
 
@@ -28,7 +29,7 @@ public sealed class ThemeServiceTests
     {
         var fileSystem = new MockFileSystem();
 
-        return new SettingsService(fileSystem, Paths, new JsonFileStore(fileSystem), new SettingsMigrationPipeline([]));
+        return new SettingsService(fileSystem, Paths, new JsonFileStore(fileSystem), new SettingsMigrationPipeline([]), new FakeUiCulture());
     }
 
     [AvaloniaFact]
