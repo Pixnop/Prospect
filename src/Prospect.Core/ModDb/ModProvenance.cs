@@ -51,6 +51,39 @@ public sealed record ModProvenance
     /// </summary>
     [JsonPropertyName("approximateMatch")]
     public bool ApproximateMatch { get; init; }
+
+    /// <summary>
+    /// Vrai quand l'utilisateur a explicitement installé une release dont l'auteur n'a coché
+    /// AUCUNE version de la série de jeu de l'instance.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Distinct d'<see cref="ApproximateMatch"/>, qui ne couvre que le rapprochement de série
+    /// mineure : une release taguée 1.22.4 posée sur une instance 1.22.6 reste un pari raisonnable,
+    /// une release taguée 1.20 posée sur du 1.22 est une décision assumée. Écrire le même drapeau
+    /// pour les deux ferait passer la seconde pour la première.
+    /// </para>
+    /// <para>
+    /// Ce que le docteur d'instance en fera : sa vérification de compatibilité des mods
+    /// (<c>InstanceDoctor</c>, <c>ModCompatibilityDoctorResult</c>) compte aujourd'hui les mods
+    /// incompatibles à partir des tags. Avec ce champ, elle pourra distinguer un mod qu'on a
+    /// installé EN LE SACHANT d'un mod devenu incompatible parce que l'instance a changé de version
+    /// de jeu depuis — deux constats qui n'appellent pas la même action. Le champ est écrit dès
+    /// maintenant pour que l'historique existe le jour où cette lecture arrivera ; rien ne le lit
+    /// encore, et ce fichier reste un cache reconstructible.
+    /// </para>
+    /// <para>
+    /// Piège <c>System.Text.Json</c> : un <c>prospect-mods.json</c> écrit avant ce champ ne le
+    /// porte pas, et l'initialiseur d'une propriété <c>init</c> n'est PAS rejoué quand la clé
+    /// manque. C'est sans danger ici, et seulement ici, parce que la valeur voulue pour une entrée
+    /// ancienne est exactement le défaut du type (<see langword="false"/> : aucune installation
+    /// passée n'a pu être faite en connaissance de cause, l'option n'existait pas). Tout champ dont
+    /// le défaut souhaité ne serait pas celui du type devra passer par une normalisation, comme le
+    /// fait <c>ProspectSettings.Normalized()</c>.
+    /// </para>
+    /// </remarks>
+    [JsonPropertyName("declaredIncompatible")]
+    public bool DeclaredIncompatible { get; init; }
 }
 
 /// <summary>Contenu du fichier <c>prospect-mods.json</c> d'une instance.</summary>

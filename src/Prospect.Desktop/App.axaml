@@ -61,5 +61,6 @@
         <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/MenuFlyout.axaml" />
         <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/Tabs.axaml" />
         <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/Alert.axaml" />
+        <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/RichText.axaml" />
     </Application.Styles>
 </Application>

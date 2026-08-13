@@ -117,25 +117,33 @@ internal static class ModDbDoubles
 /// </summary>
 internal sealed class FakeModDbHandler : HttpMessageHandler
 {
+    /// <summary>Entrée de catalogue de Config lib, sans logo ni alias d'URL.</summary>
+    public const string ConfigLibCatalogEntry = """
+    { "modid": 1783, "assetid": 9551, "downloads": 627953, "follows": 0, "trendingpoints": 5, "comments": 0,
+      "name": "Config lib", "summary": "A universal place to configure your mods.", "modidstrs": ["configlib"],
+      "author": "Maltiez", "urlalias": null, "side": "both", "type": "mod", "logo": null,
+      "tags": ["Utility"], "lastreleased": "2026-05-01 12:03:34" }
+    """;
+
+    /// <summary>Entrée de catalogue de BetterRuins, avec logo et alias d'URL.</summary>
+    public const string BetterRuinsCatalogEntry = """
+    { "modid": 792, "assetid": 3829, "downloads": 1095320, "follows": 8133, "trendingpoints": 0, "comments": 1440,
+      "name": "BetterRuins", "summary": "Adds many new ruins to your survival world.", "modidstrs": ["betterruins"],
+      "author": "NiclAss", "urlalias": "betterruins", "side": "both", "type": "mod",
+      "logo": "https://moddbcdn.vintagestory.at/betterruins.png",
+      "tags": ["Worldgen", "Exploration"], "lastreleased": "2026-07-28 18:59:32" }
+    """;
+
+    /// <summary>Corps de <c>/api/mods</c> avec les deux entrées par défaut, plus celles demandées.</summary>
+    public static string CatalogWith(params string[] extraEntries)
+        => $$"""
+        { "statuscode": "200", "mods": [ {{string.Join(',', new[] { ConfigLibCatalogEntry, BetterRuinsCatalogEntry }.Concat(extraEntries))}} ] }
+        """;
+
     // Propriété plutôt que const (comme UpdatesJson plus bas) : un test qui veut exercer un
     // troisième mod (par exemple sans logo ni résumé, voir ModsHeadlessTests) écrase cette valeur
     // avant d'initialiser le navigateur, sans toucher au catalogue par défaut des autres tests.
-    public string CatalogJson { get; set; } = """
-    {
-      "statuscode": "200",
-      "mods": [
-        { "modid": 1783, "assetid": 9551, "downloads": 627953, "follows": 0, "trendingpoints": 5, "comments": 0,
-          "name": "Config lib", "summary": "A universal place to configure your mods.", "modidstrs": ["configlib"],
-          "author": "Maltiez", "urlalias": null, "side": "both", "type": "mod", "logo": null,
-          "tags": ["Utility"], "lastreleased": "2026-05-01 12:03:34" },
-        { "modid": 792, "assetid": 3829, "downloads": 1095320, "follows": 8133, "trendingpoints": 0, "comments": 1440,
-          "name": "BetterRuins", "summary": "Adds many new ruins to your survival world.", "modidstrs": ["betterruins"],
-          "author": "NiclAss", "urlalias": "betterruins", "side": "both", "type": "mod",
-          "logo": "https://moddbcdn.vintagestory.at/betterruins.png",
-          "tags": ["Worldgen", "Exploration"], "lastreleased": "2026-07-28 18:59:32" }
-      ]
-    }
-    """;
+    public string CatalogJson { get; set; } = CatalogWith();
 
     /// <summary>
     /// Corps de <c>/api/tags</c>. Propriété plutôt que constante, pour la même raison que
@@ -165,7 +173,10 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
         "releases": [
           { "releaseid": 38314, "fileid": 84120, "mainfile": "https://moddbcdn.vintagestory.at/configlib_1.11.1.zip",
             "filename": "configlib_1.11.1.zip", "downloads": 90210, "tags": ["1.21.3"], "modidstr": "configlib",
-            "modversion": "1.11.1", "changelog": null, "created": "2026-02-11 09:22:10" }
+            "modversion": "1.11.1", "changelog": null, "created": "2026-02-11 09:22:10" },
+          { "releaseid": 39980, "fileid": 88961, "mainfile": "https://moddbcdn.vintagestory.at/configlib_1.12.0.zip",
+            "filename": "configlib_1.12.0.zip", "downloads": 118728, "tags": ["1.22.0"], "modidstr": "configlib",
+            "modversion": "1.12.0", "changelog": null, "created": "2026-05-01 12:03:34" }
         ]
       }
     }
@@ -188,6 +199,46 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
     """;
 
     private static readonly byte[] ConfigLibArchive = ModDbDoubles.BuildArchive(ModDbDoubles.ModInfo("configlib", "Config lib", "1.11.1"));
+
+    // Deux archives d'un même mod, l'une avec une dépendance et l'autre sans : c'est ce qui rend
+    // visible l'effet réel du sélecteur de version, puisque les dépendances se lisent dans le
+    // modinfo.json TÉLÉCHARGÉ et non dans l'API.
+    private static readonly byte[] CarryOnArchive =
+        ModDbDoubles.BuildArchive(ModDbDoubles.ModInfo("carryon", "Carry On", "1.14.3", dependency: "carryonlib"));
+
+    private static readonly byte[] CarryOnOlderArchive =
+        ModDbDoubles.BuildArchive(ModDbDoubles.ModInfo("carryon", "Carry On", "1.14.2"));
+
+    /// <summary>La release taguée pour une AUTRE série mineure, celle que seul le dévoilement montre.</summary>
+    private static readonly byte[] CarryOnOutOfSeriesArchive =
+        ModDbDoubles.BuildArchive(ModDbDoubles.ModInfo("carryon", "Carry On", "1.13.0", dependency: "carryonlib"));
+
+    private static readonly byte[] CarryOnLibArchive =
+        ModDbDoubles.BuildArchive(ModDbDoubles.ModInfo("carryonlib", "CarryOnLib", "1.2.0"));
+
+    /// <summary>
+    /// Versions de jeu taguées sur la seule release de CarryOnLib. Réglable parce que c'est le
+    /// levier du cas réel qui a motivé les deux verdicts de résolution : une fiche bien publiée
+    /// dont aucune release ne cible la version de l'instance n'est pas « introuvable sur le ModDB ».
+    /// </summary>
+    public IReadOnlyList<string> CarryOnLibGameVersions { get; set; } = ["1.21.3", "1.22.0"];
+
+    private string CarryOnLibJson => $$"""
+    {
+      "statuscode": "200",
+      "mod": {
+        "modid": 4687, "assetid": 27960, "name": "CarryOnLib", "text": "<p>Bibliothèque de Carry On.</p>",
+        "author": "NerdScurvy", "urlalias": "carryonlib", "logofile": null, "downloads": 812000,
+        "side": "both", "type": "mod", "tags": [], "lastreleased": "2026-08-01 09:00:00",
+        "releases": [
+          { "releaseid": 51900, "fileid": 112000, "mainfile": "https://moddbcdn.vintagestory.at/carryonlib_1.2.0.zip",
+            "filename": "carryonlib_1.2.0.zip", "downloads": 400000,
+            "tags": [{{string.Join(',', CarryOnLibGameVersions.Select(version => $"\"{version}\""))}}],
+            "modidstr": "carryonlib", "modversion": "1.2.0", "changelog": null, "created": "2026-08-01 09:00:00" }
+        ]
+      }
+    }
+    """;
 
     // Vignette PNG minuscule mais réellement décodable, servie pour toute URL de logo (voir
     // Respond) : IModLogoCache doit pouvoir exercer un vrai décodage Avalonia.Media.Imaging.Bitmap
@@ -213,6 +264,22 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
 
     /// <summary>Identifiants de mods à considérer comme compatibles avec la version demandée.</summary>
     public IReadOnlyList<int> CompatibleModIds { get; set; } = [1783, 792];
+
+    /// <summary>
+    /// Fiche de Carry On, avec sa description RÉELLE de 29 Ko et deux releases compatibles. Elle
+    /// n'est pas dans le catalogue par défaut (les tests qui comptent les résultats compteraient un
+    /// mod de plus) : les tests qui en ont besoin l'ajoutent à <see cref="CatalogJson"/>.
+    /// </summary>
+    public string CarryOnJson { get; set; } = RealModDbSamples.CarryOnDetailJson();
+
+    /// <summary>Entrée de catalogue de Carry On, à concaténer dans <see cref="CatalogJson"/>.</summary>
+    public const string CarryOnCatalogEntry = """
+    { "modid": 890, "assetid": 4405, "downloads": 2841233, "follows": 12044, "trendingpoints": 91, "comments": 640,
+      "name": "Carry On", "summary": "Allows picking up and carrying blocks, especially containers along with their contents, in your hands and on your back.",
+      "modidstrs": ["carryon"], "author": "NerdScurvy", "urlalias": "carryon", "side": "both", "type": "mod",
+      "logo": "https://moddbcdn.vintagestory.at/CarryOnLogo.png",
+      "tags": ["Utility", "QoL"], "lastreleased": "2026-08-07 10:22:05" }
+    """;
 
     /// <summary>
     /// Corps de <c>/api/updates</c>. Aucune mise à jour par défaut, cohérent avec le catalogue
@@ -244,7 +311,16 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
                 LogoRequestCount++;
             }
 
-            var bytes = isLogo ? LogoBytes : ConfigLibArchive;
+            var bytes = isLogo
+                ? LogoBytes
+                : url.AbsolutePath switch
+                {
+                    "/carryon_1.14.3.zip" => CarryOnArchive,
+                    "/carryon_1.14.2.zip" => CarryOnOlderArchive,
+                    "/carryon_1.13.0.zip" => CarryOnOutOfSeriesArchive,
+                    "/carryonlib_1.2.0.zip" => CarryOnLibArchive,
+                    _ => ConfigLibArchive,
+                };
 
             var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) };
             response.Content.Headers.ContentType = new MediaTypeHeaderValue(isLogo ? "image/png" : "application/zip");
@@ -263,6 +339,8 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
             "/api/tags" => TagsJson,
             "/api/mod/1783" or "/api/mod/configlib" => ConfigLibJson,
             "/api/mod/792" or "/api/mod/betterruins" => BetterRuinsJson,
+            "/api/mod/890" or "/api/mod/carryon" => CarryOnJson,
+            "/api/mod/4687" or "/api/mod/carryonlib" => CarryOnLibJson,
             "/api/v2/mods/install-information" => """{ "data": {} }""",
             "/api/updates" => UpdatesJson,
             _ => """{"statuscode":"404"}""",

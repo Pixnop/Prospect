@@ -210,12 +210,18 @@
 
   <!-- ── Fiche d'un mod ──────────────────────────────────────────────────────────── -->
   <x:String x:Key="Mods_Detail_Versions">Versions</x:String>
-  <x:String x:Key="Mods_Detail_SourceNote">The description and screenshots come from the official ModDB page. Prospect shows the text without its markup; open the page for the full version.</x:String>
+  <x:String x:Key="Mods_Detail_SourceNote">The description comes from the official ModDB page, exactly as its author published it. Open the page for comments and screenshots.</x:String>
+  <x:String x:Key="Mods_Detail_Links">Author links</x:String>
 
   <!-- ── Confirmation d'installation ─────────────────────────────────────────────── -->
   <x:String x:Key="Mods_Plan_Confirm">Install</x:String>
   <x:String x:Key="Mods_Plan_FileName">file:</x:String>
   <x:String x:Key="Mods_Plan_Dependencies">Missing dependencies</x:String>
+  <x:String x:Key="Mods_Plan_Release">Version to install</x:String>
+  <x:String x:Key="Mods_Plan_Changelog">Release notes</x:String>
+  <x:String x:Key="Mods_Plan_NoChangelog">The author published nothing for this version.</x:String>
+  <x:String x:Key="Mods_Plan_InstallAnyway">Install anyway</x:String>
+  <x:String x:Key="Mods_Plan_ReleaseReloadFailed">This version could not be prepared. The plan on screen is still the previous one.</x:String>
 
   <!-- ── Onglet Mods d'une instance ──────────────────────────────────────────────── -->
   <x:String x:Key="Mods_Tab_Browse">Browse ModDB</x:String>

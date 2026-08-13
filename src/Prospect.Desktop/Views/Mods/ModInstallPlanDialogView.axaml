@@ -3,12 +3,18 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Prospect.Desktop.ViewModels.Mods"
+             xmlns:controls="using:Prospect.Desktop.Controls"
              mc:Ignorable="d" d:DesignWidth="480"
              x:Class="Prospect.Desktop.Views.Mods.ModInstallPlanDialogView"
              x:DataType="vm:ModInstallPlanDialogViewModel">
 
   <!-- Confirmation d'installation. Les dépendances manquantes sont listées et cochables : c'est le
-       seul chemin par lequel elles peuvent être installées, rien ne part sans ce bouton. -->
+       seul chemin par lequel elles peuvent être installées, rien ne part sans ce bouton.
+
+       Le sélecteur de version en tête n'apparaît que lorsqu'il y a un choix à faire. Le changer
+       REJOUE la préparation du plan : le fichier cible, l'avertissement d'approximation et surtout
+       la liste des dépendances se recalculent, parce que ces dernières se lisent dans le
+       modinfo.json de l'archive téléchargée et non dans l'API. -->
 
   <Border Width="500" MaxHeight="620" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
           Background="{DynamicResource GlassMenu}" BorderBrush="{DynamicResource GlassEdge}"
@@ -42,7 +48,85 @@
             <TextBlock Text="{StaticResource Mods_Plan_FileName}" VerticalAlignment="Center"
                        FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
             <TextBlock Text="{Binding FileNameText}" VerticalAlignment="Center" FontFamily="{DynamicResource FontMono}"
-                       FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+                       FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}"
+                       TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+
+          <!-- ── Sélecteur de version ─────────────────────────────────────────────── -->
+          <StackPanel Spacing="8" IsVisible="{Binding HasReleaseChoice}">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Text="{StaticResource Mods_Plan_Release}" VerticalAlignment="Center"
+                         FontSize="{StaticResource FsCaption}" FontWeight="{StaticResource FwMedium}"
+                         Foreground="{DynamicResource Text2}" />
+              <TextBlock Grid.Column="1" Text="{Binding ReleaseCountText}" VerticalAlignment="Center"
+                         TextTrimming="CharacterEllipsis"
+                         FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+            </Grid>
+
+            <ComboBox HorizontalAlignment="Stretch" IsEnabled="{Binding !IsBusy}"
+                      ItemsSource="{Binding Releases}" SelectedItem="{Binding SelectedRelease, Mode=TwoWay}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ModReleaseChoiceViewModel">
+                  <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding VersionText}" VerticalAlignment="Center" MinWidth="86"
+                               FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsCaption}" />
+                    <!-- Une seule pastille, deux libellés : « compatibilité supposée » pour la même
+                         série mineure, « non déclarée compatible » pour le reste. Le ton
+                         incompatible n'est posé que sur le second. -->
+                    <ContentControl Grid.Column="1" Classes="badge" Margin="0,0,8,0" VerticalAlignment="Center"
+                                    Content="{Binding CompatibilityTag}" IsVisible="{Binding HasCompatibilityTag}"
+                                    Classes.incompatible="{Binding IsDeclaredIncompatible}" />
+                    <TextBlock Grid.Column="2" Text="{Binding DateText}" VerticalAlignment="Center" Margin="0,0,10,0"
+                               TextTrimming="CharacterEllipsis"
+                               FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}"
+                               Foreground="{DynamicResource Text4}" />
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                      <Path Width="11" Height="11" Stretch="Uniform" Data="{StaticResource Icon.download}"
+                            Stroke="{DynamicResource Text4}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                      <TextBlock Text="{Binding DownloadsText}" FontFamily="{DynamicResource FontMono}"
+                                 FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <!-- Dévoilement EXPLICITE des releases qu'aucun tag ne déclare compatibles. Les tags du
+                 ModDB sont cochés à la main et prennent du retard : refuser tout net serait plus
+                 faux qu'utile, mais le choix doit être pris, pas subi. -->
+            <Button Classes="ghost sm" HorizontalAlignment="Left" Padding="0"
+                    IsVisible="{Binding HasIncompatibleReleases}" IsEnabled="{Binding !IsBusy}"
+                    Content="{Binding ToggleAllReleasesText}" Command="{Binding ToggleAllReleasesCommand}" />
+
+            <Border Classes="alert warning" IsVisible="{Binding ShowIncompatibleWarning}">
+              <TextBlock Text="{Binding IncompatibleWarning}" TextWrapping="Wrap" LineHeight="18"
+                         FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+            </Border>
+
+            <ProgressBar IsIndeterminate="True" Height="3" IsVisible="{Binding IsBusy}" />
+
+            <Border Classes="alert warning" IsVisible="{Binding ReloadFailed}">
+              <TextBlock Text="{StaticResource Mods_Plan_ReleaseReloadFailed}" TextWrapping="Wrap" LineHeight="18"
+                         FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+            </Border>
+
+            <!-- Le changelog d'une release est du HTML lui aussi (relevé réel sur le ModDB) : il
+                 passe donc par le même rendu que la description de la fiche. -->
+            <StackPanel Spacing="6" DataContext="{Binding SelectedRelease}" x:CompileBindings="False">
+              <TextBlock Text="{StaticResource Mods_Plan_Changelog}" FontSize="{StaticResource FsCaption}"
+                         FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+              <Border Classes="card flat" Padding="14,12" MaxHeight="200" ClipToBounds="True">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                  <Panel>
+                    <controls:RichTextPresenter Document="{Binding Changelog}" IsVisible="{Binding HasChangelog}"
+                                                ImageMaxWidth="420" ImageMaxHeight="200" />
+                    <TextBlock Text="{StaticResource Mods_Plan_NoChangelog}" TextWrapping="Wrap" LineHeight="18"
+                               IsVisible="{Binding !HasChangelog}"
+                               FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text4}" />
+                  </Panel>
+                </ScrollViewer>
+              </Border>
+            </StackPanel>
           </StackPanel>
 
           <Border Classes="alert warning" IsVisible="{Binding ShowApproximateWarning}">
@@ -94,6 +178,37 @@
             <TextBlock Text="{Binding NoCompatibleReleaseMessage}" TextWrapping="Wrap" LineHeight="18"
                        FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
           </Border>
+
+          <!-- ── Installer quand même ─────────────────────────────────────────────────
+               Le bandeau ci-dessus dit la vérité ; ces cases la rendent actionnable. Elles partent
+               DÉCOCHÉES, contrairement aux dépendances ordinaires : une case pré-cochée est
+               acceptable pour ce que l'auteur a déclaré, pas pour ce qu'il n'a pas déclaré. -->
+          <StackPanel Spacing="8" IsVisible="{Binding HasInstallableAnyway}">
+            <TextBlock Text="{StaticResource Mods_Plan_InstallAnyway}" FontSize="{StaticResource FsCaption}"
+                       FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+            <Border Classes="card" Padding="0" ClipToBounds="True">
+              <ItemsControl ItemsSource="{Binding InstallableAnyway}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ModDependencyChoiceViewModel">
+                    <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="14,10">
+                      <Grid ColumnDefinitions="Auto,*,Auto">
+                        <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Margin="6,0,10,0" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"
+                                     FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
+                          <TextBlock Text="{Binding ReasonText}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"
+                                     FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="2" Text="{Binding VersionText}" VerticalAlignment="Center"
+                                   FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsCaption}"
+                                   Foreground="{DynamicResource Text3}" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Border>
+          </StackPanel>
         </StackPanel>
       </ScrollViewer>
     </DockPanel>

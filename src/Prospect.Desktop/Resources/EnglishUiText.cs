@@ -419,6 +419,39 @@ internal sealed class EnglishModsText : ModsText
 
     internal override string UpdateFailedTitle => "Cannot update";
 
+    internal override string LinkSourceCode => "Source code";
+
+    internal override string LinkIssues => "Issues";
+
+    internal override string LinkWiki => "Wiki";
+
+    internal override string LinkHomepage => "Mod website";
+
+    internal override string ApproximateReleaseTag => "assumed compatibility";
+
+    internal override string IncompatibleReleaseTag => "not declared compatible";
+
+    internal override string ShowAllReleases => "Show all versions";
+
+    internal override string ShowCompatibleReleasesOnly => "Show compatible ones only";
+
+    internal override string ReleaseChoiceCount(int count) => count switch
+    {
+        0 => "no compatible version",
+        1 => "1 compatible version",
+        _ => $"{FormatCount(count)} compatible versions",
+    };
+
+    internal override string IncompatibleReleaseWarning(string gameVersion, IReadOnlyList<string> taggedVersions)
+        => taggedVersions.Count == 0
+            ? $"The author declared this release compatible with no game version at all. It may well run on {gameVersion}, but nothing says so."
+            : $"The author declared this release for {CompatibleVersions(taggedVersions)}, not for {gameVersion}. Those boxes are ticked by hand and fall behind, so it may work — at your own risk.";
+
+    internal override string InstallAnywayReason(IReadOnlyList<string> taggedVersions)
+        => taggedVersions.Count == 0
+            ? "no declared game version"
+            : $"declared for {CompatibleVersions(taggedVersions)}";
+
     protected override CultureInfo NumberCulture { get; } = CultureInfo.GetCultureInfo("en-US");
 
     internal override string Subtitle(int indexedCount) => indexedCount switch
@@ -534,7 +567,8 @@ internal sealed class EnglishModsText : ModsText
         var author = names.Count > 1 ? "Their authors have" : "Its author has";
 
         return $"On ModDB, but with no release for Vintage Story {gameVersion}: {string.Join(", ", names)}. "
-            + $"{author} published nothing for this game version, so install by hand or wait it out.";
+            + $"{author} published nothing for this game version. Those compatibility boxes are ticked by hand and fall behind, "
+            + "so you can still install the latest published release, knowing what you are doing.";
     }
 
     internal override string DisabledDependencies(IReadOnlyList<string> identifiers)

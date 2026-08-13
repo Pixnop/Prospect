@@ -414,6 +414,43 @@ internal abstract class ModsText
 
     internal abstract string UpdateFailedTitle { get; }
 
+    // ── Fiche : liens externes déclarés par l'auteur ─────────────────────────────────────────
+
+    internal abstract string LinkSourceCode { get; }
+
+    internal abstract string LinkIssues { get; }
+
+    internal abstract string LinkWiki { get; }
+
+    internal abstract string LinkHomepage { get; }
+
+    // ── Sélecteur de version du dialogue d'installation ─────────────────────────────────────
+
+    /// <summary>
+    /// Pastille d'une release retenue par élargissement à la série mineure : l'auteur n'a PAS
+    /// coché cette version de jeu, c'est nous qui supposons. À dire, jamais à taire.
+    /// </summary>
+    internal abstract string ApproximateReleaseTag { get; }
+
+    /// <summary>
+    /// Pastille d'une release qu'AUCUN tag ne rattache à cette série de jeu. Elle n'apparaît
+    /// qu'après le dévoilement explicite : l'utilisateur a le droit de l'installer, pas de
+    /// l'installer sans le savoir.
+    /// </summary>
+    internal abstract string IncompatibleReleaseTag { get; }
+
+    internal abstract string ShowAllReleases { get; }
+
+    internal abstract string ShowCompatibleReleasesOnly { get; }
+
+    internal abstract string ReleaseChoiceCount(int count);
+
+    /// <summary>Avertissement NON bloquant affiché quand la release choisie n'est déclarée compatible avec rien.</summary>
+    internal abstract string IncompatibleReleaseWarning(string gameVersion, IReadOnlyList<string> taggedVersions);
+
+    /// <summary>Sous-titre de la case « installer quand même » d'une dépendance sans release compatible.</summary>
+    internal abstract string InstallAnywayReason(IReadOnlyList<string> taggedVersions);
+
     /// <summary>Culture de mise en forme des grands nombres (séparateur de milliers).</summary>
     protected abstract CultureInfo NumberCulture { get; }
 

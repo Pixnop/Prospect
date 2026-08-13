@@ -53,11 +53,12 @@ public sealed class ModCatalogShapesLiveTests(ITestOutputHelper output)
                     shell.ModBrowser.SelectedInstance,
                     new FakeExternalUrlOpener(),
                     shell.Overlay,
+                    ModDbDoubles.CreateLogoCache(),
                     () => Task.CompletedTask);
 
                 output.WriteLine(
                     $"  [{shape}] {mod.ModId} « {dialog.Name} » : {detail.Releases.Count} releases, "
-                    + $"description {dialog.Description.Length} caractères.");
+                    + $"description {dialog.Description.Document.Blocks.Count} blocs.");
             }
             catch (Exception exception)
             {

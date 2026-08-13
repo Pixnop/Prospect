@@ -224,12 +224,18 @@
 
   <!-- ── Fiche d'un mod ──────────────────────────────────────────────────────────── -->
   <x:String x:Key="Mods_Detail_Versions">Versions</x:String>
-  <x:String x:Key="Mods_Detail_SourceNote">La description et les captures proviennent de la fiche ModDB officielle. Prospect en affiche le texte sans son balisage ; ouvre la fiche pour la version complète.</x:String>
+  <x:String x:Key="Mods_Detail_SourceNote">La description vient de la fiche ModDB officielle, telle que son auteur l'a publiée. Ouvre la fiche pour les commentaires et les captures.</x:String>
+  <x:String x:Key="Mods_Detail_Links">Liens de l'auteur</x:String>
 
   <!-- ── Confirmation d'installation ─────────────────────────────────────────────── -->
   <x:String x:Key="Mods_Plan_Confirm">Installer</x:String>
   <x:String x:Key="Mods_Plan_FileName">fichier :</x:String>
   <x:String x:Key="Mods_Plan_Dependencies">Dépendances manquantes</x:String>
+  <x:String x:Key="Mods_Plan_Release">Version à installer</x:String>
+  <x:String x:Key="Mods_Plan_Changelog">Notes de version</x:String>
+  <x:String x:Key="Mods_Plan_NoChangelog">L'auteur n'a rien publié pour cette version.</x:String>
+  <x:String x:Key="Mods_Plan_InstallAnyway">Installer quand même</x:String>
+  <x:String x:Key="Mods_Plan_ReleaseReloadFailed">Cette version n'a pas pu être préparée. Le plan affiché reste celui de la version précédente.</x:String>
 
   <!-- ── Onglet Mods d'une instance ──────────────────────────────────────────────── -->
   <x:String x:Key="Mods_Tab_Browse">Parcourir le ModDB</x:String>

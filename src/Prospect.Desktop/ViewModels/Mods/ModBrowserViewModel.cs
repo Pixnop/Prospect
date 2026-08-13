@@ -379,6 +379,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                 SelectedInstance,
                 _urlOpener,
                 _overlay,
+                _logoCache,
                 () => StartInstallAsync(card)));
         }
         catch (Exception exception) when (exception is ModDbApiException or ModDbUnavailableException)
@@ -402,15 +403,19 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         IsInstalling = true;
         try
         {
-            var plan = await _installService
-                .PrepareAsync(slug, card.ModId, ModCompatibilityMode.ExactGameVersion, new Progress<DownloadProgress>(OnProgress), CancellationToken.None)
-                .ConfigureAwait(true);
+            var plan = await PreparePlanAsync(slug, card.ModId, releaseId: null).ConfigureAwait(true);
 
+            // Le dialogue reçoit de quoi RECALCULER un plan, pas seulement de quoi appliquer
+            // celui-ci : changer de release dans le sélecteur repasse par la même préparation,
+            // avec les mêmes dépendances lues dans la même archive téléchargée.
             _overlay.Show(new ModInstallPlanDialogViewModel(
                 plan,
                 SelectedInstance.Name,
-                selection => ApplyAsync(slug, plan, selection),
-                _overlay));
+                (chosen, selection) => ApplyAsync(slug, chosen, selection),
+                releaseId => PreparePlanAsync(slug, card.ModId, releaseId),
+                _overlay,
+                _urlOpener,
+                _logoCache));
         }
         catch (ModReleaseNotFoundException exception)
         {
@@ -427,6 +432,15 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             InstallProgress = null;
         }
     }
+
+    private Task<ModInstallPlan> PreparePlanAsync(string slug, int modId, int? releaseId)
+        => _installService.PrepareAsync(
+            slug,
+            modId,
+            ModCompatibilityMode.ExactGameVersion,
+            releaseId,
+            new Progress<DownloadProgress>(OnProgress),
+            CancellationToken.None);
 
     private async Task ApplyAsync(string slug, ModInstallPlan plan, IReadOnlyCollection<string> selection)
     {

@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Headless.XUnit;
 using Avalonia.Styling;
+using Avalonia.VisualTree;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,6 +14,7 @@ using Prospect.Core.Modpacks;
 using Prospect.Core.Runtime;
 using Prospect.Core.Storage;
 
+using Prospect.Desktop.Layout;
 using Prospect.Desktop.Tests.Support;
 using Prospect.Desktop.Tests.TestDoubles;
 using Prospect.Desktop.ViewModels.Dialogs;
@@ -388,6 +390,52 @@ public sealed class ResponsiveRegressionTests
     }
 
     [AvaloniaFact]
+    public async Task ModBrowser_Grid_AddsAColumnAsTheWindowGrows()
+    {
+        // La grille fluide fait deux promesses : elle ne descend jamais sous deux colonnes au
+        // plancher de la fenêtre, et elle en ajoute une quand la place le permet. Les deux se
+        // vérifient ici, sur la même fenêtre que la garde d'invariants, parce qu'une grille qui
+        // tient ses boîtes tout en rendant une seule colonne à 1280 tiendrait la lettre du contrat
+        // sans en tenir l'esprit.
+        using var provider = ResponsiveScenario.CreateProvider(out _, out _);
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.ShowModBrowser();
+        await shell.ModBrowser.InitializeCommand.ExecuteAsync(null);
+        window.Settle();
+
+        var expected = new (double Width, double Height, int Columns)[]
+        {
+            (ResponsiveWindowSizes.Floor.Width, ResponsiveWindowSizes.Floor.Height, 2),
+            (1100, 700, 2),
+            (1280, 800, 3),
+            (1600, 900, 4),
+        };
+
+        foreach (var (width, height, columns) in expected)
+        {
+            window.Width = width;
+            window.Height = height;
+            window.Settle();
+
+            var grid = window.GetVisualDescendants().OfType<FluidGridPanel>().ShouldHaveSingleItem();
+            grid.ColumnCount.ShouldBe(columns, $"à {width}x{height}, la grille devrait rendre {columns} colonnes");
+
+            // Et les cartes remplissent réellement la largeur : une colonne qui garderait sa
+            // largeur minimale laisserait la bande vide que cette refonte supprime.
+            var card = grid.Children[0];
+            card.Bounds.Width.ShouldBeGreaterThanOrEqualTo(grid.MinItemWidth - 1);
+            var used = (card.Bounds.Width * columns) + (grid.ColumnSpacing * (columns - 1));
+            // Un point de tolérance par colonne : l'alignement au pixel arrondit chaque largeur de
+            // carte, et ces arrondis s'additionnent sur la rangée.
+            used.ShouldBe(grid.Bounds.Width, tolerance: columns);
+        }
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public async Task ModDetailDialog_HoldsItsBoxes()
     {
         using var provider = ResponsiveScenario.CreateProvider(out _, out _);
@@ -402,6 +450,88 @@ public sealed class ResponsiveRegressionTests
 
         window.ShouldHoldLayoutInvariantsAtEverySize("Fiche de mod");
 
+        window.Close();
+    }
+
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ModDetailDialog_WithARealModDbDescription_HoldsItsBoxes(bool light)
+    {
+        // La fiche du faux serveur tient en deux paragraphes : elle ne tend aucune boîte. Celle-ci
+        // porte la description RÉELLE de Carry On, 29 Ko d'éditeur WYSIWYG — titres, listes à trois
+        // niveaux, blocs de code, images hors CDN et 34 liens. C'est ce document-là qui décide si
+        // le rendu tient à 960 points de large.
+        using var provider = ResponsiveScenario.CreateProvider(out _, out var catalogHandler);
+        catalogHandler.ModDb.CatalogJson = FakeModDbHandler.CatalogWith(FakeModDbHandler.CarryOnCatalogEntry);
+        var window = ResponsiveScenario.ShowWindow(provider, light ? ThemeVariant.Light : ThemeVariant.Dark);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.ShowModBrowser();
+        await shell.ModBrowser.InitializeCommand.ExecuteAsync(null);
+        var card = shell.ModBrowser.Results.Single(entry => entry.Name == "Carry On");
+        await card.OpenCommand.ExecuteAsync(null);
+        window.Settle();
+
+        var dialog = shell.Overlay.Active.ShouldBeOfType<ModDetailDialogViewModel>();
+        dialog.Description.Document.Blocks.Count.ShouldBeGreaterThan(100);
+        dialog.HasLinks.ShouldBeTrue();
+        await Task.WhenAll(dialog.Description.Images.Select(image => image.LoadCompletion));
+        window.Settle();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize(light ? "Fiche ModDB réelle, thème clair" : "Fiche ModDB réelle");
+
+        Application.Current!.RequestedThemeVariant = ThemeVariant.Dark;
+        window.Close();
+    }
+
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ModInstallPlanDialog_WithAReleasePicker_HoldsItsBoxes(bool light)
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out var catalogHandler);
+        provider.SeedInstalledVersion(fileSystem, "1.21.3");
+        catalogHandler.ModDb.CatalogJson = FakeModDbHandler.CatalogWith(FakeModDbHandler.CarryOnCatalogEntry);
+        // Le navigateur filtre sur l'index de compatibilité du serveur dès qu'une instance est
+        // ciblée : sans cette ligne, Carry On serait indexé mais jamais affiché.
+        catalogHandler.ModDb.CompatibleModIds = [1783, 792, 890];
+        // CarryOnLib n'est publiée que pour une autre série : la dépendance de la release dévoilée
+        // tombe donc dans « publiée mais sans release compatible », donc dans l'offre décochée.
+        catalogHandler.ModDb.CarryOnLibGameVersions = ["1.22.0"];
+        var window = ResponsiveScenario.ShowWindow(provider, light ? ThemeVariant.Light : ThemeVariant.Dark);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var home = provider.GetRequiredService<HomeViewModel>();
+
+        await ResponsiveScenario.CreateInstanceAsync(shell, home, ResponsiveScenario.LongInstanceName, "1.21.3");
+        shell.ShowModBrowser();
+        await shell.ModBrowser.InitializeCommand.ExecuteAsync(null);
+        await shell.ModBrowser.Results.Single(entry => entry.Name == "Carry On").InstallCommand.ExecuteAsync(null);
+        window.Settle();
+
+        var dialog = shell.Overlay.Active.ShouldBeOfType<ModInstallPlanDialogViewModel>();
+        dialog.HasReleaseChoice.ShouldBeTrue();
+        dialog.Releases.Count.ShouldBe(2);
+
+        window.ShouldHoldLayoutInvariantsAtEverySize(
+            light ? "Dialogue d'installation, sélecteur de version, thème clair" : "Dialogue d'installation, sélecteur de version");
+
+        // Le dialogue le plus chargé qui existe : dévoilement ouvert, release non déclarée
+        // compatible choisie (donc avertissement affiché), et la dépendance publiée sans release
+        // compatible offerte à l'installation. C'est cet état-là qui tend le plus ses boîtes.
+        dialog.ToggleAllReleasesCommand.Execute(null);
+        dialog.SelectedRelease = dialog.Releases.Single(release => release.IsDeclaredIncompatible);
+        await dialog.ReloadCompletion;
+        window.Settle();
+        dialog.ShowIncompatibleWarning.ShouldBeTrue();
+        dialog.HasInstallableAnyway.ShouldBeTrue();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize(
+            light
+                ? "Dialogue d'installation, version incompatible dévoilée, thème clair"
+                : "Dialogue d'installation, version incompatible dévoilée");
+
+        Application.Current!.RequestedThemeVariant = ThemeVariant.Dark;
         window.Close();
     }
 

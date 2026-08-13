@@ -114,6 +114,14 @@ public sealed class ModInstallService
     /// <param name="slug">Instance cible.</param>
     /// <param name="modDbModId">Identifiant numérique de la fiche ModDB.</param>
     /// <param name="mode">Strict, ou élargi à la série mineure.</param>
+    /// <param name="releaseId">
+    /// Release explicitement choisie dans le dialogue d'installation, ou <see langword="null"/>
+    /// pour la meilleure compatible. Le choix explicite porte sur TOUTES les releases publiées, y
+    /// compris celles qu'aucun tag ne déclare compatibles : l'utilisateur a le droit d'installer
+    /// ce que l'auteur n'a pas coché, il n'a simplement pas le droit de le faire sans le savoir
+    /// (voir <see cref="ModReleaseCompatibility"/>). Un identifiant introuvable retombe sur la
+    /// meilleure compatible plutôt que d'échouer.
+    /// </param>
     /// <param name="progress">Avancement du téléchargement.</param>
     /// <param name="cancellationToken">Annulation.</param>
     /// <exception cref="ModReleaseNotFoundException">Aucune release compatible avec la version de l'instance.</exception>
@@ -124,6 +132,7 @@ public sealed class ModInstallService
         string slug,
         int modDbModId,
         ModCompatibilityMode mode = ModCompatibilityMode.ExactGameVersion,
+        int? releaseId = null,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
@@ -131,8 +140,17 @@ public sealed class ModInstallService
         var gameVersion = instance.Metadata.GameVersion;
 
         var detail = await _client.GetModAsync(modDbModId.ToString(System.Globalization.CultureInfo.InvariantCulture), cancellationToken).ConfigureAwait(false);
-        var primary = await BuildItemAsync(detail, gameVersion, mode, cancellationToken).ConfigureAwait(false)
+
+        // La liste porte TOUTES les releases, chacune avec son verdict : le dialogue n'en montre
+        // que les compatibles tant qu'on ne lui demande pas le contraire, mais le choix explicite
+        // doit pouvoir tomber sur n'importe laquelle.
+        var candidates = ModReleaseSelector.SelectAll(detail.Releases, gameVersion, mode, includeIncompatible: true);
+        var automatic = ModReleaseSelector.Automatic(candidates, mode);
+        var choice = (releaseId is { } wanted ? candidates.FirstOrDefault(candidate => candidate.Release.ReleaseId == wanted) : null)
+            ?? (automatic.Count > 0 ? automatic[0] : null)
             ?? throw new ModReleaseNotFoundException(detail.Name, gameVersion);
+
+        var primary = await BuildItemAsync(detail.ModId, detail.Name, choice, cancellationToken).ConfigureAwait(false);
 
         var archivePath = await DownloadAsync(primary, progress, cancellationToken).ConfigureAwait(false);
         var content = _archiveReader.Read(archivePath);
@@ -143,7 +161,7 @@ public sealed class ModInstallService
 
         var (dependencies, unresolved) = await ResolveDependencyItemsAsync(issues, gameVersion, mode, cancellationToken).ConfigureAwait(false);
 
-        return new ModInstallPlan(primary, dependencies, issues, unresolved, gameVersion);
+        return new ModInstallPlan(primary, dependencies, issues, unresolved, gameVersion) { AvailableReleases = candidates };
     }
 
     /// <summary>
@@ -153,7 +171,9 @@ public sealed class ModInstallService
     /// <param name="plan">Plan produit par <see cref="PrepareAsync"/>.</param>
     /// <param name="selectedDependencies">
     /// Identifiants des dépendances à installer. <see langword="null"/> ou vide n'en installe
-    /// aucune : c'est un choix explicite de l'utilisateur, jamais un défaut implicite.
+    /// aucune : c'est un choix explicite de l'utilisateur, jamais un défaut implicite. Les
+    /// dépendances de <see cref="ModInstallPlan.InstallableAnyway"/> obéissent à la même liste,
+    /// mais l'écran ne les coche jamais d'avance.
     /// </param>
     /// <param name="progress">Avancement du téléchargement.</param>
     /// <param name="cancellationToken">Annulation.</param>
@@ -175,6 +195,21 @@ public sealed class ModInstallService
             if (selected.Contains(dependency.ModIdString))
             {
                 installed.Add(await InstallItemAsync(slug, dependency, progress, cancellationToken).ConfigureAwait(false));
+            }
+            else
+            {
+                skipped.Add(dependency.ModIdString);
+            }
+        }
+
+        // Dépendances sans release déclarée compatible : installées seulement si l'utilisateur a
+        // coché leur case, qui part décochée. Elles passent par le MÊME chemin d'installation, donc
+        // par la même écriture de provenance, qui gardera trace du verdict.
+        foreach (var dependency in plan.InstallableAnyway)
+        {
+            if (selected.Contains(dependency.ModIdString))
+            {
+                installed.Add(await InstallItemAsync(slug, dependency.BestAvailable!, progress, cancellationToken).ConfigureAwait(false));
             }
             else
             {
@@ -416,20 +451,49 @@ public sealed class ModInstallService
         CancellationToken cancellationToken)
     {
         var choice = ModReleaseSelector.Select(detail.Releases, gameVersion, mode);
-        if (choice is null)
-        {
-            return null;
-        }
 
+        return choice is null ? null : await BuildItemAsync(detail.ModId, detail.Name, choice, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// La meilleure release publiée d'une fiche dont AUCUNE n'est déclarée compatible : la plus
+    /// récente, marquée <see cref="ModReleaseCompatibility.NotDeclared"/> pour que rien, ni l'écran
+    /// ni la provenance écrite ensuite, ne la fasse passer pour confirmée.
+    /// </summary>
+    private async Task<ModInstallItem?> BuildFallbackItemAsync(
+        ModDbModDetail detail,
+        GameVersion gameVersion,
+        CancellationToken cancellationToken)
+    {
+        var candidates = ModReleaseSelector.SelectAll(
+            detail.Releases,
+            gameVersion,
+            ModCompatibilityMode.WidenToMinorSeries,
+            includeIncompatible: true);
+
+        return candidates.Count == 0
+            ? null
+            : await BuildItemAsync(detail.ModId, detail.Name, candidates[0], cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<ModInstallItem> BuildItemAsync(
+        int modDbModId,
+        string displayName,
+        ModReleaseChoice choice,
+        CancellationToken cancellationToken)
+    {
         var size = await _client.GetFileSizeAsync(choice.Release.DownloadUrl, cancellationToken).ConfigureAwait(false);
 
         return new ModInstallItem(
-            detail.ModId,
-            detail.Name,
+            modDbModId,
+            displayName,
             choice.Release,
             choice.IsApproximate,
             BuildFileName(choice.Release.ModIdString, choice.Release.Version),
-            size);
+            size)
+        {
+            Compatibility = choice.Compatibility,
+        };
     }
 
     // Chemin de secours pour un mod mis à jour sans provenance préalable (déposé à la main, jamais
@@ -508,14 +572,22 @@ public sealed class ModInstallService
             // qu'aucune de ses releases ne porte le tag de cette version de jeu. Verdict distinct,
             // et on sait même nommer le mod dont il s'agit.
             var item = await BuildItemAsync(detail, gameVersion, mode, cancellationToken).ConfigureAwait(false);
-            if (item is null)
-            {
-                unresolved.Add(new UnresolvedModDependency(issue.ModIdString, ModDependencyResolution.NoCompatibleRelease, detail.Name));
-            }
-            else
+            if (item is not null)
             {
                 items.Add(item);
+
+                continue;
             }
+
+            // Et la fiche a beau n'avoir aucune release déclarée compatible, elle a des releases :
+            // celle du haut est proposée en dernier recours, décochée, avec ses vrais tags. Sans
+            // ça, une dépendance dont l'auteur a juste oublié de cocher la dernière version du jeu
+            // rendrait le mod qui en dépend impossible à installer.
+            var fallback = await BuildFallbackItemAsync(detail, gameVersion, cancellationToken).ConfigureAwait(false);
+            unresolved.Add(new UnresolvedModDependency(issue.ModIdString, ModDependencyResolution.NoCompatibleRelease, detail.Name)
+            {
+                BestAvailable = fallback,
+            });
         }
 
         return (items, unresolved);
@@ -546,6 +618,7 @@ public sealed class ModInstallService
                 Version = item.Version,
                 InstalledUtc = _clock.UtcNow,
                 ApproximateMatch = item.IsApproximateMatch,
+                DeclaredIncompatible = item.IsDeclaredIncompatible,
             },
             cancellationToken).ConfigureAwait(false);
 

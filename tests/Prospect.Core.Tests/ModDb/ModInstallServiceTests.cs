@@ -120,6 +120,128 @@ public sealed class ModInstallServiceTests
     }
 
     [Fact]
+    public async Task PrepareAsync_ListsEveryReleaseWithItsVerdict_CompatibleOnesFirst()
+    {
+        var harness = Create("1.21.3");
+
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, cancellationToken: CancellationToken.None);
+
+        // Toutes les releases, chacune étiquetée : le dialogue n'en montre que les compatibles tant
+        // qu'on ne lui demande pas le contraire, mais il doit avoir les autres sous la main.
+        plan.AvailableReleases.Select(choice => choice.Release.Version.ToString()).ShouldBe(["1.11.1", "1.10.0", "1.12.0"]);
+        plan.AvailableReleases.Take(2).ShouldAllBe(choice => choice.Compatibility == ModReleaseCompatibility.Declared);
+        plan.AvailableReleases[2].Compatibility.ShouldBe(ModReleaseCompatibility.NotDeclared);
+
+        // Et la sélection automatique reste ce qu'elle était : la plus récente DÉCLARÉE compatible.
+        plan.AvailableReleases[0].Release.ReleaseId.ShouldBe(plan.Primary.Release.ReleaseId);
+        plan.Primary.IsDeclaredIncompatible.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task PrepareAsync_WithAnExplicitRelease_PlansThatOneAndKeepsTheSameChoices()
+    {
+        // Le chemin du sélecteur de version : rien d'autre ne change, ni le mode de compatibilité,
+        // ni la résolution de dépendances, ni la mécanique préparer/consentir/appliquer.
+        var harness = Create("1.21.3");
+
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, releaseId: 37000, cancellationToken: CancellationToken.None);
+
+        plan.Primary.Version.ShouldBe(ModVersion.Parse("1.10.0"));
+        plan.Primary.Release.ReleaseId.ShouldBe(37000);
+        plan.Primary.TargetFileName.ShouldBe("configlib-1.10.0.zip");
+        plan.AvailableReleases.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task PrepareAsync_WithAnExplicitlyIncompatibleRelease_InstallsItAndMarksIt()
+    {
+        // « Il faut pouvoir installer des incompatibles » : les tags sont cochés à la main et
+        // prennent du retard. Rien n'est élargi en silence, mais un choix explicite est honoré —
+        // et laisse une trace, dans le plan puis dans la provenance.
+        var harness = Create("1.21.3");
+
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, releaseId: 39980, cancellationToken: CancellationToken.None);
+
+        plan.Primary.Version.ShouldBe(ModVersion.Parse("1.12.0"));
+        plan.Primary.Compatibility.ShouldBe(ModReleaseCompatibility.NotDeclared);
+        plan.Primary.IsDeclaredIncompatible.ShouldBeTrue();
+        plan.Primary.IsApproximateMatch.ShouldBeTrue();
+        plan.NeedsConfirmation.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ApplyAsync_AnExplicitlyIncompatibleRelease_IsRecordedAsSuchInTheProvenance()
+    {
+        // La provenance ne doit pas faire passer ce choix pour une compatibilité confirmée : le
+        // docteur d'instance pourra plus tard distinguer un mod posé en connaissance de cause d'un
+        // mod devenu incompatible parce que l'instance a changé de version depuis.
+        var harness = Create("1.21.3");
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, releaseId: 39980, cancellationToken: CancellationToken.None);
+
+        var outcome = await harness.Service.ApplyAsync(Slug, plan, cancellationToken: CancellationToken.None);
+
+        var provenance = outcome.Installed.ShouldHaveSingleItem().Provenance.ShouldNotBeNull();
+        provenance.DeclaredIncompatible.ShouldBeTrue();
+        provenance.ApproximateMatch.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ApplyAsync_AReleaseTheAuthorDeclared_LeavesTheIncompatibleFlagOff()
+    {
+        var harness = Create("1.21.3");
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, cancellationToken: CancellationToken.None);
+
+        var outcome = await harness.Service.ApplyAsync(Slug, plan, cancellationToken: CancellationToken.None);
+
+        var provenance = outcome.Installed[0].Provenance.ShouldNotBeNull();
+        provenance.DeclaredIncompatible.ShouldBeFalse();
+        provenance.ApproximateMatch.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task PrepareAsync_ExplicitReleaseChangesTheDependenciesRead_FromTheChosenArchive()
+    {
+        // Les dépendances viennent du modinfo.json de l'archive TÉLÉCHARGÉE, jamais de l'API :
+        // changer de release change donc réellement le plan, ce qui est la raison d'être du
+        // recalcul déclenché par le sélecteur.
+        var harness = Create("1.21.3");
+
+        var newest = await harness.Service.PrepareAsync(Slug, 1783, cancellationToken: CancellationToken.None);
+        var older = await harness.Service.PrepareAsync(Slug, 1783, releaseId: 37000, cancellationToken: CancellationToken.None);
+
+        newest.MissingDependencies.Select(item => item.ModIdString).ShouldContain("vsimgui");
+        older.MissingDependencies.ShouldBeEmpty();
+        older.Issues.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task PrepareAsync_ReleaseIdThatDoesNotExist_FallsBackToTheBestOneRatherThanFailing()
+    {
+        var harness = Create("1.21.3");
+
+        // Un identifiant qui n'existe sur aucune release de la fiche : la seule cause plausible est
+        // une fiche modifiée entre l'ouverture du dialogue et le clic. Refuser d'installer serait
+        // une punition disproportionnée.
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, releaseId: 999999, cancellationToken: CancellationToken.None);
+
+        plan.Primary.Version.ShouldBe(ModVersion.Parse("1.11.1"));
+    }
+
+    [Fact]
+    public async Task ApplyAsync_AfterChoosingAnOlderRelease_InstallsThatVersionAndRecordsItsProvenance()
+    {
+        var harness = Create("1.21.3");
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, releaseId: 37000, cancellationToken: CancellationToken.None);
+
+        var outcome = await harness.Service.ApplyAsync(Slug, plan, cancellationToken: CancellationToken.None);
+
+        var installed = outcome.Installed.ShouldHaveSingleItem();
+        installed.FileName.ShouldBe("configlib-1.10.0.zip");
+        installed.Provenance.ShouldNotBeNull().ReleaseId.ShouldBe(37000);
+        installed.Provenance.Version.ShouldBe(ModVersion.Parse("1.10.0"));
+    }
+
+    [Fact]
     public async Task PrepareAsync_UnknownMod_SurfacesTheApplicationLevelNotFound()
     {
         var harness = Create();
@@ -287,6 +409,74 @@ public sealed class ModInstallServiceTests
     }
 
     /// <summary>
+    /// Et la suite du même cas réel : le constat honnête ne suffit pas, il faut pouvoir agir. La
+    /// meilleure release publiée de la fiche est proposée avec ses vrais tags, sans jamais être
+    /// installée d'office.
+    /// </summary>
+    [Fact]
+    public async Task PrepareAsync_DependencyWithNoCompatibleRelease_OffersItsBestPublishedReleaseAnyway()
+    {
+        var harness = Create(gameVersion: "1.22.6");
+
+        var plan = await harness.Service.PrepareAsync(Slug, 890, cancellationToken: CancellationToken.None);
+
+        var offer = plan.InstallableAnyway.ShouldHaveSingleItem();
+        offer.ModIdString.ShouldBe("carryonlib");
+        offer.BestAvailable.ShouldNotBeNull().Version.ToString().ShouldBe("1.0.0-pre.8");
+
+        // 1.22.4 sur une instance en 1.22.6 : même série mineure, donc une compatibilité SUPPOSÉE,
+        // pas une absence totale de déclaration. La nuance décide de ce que la provenance écrira.
+        offer.BestAvailable.Compatibility.ShouldBe(ModReleaseCompatibility.SameMinorSeries);
+        offer.BestAvailableGameVersions.ShouldContain("1.22.4");
+        offer.BestAvailableGameVersions.ShouldNotContain("1.22.6");
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WithoutTickingTheOffer_InstallsTheModAloneAndReportsTheSkip()
+    {
+        // L'option part décochée : ne rien cocher doit donner exactement le comportement d'avant.
+        var harness = Create(gameVersion: "1.22.6");
+        var plan = await harness.Service.PrepareAsync(Slug, 890, cancellationToken: CancellationToken.None);
+
+        var outcome = await harness.Service.ApplyAsync(Slug, plan, cancellationToken: CancellationToken.None);
+
+        outcome.Installed.ShouldHaveSingleItem().Provenance!.ModIdString.ShouldBe("carryon");
+        outcome.SkippedDependencies.ShouldContain("carryonlib");
+    }
+
+    [Fact]
+    public async Task ApplyAsync_TickingTheOffer_InstallsTheDependencyInTheSameGesture()
+    {
+        // Le bout du cas réel : installer Carry On 2.0.0-pre.8 sur une instance en 1.22.6 ET
+        // cocher CarryOnLib 1.0.0-pre.8, taguée jusqu'à 1.22.4, en un seul geste.
+        var harness = Create(gameVersion: "1.22.6");
+        var plan = await harness.Service.PrepareAsync(Slug, 890, cancellationToken: CancellationToken.None);
+
+        var outcome = await harness.Service.ApplyAsync(Slug, plan, ["carryonlib"], cancellationToken: CancellationToken.None);
+
+        outcome.Installed.Select(mod => mod.Provenance!.ModIdString).ShouldBe(["carryon", "carryonlib"]);
+        outcome.SkippedDependencies.ShouldBeEmpty();
+
+        var lib = outcome.Installed[1].Provenance.ShouldNotBeNull();
+        lib.Version.ToString().ShouldBe("1.0.0-pre.8");
+        lib.ApproximateMatch.ShouldBeTrue("la compatibilité n'est que supposée, jamais déclarée");
+        lib.DeclaredIncompatible.ShouldBeFalse("1.22.4 et 1.22.6 sont la même série mineure");
+    }
+
+    [Fact]
+    public async Task PrepareAsync_DependencyThatTheModDbDoesNotPublish_HasNothingToOffer()
+    {
+        // Contrôle négatif : on ne propose pas d'installer quand même ce qui n'existe pas.
+        var harness = Create();
+        harness.Server.KnownDependency = false;
+
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, cancellationToken: CancellationToken.None);
+
+        plan.UnresolvedDependencies.ShouldHaveSingleItem().BestAvailable.ShouldBeNull();
+        plan.InstallableAnyway.ShouldBeEmpty();
+    }
+
+    /// <summary>
     /// Le contrôle négatif du test précédent : sur une instance dont la version EST couverte par les
     /// tags de <c>carryonlib</c>, la même dépendance se résout normalement. Sans lui, le test
     /// ci-dessus passerait tout aussi bien si la résolution était cassée pour de bon.
@@ -438,10 +628,20 @@ public sealed class ModInstallServiceTests
     private sealed class FakeModDbServer
     {
         public static readonly byte[] ConfigLibArchive = ModInfoSamples.BuildArchive(ModInfoSamples.ConfigLib);
+
+        /// <summary>Une release ANTÉRIEURE de la même fiche, celle que le sélecteur de version permet de choisir.</summary>
+        public static readonly byte[] ConfigLibOlderArchive = ModInfoSamples.BuildArchive("""
+        { "type": "code", "name": "Config lib", "modid": "configlib", "version": "1.10.0", "authors": ["Maltiez"] }
+        """);
         public static readonly byte[] ExtraInfoArchive = ModInfoSamples.BuildArchive(ModInfoSamples.ExtraInfo);
 
         public static readonly byte[] VsImGuiArchive = ModInfoSamples.BuildArchive("""
         { "type": "code", "name": "VS ImGui", "modid": "vsimgui", "version": "1.3.0", "authors": ["Maltiez"] }
+        """);
+
+        /// <summary>L'archive de la dépendance qu'on peut choisir d'installer malgré ses tags.</summary>
+        public static readonly byte[] CarryOnLibArchive = ModInfoSamples.BuildArchive("""
+        { "type": "code", "name": "CarryOnLib", "modid": "carryonlib", "version": "1.0.0-pre.8", "authors": ["NerdScurvy"] }
         """);
 
         /// <summary>
@@ -492,9 +692,12 @@ public sealed class ModInstallServiceTests
             var payload = path switch
             {
                 "/configlib_1.11.1.zip" => ConfigLibArchive,
+                "/configlib_1.12.0.zip" => ConfigLibArchive,
+                "/configlib_1.10.0.zip" => ConfigLibOlderArchive,
                 "/extrainfo_2.2.1.zip" => ExtraInfoArchive,
                 "/vsimgui_1.3.0.zip" => VsImGuiArchive,
                 "/carryon_2.0.0-pre.8.zip" => CarryOnArchive,
+                "/carryonlib_1.0.0-pre.8.zip" => CarryOnLibArchive,
                 _ => null,
             };
 
@@ -542,8 +745,12 @@ public sealed class ModInstallServiceTests
                 "filename": "configlib_1.12.0.zip", "downloads": 1, "tags": ["1.22.0"], "modidstr": "configlib",
                 "modversion": "1.12.0", "changelog": null, "created": "2026-05-01 12:03:34" },
               { "releaseid": 38314, "fileid": 84120, "mainfile": "https://moddbcdn.vintagestory.at/configlib_1.11.1.zip",
-                "filename": "configlib_1.11.1.zip", "downloads": 1, "tags": ["1.21.3", "1.21.0"], "modidstr": "configlib",
-                "modversion": "1.11.1", "changelog": null, "created": "2026-02-11 09:22:10" }
+                "filename": "configlib_1.11.1.zip", "downloads": 90210, "tags": ["1.21.3", "1.21.0"], "modidstr": "configlib",
+                "modversion": "1.11.1", "changelog": "<p>Correction du <strong>rechargement</strong>.</p>",
+                "created": "2026-02-11 09:22:10" },
+              { "releaseid": 37000, "fileid": 82000, "mainfile": "https://moddbcdn.vintagestory.at/configlib_1.10.0.zip",
+                "filename": "configlib_1.10.0.zip", "downloads": 41337, "tags": ["1.21.3"], "modidstr": "configlib",
+                "modversion": "1.10.0", "changelog": null, "created": "2025-12-02 08:00:00" }
             ]
           }
         }

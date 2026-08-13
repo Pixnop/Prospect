@@ -415,6 +415,39 @@ internal sealed class FrenchModsText : ModsText
 
     internal override string UpdateFailedTitle => "Mise à jour impossible";
 
+    internal override string LinkSourceCode => "Code source";
+
+    internal override string LinkIssues => "Tickets";
+
+    internal override string LinkWiki => "Wiki";
+
+    internal override string LinkHomepage => "Site du mod";
+
+    internal override string ApproximateReleaseTag => "compatibilité supposée";
+
+    internal override string IncompatibleReleaseTag => "non déclarée compatible";
+
+    internal override string ShowAllReleases => "Montrer toutes les versions";
+
+    internal override string ShowCompatibleReleasesOnly => "Ne montrer que les compatibles";
+
+    internal override string ReleaseChoiceCount(int count) => count switch
+    {
+        0 => "aucune version compatible",
+        1 => "1 version compatible",
+        _ => $"{FormatCount(count)} versions compatibles",
+    };
+
+    internal override string IncompatibleReleaseWarning(string gameVersion, IReadOnlyList<string> taggedVersions)
+        => taggedVersions.Count == 0
+            ? $"L'auteur n'a déclaré cette version compatible avec aucune version du jeu. Elle peut très bien fonctionner en {gameVersion}, mais rien ne l'affirme."
+            : $"L'auteur a déclaré cette version pour {CompatibleVersions(taggedVersions)}, pas pour {gameVersion}. Les compatibilités sont cochées à la main et prennent du retard : elle fonctionnera peut-être, à tes risques.";
+
+    internal override string InstallAnywayReason(IReadOnlyList<string> taggedVersions)
+        => taggedVersions.Count == 0
+            ? "aucune version de jeu déclarée"
+            : $"déclarée pour {CompatibleVersions(taggedVersions)}";
+
     protected override CultureInfo NumberCulture { get; } = CultureInfo.GetCultureInfo("fr-FR");
 
     internal override string Subtitle(int indexedCount) => indexedCount switch
@@ -517,7 +550,8 @@ internal sealed class FrenchModsText : ModsText
         => names.Count == 0
             ? string.Empty
             : $"Publié{(names.Count > 1 ? "s" : string.Empty)} sur le ModDB, mais sans version pour Vintage Story {gameVersion} : {string.Join(", ", names)}. "
-                + $"{(names.Count > 1 ? "Leurs auteurs n'ont" : "Son auteur n'a")} rien publié pour cette version du jeu : à installer à la main, ou à attendre.";
+                + $"{(names.Count > 1 ? "Leurs auteurs n'ont" : "Son auteur n'a")} rien publié pour cette version du jeu. "
+                + "Les compatibilités sont cochées à la main et prennent du retard : tu peux quand même installer la dernière version publiée, en connaissance de cause.";
 
     internal override string DisabledDependencies(IReadOnlyList<string> identifiers)
         => identifiers.Count == 0

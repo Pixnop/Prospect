@@ -58,6 +58,12 @@ public sealed record ModDbModSummary
     /// <summary>Identifiant numérique interne, seule clé stable pour rappeler l'API.</summary>
     public required int ModId { get; init; }
 
+    /// <summary>
+    /// Identifiant d'asset, celui qui route la page publique. À NE PAS confondre avec
+    /// <see cref="ModId"/> : les deux espaces divergent (voir <c>ModDbMapper.BuildPageUrl</c>).
+    /// </summary>
+    public int AssetId { get; init; }
+
     /// <summary>Nom affiché.</summary>
     public required string Name { get; init; }
 
@@ -96,6 +102,9 @@ public sealed record ModDbModSummary
 
     /// <summary>Date de la dernière release, ou <see langword="null"/> si illisible ou absente.</summary>
     public DateTimeOffset? LastReleasedUtc { get; init; }
+
+    /// <summary>Page publique de la fiche, alias d'URL quand il existe (voir <c>ModDbMapper.BuildPageUrl</c>).</summary>
+    public Uri PageUrl { get; init; } = ModDbMapper.SiteBaseUrl;
 }
 
 /// <summary>
@@ -146,6 +155,12 @@ public sealed record ModDbModDetail
     /// <summary>Identifiant numérique interne.</summary>
     public required int ModId { get; init; }
 
+    /// <summary>
+    /// Identifiant d'asset, celui qui route la page publique. À NE PAS confondre avec
+    /// <see cref="ModId"/> : les deux espaces divergent (voir <c>ModDbMapper.BuildPageUrl</c>).
+    /// </summary>
+    public int AssetId { get; init; }
+
     /// <summary>Nom affiché.</summary>
     public required string Name { get; init; }
 
@@ -153,9 +168,10 @@ public sealed record ModDbModDetail
     public string Author { get; init; } = string.Empty;
 
     /// <summary>
-    /// Description longue en HTML brut, telle que publiée. Prospect ne l'affiche jamais telle
-    /// quelle : <see cref="HtmlText.ToPlainText"/> en produit une version lisible et le bouton
-    /// « Ouvrir sur le ModDB » renvoie à la fiche officielle pour le rendu complet.
+    /// Description longue en HTML brut d'éditeur riche, telle que publiée. Elle est RENDUE par la
+    /// fiche, pas aplatie : <see cref="HtmlRichTextParser.Parse"/> la traduit en blocs
+    /// (paragraphes, titres, listes, code, images, liens) que la couche UI compose en contrôles.
+    /// <see cref="HtmlText.ToPlainText"/> reste disponible pour les usages qui veulent du texte nu.
     /// </summary>
     public string DescriptionHtml { get; init; } = string.Empty;
 
@@ -171,8 +187,27 @@ public sealed record ModDbModDetail
     /// <summary>Nombre de téléchargements cumulés.</summary>
     public int Downloads { get; init; }
 
+    /// <summary>Nombre d'abonnés à la fiche.</summary>
+    public int Follows { get; init; }
+
     /// <summary>Page publique du mod sur le ModDB.</summary>
     public required Uri PageUrl { get; init; }
+
+    /// <summary>
+    /// Site du mod, ou <see langword="null"/>. Les quatre liens externes de la fiche sont
+    /// nullables ET souvent servis en chaîne VIDE plutôt qu'en <c>null</c>
+    /// (docs/research/moddb-api.md) : le mapper traite les deux cas de la même façon.
+    /// </summary>
+    public Uri? HomepageUrl { get; init; }
+
+    /// <summary>Dépôt de code, ou <see langword="null"/>.</summary>
+    public Uri? SourceCodeUrl { get; init; }
+
+    /// <summary>Suivi des tickets, ou <see langword="null"/>.</summary>
+    public Uri? IssueTrackerUrl { get; init; }
+
+    /// <summary>Wiki du mod, ou <see langword="null"/>.</summary>
+    public Uri? WikiUrl { get; init; }
 
     /// <summary>Releases, de la plus récente à la plus ancienne.</summary>
     public IReadOnlyList<ModDbRelease> Releases { get; init; } = [];

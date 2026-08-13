@@ -32,6 +32,13 @@
     <Compile Include="..\Prospect.Core.Tests\Live\LiveModDb.cs" Link="Live\LiveModDb.cs" />
   </ItemGroup>
 
+  <!-- La MÊME description de fiche réelle que la suite du Core, liée plutôt que recopiée : le
+       parseur la lit d'un côté, la garde de mise en page la RENDE de l'autre, et les deux doivent
+       porter sur le même échantillon. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\Prospect.Core.Tests\ModDb\Fixtures\*.html" Link="Mods\Fixtures\%(Filename)%(Extension)" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\Prospect.Desktop\Prospect.Desktop.csproj" />
   </ItemGroup>

@@ -1,0 +1,426 @@
+<p>Fork of mod made by copygirl - <a href="https://mods.vintagestory.at/show/mod/38">CarryCapacity</a></p>
+<p>Allows picking up and carrying blocks, especially containers along with their contents, in your hands and on your back.</p>
+<p>&nbsp;</p>
+<p><a title="Buy me a coffee" href="https://ko-fi.com/nerdscurvy"><img src="https://vintagestory-carryon.s3.us-east-1.amazonaws.com/coffee.png" alt="Coffee and Gears" width="219" height="195"></a></p>
+<p><a href="https://ko-fi.com/nerdscurvy">Please support my caffeine consumption</a></p>
+<h3><strong>Carry On 2.0 - Early testing pre-release</strong></h3>
+<p>Use at your own risk.</p>
+<p>CarryOn 2.0 requires <a href="https://mods.vintagestory.at/carryonlib">CarryOnLib</a> to run.</p>
+<p>&nbsp;</p>
+<p><strong>CarryOn v2.0.0-pre.5</strong></p>
+<h4>Carried block entity</h4>
+<ul>
+<li>When a carried block is dropped and no suitable location is found to place it then a dropped block entity is spawned.
+<ul>
+<li>For the initial version of this feature the entity will appear as a small crate with random rotation.</li>
+</ul>
+</li>
+<li>Owner has a grace period where only they can pick it up, after that anyone can interact to grab it.</li>
+<li>By default the entity will despawn after 30 game days</li>
+<li>Refer to the CarriedBlockEntity section in CarryOnConfig.json</li>
+</ul>
+<h4>Pickup from claims</h4>
+<ul>
+<li>Players will no longer to be able to pickup dropped blocks from traders or other claims they don't own.
+<ul>
+<li>This was a feature of the Dropped Block Tracker which is being phased out.</li>
+<li>Any block dropped on a claim, for which the player does not have permission, will drop as an entity.</li>
+</ul>
+</li>
+<li>Pickup will perform client side claim check and block optimistic pickup attempts</li>
+</ul>
+<h4>Hunger modifier support</h4>
+<ul>
+<li>Carrying blocks now effects hunger rates
+<ul>
+<li>Fully configurable, currently only enabled for back slot - see CarryHungerRate section CarryOnConfig.json</li>
+</ul>
+</li>
+</ul>
+<p>&nbsp; &nbsp; &nbsp; &nbsp;Example:</p>
+<pre style="padding-left: 40px;">"CarryHungerRate": {<br>  "HandsEnabled": false,<br>  "BackEnabled": true,<br>  "MinSaturationThreshold": 150.0,<br>  "ModifierOverrides": {<br>    "ByBlockCode": [<br>      {<br>        "Key": "game:crate",<br>        "Hands": 0.3,<br>        "Back": 0.4<br>      },<br>      {<br>        "Key": "game:log*",<br>        "Back": 0.5<br>      }<br>    ],<br>    "ByBlockClass": [<br>      {<br>        "Key": "BlockChest",<br>        "Back": 0.4<br>      }<br>    ],<br>    "SlotDefaults": {<br>      "Hands": 0.2,<br>      "Back": 0.3<br>    }<br>  }<br>}</pre>
+<p>&nbsp;</p>
+<h4>Walk Speed modifier</h4>
+<p>The config format changed from earlier releases so it can be edited with AutoConfigLib.</p>
+<pre>"CarryWalkSpeed": {<br>  "HandsEnabled": true,<br>  "BackEnabled": true,<br>  "HandsAllowSprint": false,<br>  "BackAllowSprint": true,<br>  "ModifierOverrides": {<br>    "ByBlockCode": [<br>      {<br>        "Key": "game:crate",<br>        "Hands": -0.4,<br>        "Back": -0.3<br>      },<br>      {<br>        "Key": "game:log*",<br>        "Hands": -0.5,<br>        "Back": -0.25<br>      },<br>      {<br>        "Key": "game:lootvessel|sea",<br>        "Hands": -0.6<br>      }<br>    ],<br>    "ByBlockClass": [<br>      {<br>        "Key": "BlockChest",<br>        "Hands": -0.35,<br>        "Back": -0.2<br>      },<br>      {<br>        "Key": "BlockBarrel",<br>        "Hands": -0.3<br>      }<br>    ],<br>    "SlotDefaults": {<br>      "Hands": -0.25,<br>      "Back": -0.15<br>    }<br>  }<br>}</pre>
+<p>&nbsp;</p>
+<h4>Damage drop behavior</h4>
+<ul>
+<li>Players will no longer drop carried blocks from light fall damage or hunger pangs.
+<ul>
+<li>The amount of damage must exceed a configured threshhold before block is dropped.</li>
+<li>Back slot is also affected - requires much heavier damage from a wolf or bear before dropped.</li>
+<li>Configurable via DropCarriedOnDamage section in CarryOnConfig.json</li>
+</ul>
+</li>
+</ul>
+<h4>Runtime configuration changes</h4>
+<ul>
+<li>Add compatability for AutoConfigLib and auto detection of config file changes<br>
+<ul>
+<li>Many of the config settings work at runtime</li>
+<li>Add command to reload the config (use when Config Watcher is disabled or not working for OS)<br>/carryon-reload</li>
+</ul>
+</li>
+</ul>
+<h4>Mod compatibility</h4>
+<ul>
+<li>Add compatibility for <a href="https://mods.vintagestory.at/upgradablestorage">Upgradeable Storage</a></li>
+<li>Added missing "side": "server" property to carryable patches</li>
+</ul>
+<p>&nbsp;</p>
+<p><img src="https://vintagestory-carryon.s3.us-east-1.amazonaws.com/cluster-carry.png" alt="" width="357" height="421"></p>
+<p><strong>CarryOn v2.0.0-pre.4 - Cluster Carry<br></strong></p>
+<ul>
+<li>Allows players to pickup blocks along with any signs that are attached to them.
+<ul>
+<li>Can be enabled in the CarryOnConfig on the server: "CarryAttachedWallSigns": true</li>
+<li>Feature is disabled by default</li>
+</ul>
+</li>
+</ul>
+<p>&nbsp;</p>
+<ul>
+<li>Players can control whether they see and/or pickup with attached signs using chat commands:
+<ul>
+<li>.carryon attachedRender [true|false]</li>
+<li>.carryon attachedPickup [true|false]</li>
+</ul>
+</li>
+</ul>
+<p>&nbsp;</p>
+<ul>
+<li>BackpackSelectionMode added to CarryOnConfig&nbsp;
+<ul>
+<li>This changes how CarryOn determines which backpack carry profile to use.</li>
+<li>Valid values:
+<ul>
+<li>FirstFound</li>
+<li>LastFound (default behaviour)</li>
+<li>FirstOnly (<a href="https://mods.vintagestory.at/playermodellib">Player Model Lib</a> compatibility)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p style="padding-left: 120px;"><img src="https://vintagestory-carryon.s3.us-east-1.amazonaws.com/happy-sml.png" alt="" width="227" height="350"></p>
+<p style="padding-left: 120px;">&nbsp;</p>
+<p><strong>CarryOn v2.0.0-pre.3</strong> allows walk speed overrides in the CarryOnConfig.json file.</p>
+<p>e.g.: Add carry penalty for various reed chests when carried on back and crates in hands:<br><span style="color: #e74c3c;">Note that the format has changed in pre.5+</span></p>
+<pre><span style="text-decoration: line-through;"><span style="color: #bdc3c7; text-decoration: line-through;">&nbsp; &nbsp; "WalkSpeedOverrides": {</span></span><br><span style="text-decoration: line-through;"><span style="color: #bdc3c7; text-decoration: line-through;">  &nbsp; &nbsp; "ByBlockCode": {</span></span><br><span style="text-decoration: line-through;"><span style="color: #bdc3c7; text-decoration: line-through;">  &nbsp; &nbsp; &nbsp; "game:stationarybasket*": { "Back": -0.1 },</span></span><br><span style="text-decoration: line-through;"><span style="color: #bdc3c7; text-decoration: line-through;">  &nbsp; &nbsp; &nbsp; "lc:lblstationarybasket*": { "Back": -0.1 },</span></span><br><span style="text-decoration: line-through;"><span style="color: #bdc3c7; text-decoration: line-through;">  &nbsp; &nbsp; &nbsp; "lcupdated:lblstationarybasket*": { "Back": -0.1 }</span></span><br><span style="text-decoration: line-through;"><span style="color: #bdc3c7; text-decoration: line-through;">
+  &nbsp;     "game:chest*|owl*": { "Back": -0.08 },
+  &nbsp;     "game:chest*|golden*": { "Back": -0.10 },
+  &nbsp;     "game:chest*": { "Back": -0.15 }
+  &nbsp; &nbsp; },</span></span><br><span style="text-decoration: line-through;"><span style="color: #bdc3c7; text-decoration: line-through;">  &nbsp; &nbsp; "ByBlockClass": {</span></span><br><span style="text-decoration: line-through;"><span style="color: #bdc3c7; text-decoration: line-through;">  &nbsp; &nbsp; &nbsp; "BlockCrate": { "Hands": -0.8 }</span></span><br><span style="text-decoration: line-through;"><span style="color: #bdc3c7; text-decoration: line-through;">  &nbsp; &nbsp; },</span></span><br><span style="text-decoration: line-through;"><span style="color: #bdc3c7; text-decoration: line-through;">  &nbsp; &nbsp; "SlotDefaults": {</span></span><br><span style="text-decoration: line-through;"><span style="color: #bdc3c7; text-decoration: line-through;">  &nbsp; &nbsp; &nbsp; "Hands": -0.25,</span></span><br><span style="text-decoration: line-through;"><span style="color: #bdc3c7; text-decoration: line-through;">  &nbsp; &nbsp; &nbsp; "Back": -0.15</span></span><br><span style="text-decoration: line-through;"><span style="color: #bdc3c7; text-decoration: line-through;">  &nbsp; &nbsp; }</span></span><br><span style="text-decoration: line-through;"><span style="color: #bdc3c7; text-decoration: line-through;">  &nbsp; }
+</span></span></pre>
+<p><br><br><strong>Note: </strong></p>
+<ul>
+<li>Adding a positive value will speed up the player.</li>
+<li>Anything after the pipe '|' in the blockCode string is for matching sub block types/variants.</li>
+</ul>
+<h3><strong>Pre-Release</strong></h3>
+<p>These may not be ready for general gameplay.</p>
+<div class="spoiler">
+<div class="spoiler-toggle">Release notes</div>
+<div class="spoiler-text">
+<h4>For Vintage Story v1.20.12<br>----</h4>
+<p><strong>CarryOn v1.9.0-pre.1</strong> adds an experimental feature: CarryOn Boating</p>
+<ul>
+<li>Compatible carried containers can be attached to the slots on rafts and sailboats.</li>
+<li>Can also be detached containers and should retain all contents.</li>
+<li>Exiting a raft or boat now requires the crouch to be tapped twice.
+<ul>
+<li>This is to workaround default keybindings of CarryOn and allow players to move chests around while sitting on the craft.</li>
+</ul>
+</li>
+</ul>
+<p>&nbsp;</p>
+<p><strong>CarryOn v1.9.0-pre.2:</strong></p>
+<ul>
+<li>Rework of boat/raft interaction</li>
+<li>Doubletap sneak to dismount now applies to Elk as well so you can move carryable blocks while riding.
+<ul>
+<li>If the sneak button is tapped twice withing 300ms then it will trigger the dismount while seated.</li>
+</ul>
+</li>
+</ul>
+<p>&nbsp;</p>
+<p><strong>CarryOn v1.9.0-pre.3:</strong></p>
+<ul>
+<li>Refactor carry handler and add on screen carry related error/warning messages.</li>
+<li>Add compatibility for <a href="https://mods.vintagestory.at/cartwrightscaravan">Cartwright's Caravan</a></li>
+<li>Add error messages to language file (English only)</li>
+</ul>
+<h4>For Vintage Story v1.21.0-pre<br>----</h4>
+<p><strong>CarryOn v1.10.0-pre.1</strong></p>
+<ul>
+<li>Same features as v1.8.2 - recompiled for the pre-release</li>
+<li>No boating changes</li>
+</ul>
+<p><br><strong>CarryOn v1.10.0-pre.2</strong></p>
+<ul>
+<li>Allows CarryOn to be used on boat/rafts and can pickup and putdown crates while riding an elk.</li>
+<li>Dismount for raft/boat/elk has changed and requires the crouch/sneak button to be tapped twice.</li>
+</ul>
+<p>&nbsp;</p>
+</div>
+</div>
+<p><strong>----</strong></p>
+<h3><strong>Usage</strong></h3>
+<p>To pick up a block with your hands, sneak and hold right-click. <strong>Both hands must be empty</strong>.<br>A circular progress bar will be visible around your cursor as you wait.<br>You can only pick up certain supported blocks, such as chests, barrels, vessels (including broken ones), anvils, ...</p>
+<p>To put a block onto your back, sneak and hold right-click without aiming at a block (or hold Ctrl when aiming at a block).&nbsp;<br>A smaller selection of blocks can be put on your back. Notably, baskets can be worn on your back without any downsides.</p>
+<p>To put a block down, or from your back into your hands, just sneak and hold right-click again.</p>
+<p>You can still interact with most doors and storage with your hands full but with a short delay (hold button to interact).</p>
+<p>CarryOn interractions can be disabled in the client&nbsp; by using to Toggle hotkey combination [ALT]+K. This is useful where CarryOn interactions conflict with another mod.</p>
+<p><span style="color: #e74c3c;">If you are unable to drop a carried block then use the Quickdrop hotkey<strong> [CTRL]+[ALT]+K</strong> (This is a workaround until the issue can be resolved)</span></p>
+<h3>Keybinds</h3>
+<h3><strong><img src="https://vintagestory-carryon.s3.us-east-1.amazonaws.com/keybinds.png" alt="image" width="672" height="221"></strong></h3>
+<p>The keybinds for CarryOn only appear after a world has been loaded.</p>
+<p>The default keybinds are mapped as above with Shift carry key also being the Sneak key.</p>
+<p>It is recommended, if you swap the Run and Sneak keys, that you do the same for the carry and swap keys.</p>
+<p>Reload your world after changes to the keybinds to ensure they take effect (Known CarryOn bug)</p>
+<p><strong>New Keybind added to v1.9.4:</strong><br>Toggle Double Tap Dismount: CTRL+K</p>
+<h3><strong>Additional Information</strong></h3>
+<p>Typically, when carrying containers, you are slowed down by some amount.<br>You also cannot sprint when carrying a block in your hands.</p>
+<p>When taking any damage, you drop what you're holding in your hands.<br>When you die, what you're carrying on your back will drop at your death location.<br>If the death occurs on a land claim on which the player does not have permission and no suitable location can be found to place the block, the items will drop. Containers will spill their contents, loot vessels will smash dropping the loot and some items could break entirely (e.g. clutter has a chance of breaking)</p>
+<h3>Recommended Mods</h3>
+<p>A selection of mods regularly tested with CarryOn - in no particular order.</p>
+<ul>
+<li><a href="https://mods.vintagestory.at/show/mod/3026">Japanese translation of Mods</a> (including CarryOn)</li>
+<li><a href="https://mods.vintagestory.at/show/mod/137">Extra Chests</a></li>
+<li><a href="https://mods.vintagestory.at/show/mod/146">Better Crates</a></li>
+<li><a href="https://mods.vintagestory.at/show/mod/1238">Primitive Survival</a></li>
+<li><a href="https://mods.vintagestory.at/vanvar">Vanilla Variants</a></li>
+<li><a href="https://mods.vintagestory.at/show/mod/329">Bricklayers</a></li>
+<li><a href="https://mods.vintagestory.at/sortablestorage">Sortable Storage</a></li>
+<li><a href="https://mods.vintagestory.at/cartwrightscaravan">Cartwright's Caravan</a></li>
+</ul>
+<h3>Having issues?</h3>
+<p>Feel free to contact me on Discord: nerdscurvy</p>
+<p>Discord link: <a href="https://discord.com/channels/302152934249070593/1040620259272577135">Vintage Story &gt; mods &gt; Carry On</a> (Join the <a href="https://discord.gg/CkJjdrB" target="_blank" rel="external nofollow noopener">Official Vintage Story Discord server</a>)</p>
+<p>To help with resolving issues - send me your logs:</p>
+<ul>
+<li>client-main.txt</li>
+<li>client-debug.txt</li>
+<li>server-main.txt</li>
+<li>server-debug.txt</li>
+</ul>
+<p>More logging information can be captured by enabling the following in the CarryOn ModConfig:</p>
+<p>"LoggingEnabled": true</p>
+<p>&nbsp;</p>
+<h3>CarryOn Chat Commands</h3>
+<div class="spoiler">
+<div class="spoiler-toggle">Commands</div>
+<div class="spoiler-text">
+<h4>Anchor assignment and display</h4>
+<ul>
+<li>.carryon gui show
+<ul>
+<li>Show current CarryOn GUI anchor assignments (runtime Hands/Back anchors). If a client config exists it also shows the saved Hands/Back values.</li>
+</ul>
+</li>
+<li>.carryon gui reset
+<ul>
+<li>Reset CarryOn GUI anchors to mod defaults (runtime + save). The default anchor positions are L1 - Hands and R1 - Back.&nbsp;</li>
+</ul>
+</li>
+<li>.carryon gui set &lt;anchor&gt; &lt;hands|back|clear&gt;
+<ul>
+<li>Set or clear carry slot anchors. Usage examples:
+<ul>
+<li><code>.carryon gui set L1 hands</code>&nbsp;— attach the Hands carried-item to anchor L1.</li>
+<li><code>.carryon gui set R2 back</code>&nbsp;— attach the Back carried-item to anchor R2.</li>
+<li><code>.carryon gui set R1 clear</code>&nbsp;— clear any assignment at anchor R1.</li>
+</ul>
+</li>
+<li>Valid anchor names: L1, L2, L3, R1, R2, R3 (case-insensitive). Changes are applied at runtime and saved to the client config when present.</li>
+</ul>
+</li>
+</ul>
+<p>&nbsp;</p>
+<h4>Background (anchor fill)</h4>
+<ul>
+<li>.carryon gui bg enable
+<ul>
+<li>Enable drawing the anchor background fill (runtime + save to client config).</li>
+</ul>
+</li>
+<li>.carryon gui bg disable
+<ul>
+<li>Disable anchor background fill (runtime + save).</li>
+</ul>
+</li>
+<li>.carryon gui bg color &lt;hex&gt;
+<ul>
+<li>Set anchor background fill color. Example:&nbsp;<code>.carryon gui bg color #E4C4A6</code></li>
+<li>Hex must be full 6-digit format; command normalizes to leading&nbsp;<code>#</code>&nbsp;and uppercase. Saved to client config.</li>
+</ul>
+</li>
+<li>.carryon gui bg alpha &lt;0.0-1.0&gt;
+<ul>
+<li>Set anchor background alpha (opacity). Example:&nbsp;<code>.carryon gui bg alpha 0.5</code></li>
+<li>Value must be between 0.0 and 1.0. Saved to client config.</li>
+</ul>
+</li>
+<li>.carryon gui bg show
+<ul>
+<li>Print current runtime settings and saved client config values for the anchor background.</li>
+</ul>
+</li>
+<li>.carryon gui bg reset
+<ul>
+<li>Reset the anchor background to mod defaults (runtime + save). (Defaults are the mod’s configured defaults — e.g., background color used by the mod.)</li>
+</ul>
+</li>
+</ul>
+<p>&nbsp;</p>
+<h4>Border (anchor outline)</h4>
+<ul>
+<li>.carryon gui border enable
+<ul>
+<li>Enable anchor border outline (runtime + save).</li>
+</ul>
+</li>
+<li>.carryon gui border disable
+<ul>
+<li>Disable anchor border outline (runtime + save).</li>
+</ul>
+</li>
+<li>.carryon gui border color &lt;hex&gt;
+<ul>
+<li>Set anchor border color (6-digit hex format). Example:&nbsp;<code>.carryon gui border color #45372D</code></li>
+<li>Validated and saved to client config.</li>
+</ul>
+</li>
+<li>.carryon gui border alpha &lt;0.0-1.0&gt;
+<ul>
+<li>Set anchor border alpha. Example:&nbsp;<code>.carryon gui border alpha 1.0</code></li>
+<li>Validated and saved.</li>
+</ul>
+</li>
+<li>.carryon gui border show
+<ul>
+<li>Show runtime and saved anchor border settings.</li>
+</ul>
+</li>
+<li>.carryon gui border reset
+<ul>
+<li>Reset anchor border to mod defaults (runtime + save).</li>
+</ul>
+</li>
+</ul>
+<p>&nbsp;</p>
+<h4>Icon highlight (glow around icons)</h4>
+<ul>
+<li>.carryon gui highlight enable
+<ul>
+<li>Enable icon highlight (runtime + save).</li>
+</ul>
+</li>
+<li>.carryon gui highlight disable
+<ul>
+<li>Disable icon highlight (runtime + save).</li>
+</ul>
+</li>
+<li>.carryon gui highlight color &lt;hex&gt;
+<ul>
+<li>Set icon highlight color (6-digit hex). Example:&nbsp;<code>.carryon gui highlight color #FFFFFF</code></li>
+<li>Validated and saved.</li>
+</ul>
+</li>
+<li>.carryon gui highlight alpha &lt;0.0-1.0&gt;
+<ul>
+<li>Set icon highlight alpha. Example:&nbsp;<code>.carryon gui highlight alpha 0.8</code></li>
+<li>Validated and saved.</li>
+</ul>
+</li>
+<li>.carryon gui highlight show
+<ul>
+<li>Show runtime and saved icon highlight settings.</li>
+</ul>
+</li>
+<li>.carryon gui highlight reset
+<ul>
+<li>Reset icon highlight to mod defaults (runtime + save).</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<p>&nbsp;</p>
+<h3>ModConfig</h3>
+<p>All carryables can be enabled/disabled via the CarryOnConfig.json file in ModConfig:</p>
+<div class="spoiler">
+<div class="spoiler-toggle">Description</div>
+<div class="spoiler-text">
+<p>Refer to the Default CarryOnConfig.json section below.</p>
+<h3>Carryables</h3>
+<p>Options to enable blocks that can be carried. Each option represents a group of block types and can be set to true or false.</p>
+<h3>Interactables</h3>
+<p>Options to enable blocks that can be interacted with while the player is carrying a block in their hands. Each option represents a group of block types (Doors also covers Trap Doors) and can be set to true or false.</p>
+<h3>CarryOptions</h3>
+<p>Options and setting to change carry behavior:</p>
+<ul>
+<li><strong>AllowSprintWhileCarrying</strong> (true/false): Normally players holding a block in their hands will not be able to sprint. When true, the player will be able to sprint, though may still have a movement penalty.</li>
+<li><strong>IgnoreCarrySpeedPenalty</strong> (true/false): Each carryable block imposes a speed penalty when carried in hands, or on back*. When true, all carryables penalties are removed and the player can move at their normal speed.</li>
+<li><strong>RemoveInteractDelayWhileCarrying</strong> (true/false): When a player is carrying a block in their hands they are only able to interact with the block types enabled in the Interactables config section. The interaction requires the player to hold the button until the animated spinner completes. This option removes the delay entirely.</li>
+<li><strong>InteractSpeedMultiplier</strong> (0.01 - 20): Most CarryOn interactions have a delay and show the animated spinner. This setting can speed up or slow down the spinner. e.g. Setting it to 2.0 means players can pickup and put down blocks twice as fast. Also effects interact while carrying and swapping blocks to back.</li>
+<li><strong>BackSlotEnabled</strong> (true/false): Some blocks can be carried on the player's back. If this option is set to false the the player will not be able to move any blocks to their back.</li>
+<li><strong>AllowChestTrunksOnBack</strong> (true/false): Enabling this option will allow players to carry the trunk on their back. Does require the ChestTrunk Carriables option to be enabled so the player can carry trunks.</li>
+<li><strong>AllowLargeChestsOnBack</strong> (true/false): This option allows higher capacity chests to be carried on the players back. Option is available for mods to use. e.g. ExtraChests</li>
+<li><strong>AllowCratesOnBack</strong> (true/false): Enabling this option will allow players to carry the crates on their back.</li>
+</ul>
+<h3>CarryablesFilters</h3>
+<p>Black magic.</p>
+<p>Filters to control what other blocks become carryable, interactable based their similarity and what mods and blocks to exclude.</p>
+<h3>DroppedBlockOptions</h3>
+<p>Only a single option related to dropped blocks:</p>
+<ul>
+<li><strong>NonGroundBlockClasses</strong> (string array): Block classes listed in this array will be treated like air when determining where to place a dropped block, such as falling to until it finds another block to land on. So beware of deep water lest ye lose yer bounty to thee murky depths.<br>Note that if you remove BlockWater and drop your block whilst under water, then the dropped block may not be able to spawn resulting in the item and any contents being spilled.&nbsp;<br>Try adding BlockLeaves for the extra fun of losing your chest in the foliage.&nbsp;<br>Blocks affected by these options may be replaced by the dropped block.</li>
+</ul>
+<h3>DebuggingOptions</h3>
+<p>In case of emergency break temporal gear:</p>
+<ul>
+<li><strong>LoggingEnabled</strong> (true/false): When enabled, extra debug logging information will be generated when processing the CarriablesFilters.&nbsp;</li>
+<li><strong>DisableHarmonyPatch</strong> (true/false): Harmony patches are used to hook into or override vanilla Vintage Story functions.<br>Disabling will break the double tap to dismount feature and possibly other functionality.</li>
+</ul>
+<p>&nbsp;</p>
+<div class="spoiler">
+<div class="spoiler-toggle">Default CarryOnConfig.json</div>
+<div class="spoiler-text">
+<pre>{<br>  "ConfigVersion": 2,<br>  "Carryables": {<br>    "Anvil": true,<br>    "Barrel": true,<br>    "Bookshelf": false,<br>    "BunchOCandles": false,<br>    "Chandelier": false,<br>    "ChestLabeled": true,<br>    "ChestTrunk": false,<br>    "Chest": true,<br>    "Clutter": false,<br>    "Crate": true,<br>    "DisplayCase": false,<br>    "Flowerpot": false,<br>    "Forge": false,<br>    "Henbox": false,<br>    "LogWithResin": false,<br>    "LootVessel": true,<br>    "MoldRack": false,<br>    "Molds": false,<br>    "Oven": false,<br>    "Planter": true,<br>    "Quern": true,<br>    "ReedBasket": true,<br>    "Resonator": true,<br>    "Shelf": false,<br>    "Sign": false,<br>    "StorageVessel": true,<br>    "ToolRack": false,<br>    "TorchHolder": false<br>  },<br>  "Interactables": {<br>    "Door": true,<br>    "Barrel": true,<br>    "Storage": true<br>  },<br>  "CarryOptions": {<br>    "AllowSprintWhileCarrying": false,<br>    "IgnoreCarrySpeedPenalty": false,<br>    "RemoveInteractDelayWhileCarrying": false,<br>    "InteractSpeedMultiplier": 1.0,<br>    "BackSlotEnabled": true,<br>    "AllowChestTrunksOnBack": false,<br>    "AllowLargeChestsOnBack": false,<br>    "AllowCratesOnBack": false<br>  },<br>  "CarryablesFilters": {<br>    "AutoMapSimilar": true,<br>    "AutoMatchIgnoreMods": [<br>      "mcrate"<br>    ],<br>    "AllowedShapeOnlyMatches": [<br>      "block/clay/lootvessel",<br>      "block/wood/chest/normal",<br>      "block/wood/trunk/normal",<br>      "block/reed/basket-normal"<br>    ],<br>    "RemoveBaseCarryableBehaviour": [<br>      "woodchests:wtrunk"<br>    ],<br>    "RemoveCarryableBehaviour": [<br>      "game:banner"<br>    ]<br>  },<br>  "DroppedBlockOptions": {<br>    "NonGroundBlockClasses": [<br>      "BlockWater",<br>      "BlockLava"<br>    ]<br>  },<br>  "DebuggingOptions": {<br>    "LoggingEnabled": false,<br>    "DisableHarmonyPatch": false<br>  }<br>}</pre>
+</div>
+</div>
+<p>&nbsp;</p>
+<div class="spoiler">
+<div class="spoiler-toggle">Config (Legacy version)</div>
+<div class="spoiler-text">
+<p>The values shown are the defaults.</p>
+<pre style="padding-left: 40px;">{<br>  "AnvilEnabled": true,<br>  "BarrelEnabled": true,<br>  "BookshelfEnabled": false,<br>  "BunchOCandlesEnabled": false,<br>  "ChandelierEnabled": false,<br>  "ChestLabeledEnabled": true,<br>  "ChestTrunkEnabled": false,<br>  "ChestEnabled": true,<br>  "ClutterEnabled": false,  (Most of the clutter found in ruins)<br>  "CrateLegacyEnabled": true,<br>  "CrateEnabled": true,<br>  "DisplayCaseEnabled": false,<br>  "FlowerpotEnabled": false,<br>  "ForgeEnabled": false,<br>  "HenboxEnabled": false, <br>  "LogWithResinEnabled": false,<br>  "LootVesselEnabled": true,<br>  "MoldRackEnabled": false,<br>  "MoldsEnabled": false,<br>  "OvenEnabled": false,<br>  "PlanterEnabled": true,<br>  "QuernEnabled": true,<br>  "ShelfEnabled": false,<br>  "SignEnabled": false,<br>  "ReedBasketEnabled": true, (Reed Chest)<br>  "StorageVesselEnabled": true,<br>  "ToolRackEnabled": false,<br>  "TorchHolderEnabled": false,<br>  "BackSlotEnabled": true, (Used to disable items carried on back)<br>  "AllowChestTrunksOnBack": false,<br>  "AllowLargeChestsOnBack": false, (e.g. ExtraChests)<br>  "AllowCratesOnBack": false,<br>  "NonGroundBlockClasses": [ <br>    "BlockWater",<br>    "BlockLava"
+  ],<br>&nbsp; "AutoMatchIgnoreMods": [<br>    "mcrate"<br>  ],<br>  "AllowedShapeOnlyMatches": [<br>    "block/clay/lootvessel",<br>    "block/wood/chest/normal",<br>    "block/wood/trunk/normal",<br>    "block/reed/basket-normal"<br>  ],<br>  "InteractDoorEnabled": true, (Hold interact button to open doors when carrying block in hands)<br>  "InteractStorageEnabled": true, (Hold interact button to open storage container when carrying block in hands)<br>  "AllowSprintWhileCarrying": false, (When true, players can still sprint while carrying chests, etc.)</pre>
+<pre style="padding-left: 40px;">  "IgnoreCarrySpeedPenalty": false, (When true, players will have normal movement speed when carrying block in hands and on back)<br>  "RemoveInteractDelayWhileCarrying": false, (When true, players can open doors and chests instantly while carrying a block in their hands)<br>  "InteractSpeedMultiplier": 1.0, (Multiplier to change the speed of the progress circle when interacting with carryable blocks)<br>  "LoggingEnabled": false (Output extra logging information)
+}</pre>
+<p>NonGroundBlockClasses is used to determine if a dropped block will sink through these types when looking for ground or placing the block.<br>e.g. Adding "BlockLeaves" will cause dropped blocks to fall through tree foliage.</p>
+<p>CarryOn will try to auto-match similar blocks in other mods to make them carryable. The following Config sections affect the auto-matching:</p>
+<ul>
+<li>AutoMatchIgnoreMods - any mod id added to this array will be excluded from auto-matching. mcrate has been excluded by default due to the multi-block storage. Carryable multi-blocks are not fully supported at the moment.</li>
+<li>AllowShapeOnlyMatches - Allows matching of similar carryables based on only the shape. Probably best to leave these as they are.</li>
+</ul>
+<p>The HoldControlForBackSwapFocus option can be used to disable to Ctrl key interaction to prioritise swapping blocks to and from the back slot.&nbsp;</p>
+<p>CarryOnClientConfig.json in ModConfig:</p>
+<pre style="padding-left: 40px;">{<br>  "HoldControlForBackSwapFocus": true<br>}</pre>
+<p>&nbsp;</p>
+</div>
+</div>
+<p>&nbsp;</p>
+<h3>&nbsp;</h3>
+</div>
+</div>
+<h3>Known Issues</h3>
+<ul>
+<li>Multi-block carryables are not fully supported. They have a habit of deleting other blocks if dropped. The Trunks should be okay.</li>
+<li>Some players have encountered an issue where they are unable to drop crate, clutter or other carried block. Current workaround is to use the Quickdrop key [Ctrl]+[Alt]+K.
+<ul>
+<li>Try going to the Key Controls section then uncheck 'Mouse click modifiers locked to Sneak/Sprint keys' and check it again. This can sometimes free-up strange keybind behavior.</li></ul></li></ul>

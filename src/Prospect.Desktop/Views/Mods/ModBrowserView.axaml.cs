@@ -16,9 +16,10 @@ namespace Prospect.Desktop.Views.Mods;
 public partial class ModBrowserView : UserControl
 {
     /// <summary>
-    /// Distance au bas du contenu, en pixels, sous laquelle la tranche suivante est demandée. Un
-    /// peu plus qu'une hauteur de carte (204 px) : la tranche arrive avant que l'utilisateur ne
-    /// touche le fond, plutôt qu'après.
+    /// Distance au bas du contenu, en pixels, sous laquelle la tranche suivante est demandée. Deux
+    /// bonnes rangées de la grille fluide, dont les cartes se dimensionnent désormais sur leur
+    /// contenu (autour de 150 px) : la tranche arrive avant que l'utilisateur ne touche le fond,
+    /// plutôt qu'après.
     /// </summary>
     private const double PrefetchDistance = 320;
 

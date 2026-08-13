@@ -35,10 +35,17 @@ internal sealed class FakeModLogoCache : IModLogoCache
     /// <summary>Jeton reçu au dernier appel, pour vérifier qu'un <c>Dispose</c> de la carte l'annule bien.</summary>
     public CancellationToken LastCancellationToken { get; private set; }
 
-    public async Task<Bitmap?> GetAsync(Uri logoUrl, CancellationToken cancellationToken = default)
+    /// <summary>Largeur d'usage reçue au dernier appel : c'est elle qui décide du coût mémoire réel.</summary>
+    public int LastMaxWidth { get; private set; }
+
+    public Task<Bitmap?> GetAsync(Uri logoUrl, CancellationToken cancellationToken = default)
+        => GetAsync(logoUrl, Prospect.Desktop.Services.ModLogoCache.MaxLogoWidth, cancellationToken);
+
+    public async Task<Bitmap?> GetAsync(Uri imageUrl, int maxWidth, CancellationToken cancellationToken = default)
     {
         CallCount++;
-        LastUrl = logoUrl;
+        LastUrl = imageUrl;
+        LastMaxWidth = maxWidth;
         LastCancellationToken = cancellationToken;
 
         if (_hangUntilCanceled)
