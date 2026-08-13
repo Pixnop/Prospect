@@ -163,6 +163,26 @@ public sealed class HtmlRichTextParserTests
     }
 
     [Fact]
+    public void Parse_SpacesAroundAnAnchor_StayOutOfTheLinkOnBothSides()
+    {
+        // Une espace happée par le lien se retrouve soulignée et cliquable devant ou derrière son
+        // libellé. Les deux côtés comptent : « voir <a>la doc</a> ensuite » a un blanc de chaque
+        // côté, et la fiche réelle de Carry On enchaîne les deux formes.
+        var runs = Parse("""<p>voir <a href="https://example.invalid">la doc</a> ensuite</p>""")
+            .ShouldHaveSingleItem()
+            .ShouldBeOfType<RichTextParagraph>()
+            .Runs;
+
+        runs.Count.ShouldBe(3);
+        runs[0].Text.ShouldBe("voir ");
+        runs[1].Text.ShouldBe("la doc");
+        runs[1].Link.ShouldNotBeNull();
+        runs[2].Text.ShouldBe(" ensuite");
+        runs[2].Link.ShouldBeNull();
+        TextOf(runs).ShouldBe("voir la doc ensuite");
+    }
+
+    [Fact]
     public void Parse_AnchorWithMarkupInside_KeepsBothTheStyleAndTheTarget()
     {
         var run = Parse("""<p><a href="https://example.invalid"><strong>gras</strong></a></p>""")

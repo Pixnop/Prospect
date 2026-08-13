@@ -359,15 +359,21 @@ public static class HtmlRichTextParser
         }
 
         /// <summary>
-        /// Pose l'espace qui sépare deux fragments. Il revient au fragment PRÉCÉDENT quand le style
-        /// ou le lien change : sinon l'espace de « voir <c>&lt;a&gt;</c>la doc » se retrouverait
-        /// dans le lien, donc souligné et cliquable alors qu'il n'appartient pas au libellé.
+        /// Pose l'espace qui sépare deux fragments. La règle tient en une phrase : l'espace ne
+        /// rejoint JAMAIS un fragment porteur de lien.
         /// </summary>
+        /// <remarks>
+        /// Sans elle, l'espace de « voir <c>&lt;a&gt;</c>la doc » entre dans le lien et se retrouve
+        /// souligné devant le libellé, puis celui de « <c>&lt;/a&gt;</c> to run. » s'y ajoute
+        /// derrière : dans les deux cas, la zone cliquable et le soulignement débordent d'un
+        /// caractère qui n'appartient pas au texte du lien. Défaut vu à l'œil sur la fiche réelle de
+        /// Carry On, qui en compte trente-quatre.
+        /// </remarks>
         private void AppendSeparator(RichTextStyle style, Uri? link)
         {
             if (_pending.Length == 0
                 && _runs.Count > 0
-                && _runs[^1] is { IsLineBreak: false } previous
+                && _runs[^1] is { IsLineBreak: false, Link: null } previous
                 && (previous.Style != style || previous.Link != link))
             {
                 _runs[^1] = previous with { Text = previous.Text + " " };
