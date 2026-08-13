@@ -43,6 +43,14 @@
                              IsVisible="{Binding Downloads.HasActive}" />
                 </Grid>
               </Button>
+              <Button Classes="ghost navitem" Classes.active="{Binding LogsNavItem.IsActive}" Command="{Binding LogsNavItem.SelectCommand}">
+                <Grid ColumnDefinitions="Auto,*">
+                  <Path Grid.Column="0" Width="16" Height="16" Margin="0,0,10,0" Stretch="Uniform"
+                        Data="{Binding LogsNavItem.IconKey, Converter={x:Static conv:IconKeyToGeometryConverter.Instance}}"
+                        Stroke="{DynamicResource Text2}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                  <TextBlock Grid.Column="1" Text="{Binding LogsNavItem.Label}" VerticalAlignment="Center" />
+                </Grid>
+              </Button>
               <Button Classes="ghost navitem" Classes.active="{Binding SettingsNavItem.IsActive}" Command="{Binding SettingsNavItem.SelectCommand}">
                 <Grid ColumnDefinitions="Auto,*">
                   <Path Grid.Column="0" Width="16" Height="16" Margin="0,0,10,0" Stretch="Uniform"

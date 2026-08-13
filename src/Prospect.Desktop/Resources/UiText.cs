@@ -74,6 +74,8 @@ internal static class UiText
 
     internal static TimeText Time => _table.Time;
 
+    internal static LogsText Logs => _table.Logs;
+
     /// <summary>
     /// La table correspondant à <paramref name="language"/>. Toute valeur inconnue rend la table
     /// française, le repli documenté de <see cref="ProspectSettings.NormalizeLanguage"/>.

@@ -1,0 +1,120 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Prospect.Desktop.ViewModels.Logs"
+             xmlns:conv="using:Prospect.Desktop.Converters"
+             mc:Ignorable="d" d:DesignWidth="944" d:DesignHeight="700"
+             x:Class="Prospect.Desktop.Views.Logs.LogsView"
+             x:DataType="vm:LogsViewModel">
+
+  <!--
+    La page Journaux. Aucune maquette du handoff ne la couvre : elle reprend la facture des autres
+    pages (en-tête titre + sous-titre chiffré + actions à droite, puis contenu défilant) et le rendu
+    monospace de l'onglet Journal d'une instance, qui montre déjà un fichier de log dans ce produit.
+
+    Ce que la page NE fait pas est écrit sur la page elle-même : elle affiche un INSTANTANÉ de la
+    fin du fichier, pas un suivi continu. Un tail temps réel demanderait un observateur de système
+    de fichiers et une politique de débit ; tant qu'il n'existe pas, la notice le dit et le bouton
+    Rafraîchir fait le travail, plutôt qu'une page qui semble figée sans qu'on sache pourquoi.
+
+    Les niveaux sont teintés par CLASSE plutôt que par pinceau lié, comme les tons de badge de
+    l'écran Versions : le ViewModel rend le mot (« error », « warn », « plain »), le style le
+    traduit en jeton de couleur, et le thème clair suit sans code supplémentaire.
+  -->
+
+  <UserControl.Styles>
+    <Style Selector="SelectableTextBlock.logline">
+      <Setter Property="FontFamily" Value="{DynamicResource FontMono}" />
+      <Setter Property="FontSize" Value="{StaticResource FsCaption}" />
+      <Setter Property="Foreground" Value="{DynamicResource Text2}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="LineHeight" Value="18" />
+    </Style>
+    <Style Selector="SelectableTextBlock.logline.warn">
+      <Setter Property="Foreground" Value="{DynamicResource WarningText}" />
+    </Style>
+    <Style Selector="SelectableTextBlock.logline.error">
+      <Setter Property="Foreground" Value="{DynamicResource DangerText}" />
+    </Style>
+  </UserControl.Styles>
+
+  <UserControl.Resources>
+    <DataTemplate x:Key="LogLineTemplate" x:DataType="vm:LogLineViewModel">
+      <SelectableTextBlock Classes="logline" Text="{Binding Text}"
+                           Classes.warn="{Binding Tone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=warn}"
+                           Classes.error="{Binding Tone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=error}" />
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Top" Margin="28,24,28,0">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Grid.Column="0" Spacing="4">
+          <TextBlock Text="{StaticResource Logs_Title}" Classes="onGlass"
+                     FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsTitle}"
+                     FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+          <TextBlock Text="{Binding SubtitleText}" Classes="onGlass"
+                     FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text3}" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+          <Button Classes="secondary" Command="{Binding RefreshCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Path Width="16" Height="16" Stretch="Uniform" Data="{StaticResource Icon.refresh}"
+                    Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+              <TextBlock Text="{StaticResource Logs_Refresh}" />
+            </StackPanel>
+          </Button>
+          <Button Classes="secondary" Command="{Binding ExportCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Path Width="16" Height="16" Stretch="Uniform" Data="{StaticResource Icon.upload}"
+                    Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+              <TextBlock Text="{StaticResource Logs_Export}" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </Grid>
+    </StackPanel>
+
+    <!-- Voir HomeView : marge sur le contenu, jamais Padding sur le ScrollViewer. -->
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="16" Margin="28,20,28,28">
+
+        <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Classes="onGlass"
+                   FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource DangerText}"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+        <Border Classes="card" IsVisible="{Binding HasLines}">
+          <StackPanel Margin="16" Spacing="10">
+            <TextBlock Text="{StaticResource Logs_SnapshotNotice}"
+                       FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+            <ItemsControl ItemsSource="{Binding Lines}" ItemTemplate="{StaticResource LogLineTemplate}" />
+          </StackPanel>
+        </Border>
+
+        <Border CornerRadius="{StaticResource RadiusMd}" BorderThickness="1" Background="{DynamicResource GlassPane}"
+                BorderBrush="{DynamicResource GlassEdgeStrong}" IsVisible="{Binding IsEmpty}">
+          <StackPanel HorizontalAlignment="Center" Spacing="12" Margin="32,48" MaxWidth="420">
+            <Path Width="40" Height="40" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.list}"
+                  Stroke="{DynamicResource Text4}" StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round" />
+            <TextBlock Text="{StaticResource Logs_EmptyTitle}" HorizontalAlignment="Center"
+                       FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                       FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+            <TextBlock Text="{StaticResource Logs_EmptyDescription}" HorizontalAlignment="Center" TextAlignment="Center"
+                       TextWrapping="Wrap" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text3}" LineHeight="20" />
+          </StackPanel>
+        </Border>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="{StaticResource Logs_PathLabel}" Classes="onGlass"
+                     FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+          <SelectableTextBlock Text="{Binding LogPathText}" FontFamily="{DynamicResource FontMono}"
+                               FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}"
+                               TextWrapping="Wrap" />
+        </StackPanel>
+
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

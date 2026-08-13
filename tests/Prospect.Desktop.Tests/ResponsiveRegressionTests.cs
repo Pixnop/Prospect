@@ -1,3 +1,5 @@
+using System.IO.Abstractions.TestingHelpers;
+
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
@@ -1085,6 +1087,61 @@ public sealed class ResponsiveRegressionTests
         window.ShouldHoldLayoutInvariantsAtEverySize("Dialogue d'import de modpack, aperçu");
 
         window.Close();
+    }
+
+    // ── Journaux ─────────────────────────────────────────────────────────────────────────────
+
+    [AvaloniaFact]
+    public void Logs_Populated_HoldsItsBoxes()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        SeedLogs(provider, fileSystem);
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.LogsNavItem.SelectCommand.Execute(null);
+        window.Settle();
+        shell.Logs.HasLines.ShouldBeTrue();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Page Journaux peuplée");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void Logs_Empty_HoldsItsBoxes()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out _, out _);
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.LogsNavItem.SelectCommand.Execute(null);
+        window.Settle();
+        shell.Logs.IsEmpty.ShouldBeTrue();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Page Journaux vide");
+
+        window.Close();
+    }
+
+    /// <summary>
+    /// Journal volontairement hostile : une ligne d'erreur très longue, celle-là même qui a révélé
+    /// le défaut d'installation Linux. Une page qui tient avec « ok » ne prouverait rien.
+    /// </summary>
+    private static void SeedLogs(ServiceProvider provider, MockFileSystem fileSystem)
+    {
+        var log = provider.GetRequiredService<IAppLog>();
+        log.Write(AppLogLevel.Info, "Version 1.22.6 installée : « /home/jean/.local/share/prospect/versions/1.22.6/Vintagestory » présent.");
+        log.Write(AppLogLevel.Warning, "Miroir cdn.vintagestory.at injoignable, bascule sur account.vintagestory.at.");
+        log.Write(
+            AppLogLevel.Error,
+            "Version 1.22.6 : aucun exécutable attendu (Vintagestory, Vintagestory.exe) dans "
+                + "« /home/jean/.local/share/prospect/versions/1.22.6 » après installation.");
+
+        var paths = provider.GetRequiredService<AppPaths>();
+        fileSystem.AddFile(
+            fileSystem.Path.Combine(paths.LogsDirectory, "instance-survie-medievale.log"),
+            new MockFileData("Game Version: v1.22.6"));
     }
 
     // ── Calques du shell ─────────────────────────────────────────────────────────────────────

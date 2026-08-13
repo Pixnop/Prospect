@@ -7,6 +7,7 @@ using Prospect.Desktop.Services;
 using Prospect.Desktop.ViewModels.Downloads;
 using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Instance;
+using Prospect.Desktop.ViewModels.Logs;
 using Prospect.Desktop.ViewModels.Mods;
 using Prospect.Desktop.ViewModels.Settings;
 using Prospect.Desktop.ViewModels.Versions;
@@ -29,6 +30,7 @@ public sealed partial class ShellViewModel : ObservableObject
         VersionsViewModel versions,
         ModBrowserViewModel modBrowser,
         DownloadsViewModel downloads,
+        LogsViewModel logs,
         SettingsViewModel settings,
         Func<string, InstanceDetailViewModel> instanceDetailFactory,
         IOverlayService overlay,
@@ -40,6 +42,7 @@ public sealed partial class ShellViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(versions);
         ArgumentNullException.ThrowIfNull(modBrowser);
         ArgumentNullException.ThrowIfNull(downloads);
+        ArgumentNullException.ThrowIfNull(logs);
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(instanceDetailFactory);
         ArgumentNullException.ThrowIfNull(overlay);
@@ -51,6 +54,7 @@ public sealed partial class ShellViewModel : ObservableObject
         Versions = versions;
         ModBrowser = modBrowser;
         Downloads = downloads;
+        Logs = logs;
         Settings = settings;
         _instanceDetailFactory = instanceDetailFactory;
         Overlay = overlay;
@@ -65,10 +69,12 @@ public sealed partial class ShellViewModel : ObservableObject
         var homeNavItem = new NavItemViewModel("layers", UiText.Shell.NavHome, home, Navigate);
         var modsNavItem = new NavItemViewModel("package", UiText.Shell.NavMods, modBrowser, ShowModBrowser);
         var versionsNavItem = new NavItemViewModel("hard-drive", UiText.Shell.NavVersions, versions, ShowVersions);
+        LogsNavItem = new NavItemViewModel("list", UiText.Shell.NavLogs, logs, ShowLogs);
         SettingsNavItem = new NavItemViewModel("settings", UiText.Shell.NavSettings, settings, ShowSettings);
 
         LibraryNavItems = [homeNavItem, modsNavItem, versionsNavItem];
         _allNavItems.AddRange(LibraryNavItems);
+        _allNavItems.Add(LogsNavItem);
         _allNavItems.Add(SettingsNavItem);
 
         _currentPage = null!;
@@ -103,6 +109,9 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>Contenu du popover Téléchargements : une vue sur la file du DownloadManager.</summary>
     public DownloadsViewModel Downloads { get; }
 
+    /// <summary>Page « Journaux ».</summary>
+    public LogsViewModel Logs { get; }
+
     /// <summary>Panneau modal partagé (wizard, dialogues de carte) : la vue résout son contenu via le <see cref="Prospect.Desktop.ViewLocator"/>.</summary>
     public IOverlayService Overlay { get; }
 
@@ -118,6 +127,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
     /// <summary>Section « Bibliothèque » de la sidebar : Accueil, Mods, Versions.</summary>
     public IReadOnlyList<NavItemViewModel> LibraryNavItems { get; }
+
+    /// <summary>Entrée « Journaux » de la zone basse de la sidebar.</summary>
+    public NavItemViewModel LogsNavItem { get; }
 
     /// <summary>Entrée « Réglages » de la zone basse de la sidebar (avec Téléchargements, géré à part car il ouvre un popover et non une page).</summary>
     public NavItemViewModel SettingsNavItem { get; }
@@ -224,6 +236,15 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         Navigate(page);
         _ = ModBrowser.InitializeCommand.ExecuteAsync(null);
+    }
+
+    // Même construction, pour la même raison : un journal lu une fois pour toutes à la construction
+    // du conteneur serait déjà périmé à la première ouverture de la page. C'est la relecture à
+    // l'entrée qui rend le bouton Rafraîchir un confort et non une obligation.
+    private void ShowLogs(object page)
+    {
+        Navigate(page);
+        Logs.RefreshCommand.Execute(null);
     }
 
     // Même construction que ShowModBrowser : la détection VS Launcher doit être relancée à chaque

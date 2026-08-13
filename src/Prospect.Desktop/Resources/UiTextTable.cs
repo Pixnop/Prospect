@@ -58,6 +58,8 @@ internal abstract class UiTextTable
     internal abstract FirstRunText FirstRun { get; }
 
     internal abstract TimeText Time { get; }
+
+    internal abstract LogsText Logs { get; }
 }
 
 /// <summary>
@@ -72,6 +74,8 @@ internal abstract class ShellText
     internal abstract string NavMods { get; }
 
     internal abstract string NavVersions { get; }
+
+    internal abstract string NavLogs { get; }
 
     internal abstract string NavSettings { get; }
 }
@@ -155,6 +159,8 @@ internal abstract class ToastsText
 
     internal abstract string ModpackExportedTitle { get; }
 
+    internal abstract string LogsExportedTitle { get; }
+
     internal abstract string BackupCreatedTitle { get; }
 
     internal abstract string BackupRestoredTitle { get; }
@@ -184,6 +190,26 @@ internal abstract class HomeText
 
     /// <summary>Pastille discrète de la carte d'instance (feature 4b), quand une vérification récente en a trouvé.</summary>
     internal abstract string UpdatesBadge(int count);
+}
+
+/// <summary>
+/// Textes CALCULÉS de la page Journaux. Les libellés fixes de la page (titre, boutons, état vide)
+/// sont dans les dictionnaires XAML, comme partout : ne vivent ici que les phrases qui comptent
+/// quelque chose.
+/// </summary>
+internal abstract class LogsText
+{
+    /// <summary>Ligne sous le titre : ce qui est affiché, et ce que l'export emporterait.</summary>
+    internal abstract string Subtitle(int shownLines, int fileCount);
+
+    /// <summary>Titre du sélecteur de destination de l'export.</summary>
+    internal abstract string ExportPickerTitle { get; }
+
+    /// <summary>Nom de fichier proposé par le sélecteur, extension comprise.</summary>
+    internal abstract string ExportFileName { get; }
+
+    /// <summary>Description du toast d'export abouti.</summary>
+    internal abstract string ExportedToastDescription(int fileCount);
 }
 
 /// <summary>Textes du popover Téléchargements.</summary>

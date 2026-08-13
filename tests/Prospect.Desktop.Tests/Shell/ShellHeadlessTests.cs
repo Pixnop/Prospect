@@ -6,11 +6,14 @@ using Avalonia.VisualTree;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Prospect.Core.Common;
 using Prospect.Core.Http;
+using Prospect.Desktop.ViewModels.Logs;
 using Prospect.Desktop.ViewModels.Mods;
 using Prospect.Desktop.ViewModels.Settings;
 using Prospect.Desktop.ViewModels.Shell;
 using Prospect.Desktop.Views.Home;
+using Prospect.Desktop.Views.Logs;
 using Prospect.Desktop.Views.Mods;
 
 using Shouldly;
@@ -82,6 +85,35 @@ public class ShellHeadlessTests
         shellViewModel.LibraryNavItems[0].IsActive.ShouldBeTrue();
         shellViewModel.SettingsNavItem.IsActive.ShouldBeFalse();
         window.GetVisualDescendants().OfType<HomeView>().ShouldNotBeEmpty();
+
+        window.Close();
+    }
+
+    /// <summary>
+    /// L'entrée « Journaux » vit dans la zone basse de la sidebar, avec Téléchargements et
+    /// Réglages, et ouvre une VRAIE page (contrairement à Téléchargements, qui ouvre un popover).
+    /// Entrer sur la page relit le fichier : sans ça, la page afficherait ce que le conteneur avait
+    /// lu à sa construction, c'est-à-dire rien.
+    /// </summary>
+    [AvaloniaFact]
+    public void SelectingLogsNavItem_ShowsTheLogsPageAndRereadsTheFile()
+    {
+        using var provider = TestServiceProviderFactory.Create(out _);
+        var window = provider.GetRequiredService<MainWindow>();
+        var shellViewModel = provider.GetRequiredService<ShellViewModel>();
+        window.Show();
+        window.Settle();
+
+        provider.GetRequiredService<IAppLog>().Write(AppLogLevel.Error, "Version 1.22.6 : aucun exécutable attendu.");
+
+        shellViewModel.LogsNavItem.SelectCommand.Execute(null);
+        window.Settle();
+
+        shellViewModel.CurrentPage.ShouldBeOfType<LogsViewModel>();
+        shellViewModel.LogsNavItem.IsActive.ShouldBeTrue();
+        shellViewModel.SettingsNavItem.IsActive.ShouldBeFalse();
+        shellViewModel.Logs.Lines.ShouldHaveSingleItem().Tone.ShouldBe("error");
+        window.GetVisualDescendants().OfType<LogsView>().ShouldNotBeEmpty();
 
         window.Close();
     }

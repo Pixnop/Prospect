@@ -57,6 +57,8 @@ internal sealed class EnglishUiText : UiTextTable
     internal override FirstRunText FirstRun { get; } = new EnglishFirstRunText();
 
     internal override TimeText Time { get; } = new EnglishTimeText();
+
+    internal override LogsText Logs { get; } = new EnglishLogsText();
 }
 
 internal sealed class EnglishShellText : ShellText
@@ -66,6 +68,8 @@ internal sealed class EnglishShellText : ShellText
     internal override string NavMods => "Mods";
 
     internal override string NavVersions => "Versions";
+
+    internal override string NavLogs => "Logs";
 
     internal override string NavSettings => "Settings";
 }
@@ -156,6 +160,8 @@ internal sealed class EnglishToastsText : ToastsText
 
     internal override string ModpackExportedTitle => "Modpack exported";
 
+    internal override string LogsExportedTitle => "Logs exported";
+
     internal override string BackupCreatedTitle => "Backup created";
 
     internal override string BackupRestoredTitle => "Backup restored";
@@ -173,6 +179,39 @@ internal sealed class EnglishHomeText : HomeText
     internal override string NoSearchResults(string query) => $"No instance matches “{query}”.";
 
     internal override string UpdatesBadge(int count) => count == 1 ? "1 update" : $"{count} updates";
+}
+
+internal sealed class EnglishLogsText : LogsText
+{
+    internal override string Subtitle(int shownLines, int fileCount)
+    {
+        var lines = shownLines switch
+        {
+            0 => "no lines",
+            1 => "1 line shown",
+            _ => $"last {shownLines} lines",
+        };
+
+        var files = fileCount switch
+        {
+            0 => "no log to export",
+            1 => "1 log to export",
+            _ => $"{fileCount} logs to export",
+        };
+
+        return $"{lines} · {files}";
+    }
+
+    internal override string ExportPickerTitle => "Export logs";
+
+    internal override string ExportFileName => "prospect-logs.zip";
+
+    internal override string ExportedToastDescription(int fileCount) => fileCount switch
+    {
+        0 => "No log to take along: the archive is empty.",
+        1 => "1 log in the archive.",
+        _ => $"{fileCount} logs in the archive.",
+    };
 }
 
 internal sealed class EnglishDownloadsText : DownloadsText

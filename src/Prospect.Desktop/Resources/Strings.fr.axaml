@@ -47,6 +47,15 @@
   <x:String x:Key="Downloads_Cancel">Annuler</x:String>
   <x:String x:Key="Downloads_ClearAll">Tout effacer</x:String>
 
+  <!-- ── Journaux ────────────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Logs_Title">Journaux</x:String>
+  <x:String x:Key="Logs_Refresh">Rafraîchir</x:String>
+  <x:String x:Key="Logs_Export">Exporter les journaux…</x:String>
+  <x:String x:Key="Logs_SnapshotNotice">Instantané : rafraîchis pour relire le fichier.</x:String>
+  <x:String x:Key="Logs_PathLabel">Fichier</x:String>
+  <x:String x:Key="Logs_EmptyTitle">Aucun journal pour l'instant</x:String>
+  <x:String x:Key="Logs_EmptyDescription">Prospect n'a encore rien écrit dans son journal. Installe une version ou lance une instance, puis reviens ici.</x:String>
+
   <!-- ── Accueil ─────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Home_Title">Instances</x:String>
   <x:String x:Key="Home_SearchPlaceholder">Filtrer les instances…</x:String>

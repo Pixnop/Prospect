@@ -25,6 +25,7 @@ using Prospect.Desktop.ViewModels.Downloads;
 using Prospect.Desktop.ViewModels.FirstRun;
 using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Instance;
+using Prospect.Desktop.ViewModels.Logs;
 using Prospect.Desktop.ViewModels.Migration;
 using Prospect.Desktop.ViewModels.Modpacks;
 using Prospect.Desktop.ViewModels.Mods;
@@ -77,6 +78,10 @@ public static class CompositionRoot
         // développement mais pour qu'un rapport de terrain soit arbitrable sur pièce : la ligne de
         // commande exacte de l'installeur du jeu, et le verdict de la vérification qui suit.
         services.AddSingleton<IAppLog, FileAppLog>();
+
+        // Et sa contrepartie en lecture, pour la page Journaux : le fichier n'était consultable
+        // que depuis un explorateur, ce qui en faisait une pièce que personne ne joint jamais.
+        services.AddSingleton<AppLogService>();
 
         // Domaine Instances. InstanceMetadataV1ToV2Migration (chantier Sauvegardes) est la
         // première vraie migration enregistrée : IEnumerable<IInstanceMetadataMigration> ne
@@ -168,6 +173,7 @@ public static class CompositionRoot
         services.AddSingleton<VersionsViewModel>();
         services.AddSingleton<ModBrowserViewModel>();
         services.AddSingleton<DownloadsViewModel>();
+        services.AddSingleton<LogsViewModel>();
         services.AddSingleton<ShellViewModel>();
 
         // Le wizard est éphémère (un par création d'instance) et l'Accueil l'obtient par fabrique

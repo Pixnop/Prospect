@@ -55,6 +55,8 @@ internal sealed class FrenchUiText : UiTextTable
     internal override FirstRunText FirstRun { get; } = new FrenchFirstRunText();
 
     internal override TimeText Time { get; } = new FrenchTimeText();
+
+    internal override LogsText Logs { get; } = new FrenchLogsText();
 }
 
 internal sealed class FrenchShellText : ShellText
@@ -64,6 +66,8 @@ internal sealed class FrenchShellText : ShellText
     internal override string NavMods => "Mods";
 
     internal override string NavVersions => "Versions";
+
+    internal override string NavLogs => "Journaux";
 
     internal override string NavSettings => "Réglages";
 }
@@ -154,6 +158,8 @@ internal sealed class FrenchToastsText : ToastsText
 
     internal override string ModpackExportedTitle => "Modpack exporté";
 
+    internal override string LogsExportedTitle => "Journaux exportés";
+
     internal override string BackupCreatedTitle => "Sauvegarde créée";
 
     internal override string BackupRestoredTitle => "Sauvegarde restaurée";
@@ -171,6 +177,39 @@ internal sealed class FrenchHomeText : HomeText
     internal override string NoSearchResults(string query) => $"Aucune instance ne correspond à « {query} ».";
 
     internal override string UpdatesBadge(int count) => count == 1 ? "1 mise à jour" : $"{count} mises à jour";
+}
+
+internal sealed class FrenchLogsText : LogsText
+{
+    internal override string Subtitle(int shownLines, int fileCount)
+    {
+        var lines = shownLines switch
+        {
+            0 => "aucune ligne",
+            1 => "1 ligne affichée",
+            _ => $"{shownLines} dernières lignes",
+        };
+
+        var files = fileCount switch
+        {
+            0 => "aucun journal à exporter",
+            1 => "1 journal à exporter",
+            _ => $"{fileCount} journaux à exporter",
+        };
+
+        return $"{lines} · {files}";
+    }
+
+    internal override string ExportPickerTitle => "Exporter les journaux";
+
+    internal override string ExportFileName => "prospect-journaux.zip";
+
+    internal override string ExportedToastDescription(int fileCount) => fileCount switch
+    {
+        0 => "Aucun journal à emporter : l'archive est vide.",
+        1 => "1 journal dans l'archive.",
+        _ => $"{fileCount} journaux dans l'archive.",
+    };
 }
 
 internal sealed class FrenchDownloadsText : DownloadsText
