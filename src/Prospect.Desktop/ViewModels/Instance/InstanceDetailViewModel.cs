@@ -56,6 +56,8 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         ModInstallService modInstallService,
         ModUpdateChecker updateChecker,
         IModUpdateCheckCache updateCache,
+        GameLogInsightsService logInsights,
+        IGameLogInsightsCache logInsightsCache,
         InstanceDoctor doctor,
         IAppEnvironment appEnvironment,
         IFileSystem fileSystem,
@@ -76,6 +78,8 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         ArgumentNullException.ThrowIfNull(modInstallService);
         ArgumentNullException.ThrowIfNull(updateChecker);
         ArgumentNullException.ThrowIfNull(updateCache);
+        ArgumentNullException.ThrowIfNull(logInsights);
+        ArgumentNullException.ThrowIfNull(logInsightsCache);
         ArgumentNullException.ThrowIfNull(doctor);
         ArgumentNullException.ThrowIfNull(appEnvironment);
         ArgumentNullException.ThrowIfNull(fileSystem);
@@ -119,7 +123,13 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
             instanceService, backupService, appEnvironment, overlay, clock, toasts);
         _isRunning = tracker.IsRunning(slug);
 
-        ModsTab = new InstanceModsTabViewModel(slug, mods, modInstallService, updateChecker, updateCache, clock, overlay, toasts, urlOpener, logoCache);
+        // Le chemin du journal est résolu une fois, ici : c'est le domaine du lancement qui sait
+        // où il vit (docs/architecture.md, section « 3. Lancement »), et l'onglet Mods n'a besoin
+        // que de le LIRE — lui passer le launcher entier lui donnerait de quoi lancer le jeu.
+        ModsTab = new InstanceModsTabViewModel(
+            slug, mods, modInstallService, updateChecker, updateCache,
+            logInsights, logInsightsCache, launcher.GetLogFilePath(slug),
+            clock, overlay, toasts, urlOpener, logoCache);
         ModsTab.BrowseRequested += (_, instanceSlug) => BrowseModsRequested?.Invoke(this, instanceSlug);
 
         _tracker.StatusChanged += OnTrackerStatusChanged;
@@ -273,6 +283,10 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
             {
                 _toasts.Show(ToastTone.Warning, UiText.Toasts.AutoBackupFailedTitle, UiText.Toasts.AutoBackupFailedMessage);
             }
+
+            // Le lancement vient de tronquer le journal : les pastilles du lancement précédent ne
+            // décrivent plus rien, elles disparaissent maintenant plutôt qu'à la sortie du jeu.
+            await ModsTab.ResetLogInsightsAsync(CancellationToken.None).ConfigureAwait(true);
         }
         catch (Exception ex) when (ex is InstanceNotFoundException or InstanceAlreadyRunningException
                                         or GameVersionNotInstalledException or Core.Runtime.RuntimeNotAvailableException
@@ -400,6 +414,11 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
             if (status.State == RunningInstanceState.Stopped)
             {
                 _ = ReloadHeaderAsync();
+
+                // Le journal du lancement est complet à cet instant précis, et c'est le seul
+                // moment où il a quelque chose de nouveau à dire : les pastilles de l'onglet Mods
+                // se recalculent ici sans que l'utilisateur ait à rouvrir quoi que ce soit.
+                _ = ModsTab.ReloadAfterExitAsync();
             }
         });
     }

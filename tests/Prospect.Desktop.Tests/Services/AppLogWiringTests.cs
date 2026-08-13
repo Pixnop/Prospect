@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 
 using Prospect.Core.Common;
+using Prospect.Core.Diagnostics;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Http;
 using Prospect.Core.Instances;
@@ -33,6 +34,7 @@ public sealed class AppLogWiringTests
         typeof(GameInstallService),
         typeof(ModInstallService),
         typeof(ModUpdateChecker),
+        typeof(GameLogInsightsService),
         typeof(IInstalledModRepository),
         typeof(IDownloadManager),
         typeof(IGameVersionCatalog),

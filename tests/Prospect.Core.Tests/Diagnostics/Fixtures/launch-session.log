@@ -1,0 +1,45 @@
+[2026-08-13T19:08:20.8838190+00:00] Lancement de « Survie » (1.22.6)
+13.8.2026 21:08:22 [Client Notification] Client logger started.
+13.8.2026 21:08:22 [Client Notification] Game Version: v1.22.6 (Stable)
+13.8.2026 21:08:22 [Client Notification] Operating System: Linux [Kernel 6.18.39.1]
+[W][21:08:22.268151] pw.conf      | [          conf.c: 1209 pw_conf_load_conf_for_context()] setting config.name to client-rt.conf is deprecated, using client.conf
+13.8.2026 21:08:22 [Client Notification] Start discovering assets
+13.8.2026 21:08:22 [Client Notification] Found 627 base assets in total
+13.8.2026 21:08:23 [Client Notification] Will search the following paths for mods:
+13.8.2026 21:08:23 [Client Notification]     /versions/1.22.6/Mods
+13.8.2026 21:08:23 [Client Notification]     /instances/survie/data/Mods
+13.8.2026 21:08:23 [Client Error] [ruinedcompass-0.4.2.zip] An exception was thrown trying to to load the ModInfo:
+13.8.2026 21:08:23 [Client Error] [ruinedcompass-0.4.2.zip] Exception: Invalid character after parsing property name. Expected ':' but got: i. Path '', line 1, position 7.
+   at Newtonsoft.Json.JsonTextReader.ParseProperty()
+   at Vintagestory.Common.ModContainer.LoadModInfo(ModCompilationContext compilationContext, ModAssemblyLoader loader) in VintagestoryLib\Common\API\ModContainer.cs:line 339
+13.8.2026 21:08:23 [Client Notification] Found 8 mods (1 disabled)
+13.8.2026 21:08:23 [Client Error] [hearthside] Could not resolve some dependencies:
+13.8.2026 21:08:23 [Client Error] [hearthside]     saltyseas - Missing
+13.8.2026 21:08:23 [Client Notification] Mods, sorted by dependency: hearthside, primitivesurvival, game, carryonlib, creative, survival, carryon
+13.8.2026 21:08:23 [Client Notification] Instantiated 152 mod systems from 6 enabled mods
+13.8.2026 21:08:23 [Client Notification] CarryOn: Harmony patches enabled.
+13.8.2026 21:08:23 [Client Event] started 'Carry On' mod
+13.8.2026 21:08:23 [Client Notification] External Origins in load order: modorigin@/versions/1.22.6/assets/creative/, modorigin@/versions/1.22.6/assets/survival/, mod@primitivesurvival-5.1.1.zip, mod@carryon-2.0.0-pre.8.zip
+13.8.2026 21:08:24 [Client Notification] Found 97 external assets in category patches
+13.8.2026 21:08:24 [Client Error] Patch 0 in hearthside:patches/kitchen.json: File saltyseas:blocktypes/barrel.json not found
+13.8.2026 21:08:24 [Client Error] Patch 3 in hearthside:patches/kitchen.json: File game:itemtypes/resource.json not found
+13.8.2026 21:08:24 [Client Warning] Patch 4 (target: carryon:blocktypes/crate.json) in hearthside:patches/kitchen.json failed probably because the syntax of the value is broken:
+13.8.2026 21:08:24 [Client Notification] JsonPatch Loader: 195 patches total, successfully applied 203 patches, missing files on 2 patches, unmet conditions on 127 patches, no errors
+13.8.2026 21:08:25 [Client Notification] Loaded 5300 unique items
+13.8.2026 21:08:26 [Client Notification] CarryOn: InitTransferBehaviors called. Registered transfer codes: []
+13.8.2026 21:08:26 [Client Error] [carryonlib] An exception was thrown when trying to start the mod:
+13.8.2026 21:08:26 [Client Error] [carryonlib] Exception: fixture failure on purpose
+   at CarryOn.CarryOnLib.CarryOnLibSystem.StartClientSide(ICoreClientAPI api)
+   at Vintagestory.Common.ModLoader.TryRunModPhase(Mod mod, ModSystem system, ICoreAPI api, ModRunPhase phase) in VintagestoryLib\Common\API\ModLoader.cs:line 680
+13.8.2026 21:08:26 [Client Error] Failed to start system CarryOn.CarryOnLib.CarryOnLibSystem
+13.8.2026 21:08:26 [Client Notification] Started 129 systems on Client:
+13.8.2026 21:08:26 [Client Notification]     Mod 'VSEssentials.dll' (game):
+13.8.2026 21:08:26 [Client Notification]         Vintagestory.ServerMods.Core
+13.8.2026 21:08:26 [Client Notification]     Mod 'primitivesurvival-5.1.1.zip' (primitivesurvival):
+13.8.2026 21:08:26 [Client Notification]         PrimitiveSurvival.ModSystem.PrimitiveSurvivalSystem
+13.8.2026 21:08:26 [Client Notification]     Mod 'carryonlib-1.0.0-pre.8.zip' (carryonlib):
+13.8.2026 21:08:26 [Client Notification]         CarryOn.CarryOnLib.CarryOnLibSystem
+13.8.2026 21:08:26 [Client Notification]     Mod 'carryon-2.0.0-pre.8.zip' (carryon):
+13.8.2026 21:08:26 [Client Notification]         CarryOn.CarrySystem
+13.8.2026 21:08:27 [Client Warning] PrimitiveSurvival.ModSystem.TreeHollows could not place a hollow at 12, 90, -44, will retry
+13.8.2026 21:08:40 [Client Notification] Exiting game now. Server running=False. Exit reason: Main screen quit button was pressed

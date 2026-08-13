@@ -661,6 +661,35 @@ internal abstract class ModsText
 
     internal abstract string BulkUpdateFailures(IReadOnlyList<BulkUpdateFailure> failures);
 
+    // ── Ce que le journal du dernier lancement dit d'un mod ─────────────────────────────────
+    // Voir Prospect.Core.Diagnostics.GameLogAnalyzer : tout est heuristique et informatif, donc
+    // ces textes CONSTATENT (« signale des erreurs ») au lieu d'accuser, et ne promettent jamais
+    // que la liste est complète.
+
+    /// <summary>Pastille rouge d'un mod auquel le dernier lancement attribue des erreurs.</summary>
+    internal abstract string LogErrorsBadge(int count);
+
+    /// <summary>Pastille ambre d'un mod auquel le dernier lancement attribue des avertissements.</summary>
+    internal abstract string LogWarningsBadge(int count);
+
+    /// <summary>Infobulle des pastilles ci-dessus : les premières lignes en cause, telles qu'écrites par le jeu.</summary>
+    internal abstract string LogProblemTooltip(IReadOnlyList<string> samples);
+
+    /// <summary>
+    /// Pastille neutre d'un mod qui référence le contenu d'un autre mod PRÉSENT.
+    /// <paramref name="others"/> compte les autres mods concernés, zéro quand il n'y en a qu'un.
+    /// </summary>
+    internal abstract string WorksWithBadge(string modName, int others);
+
+    /// <summary>Même pastille, quand la référence n'a PAS été résolue au dernier lancement.</summary>
+    internal abstract string ExpectsContentBadge(string modName, int others);
+
+    /// <summary>Une ligne de l'infobulle d'intégration : de quel mod il s'agit, et si la référence tient.</summary>
+    internal abstract string IntegrationTooltipLine(string modName, bool resolved);
+
+    /// <summary>Infobulle d'intégration complète : ses lignes, plus le rappel que ce n'est qu'un signal.</summary>
+    internal abstract string IntegrationTooltip(IReadOnlyList<string> lines);
+
     /// <summary>Grand nombre séparé selon la convention de la langue (1 234 en français, 1,234 en anglais).</summary>
     internal string FormatCount(int value) => value.ToString("N0", NumberCulture);
 

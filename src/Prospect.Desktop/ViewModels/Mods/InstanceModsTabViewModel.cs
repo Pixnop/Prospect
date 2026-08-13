@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Prospect.Core.Common;
+using Prospect.Core.Diagnostics;
 using Prospect.Core.Http;
 using Prospect.Core.ModDb;
 using Prospect.Desktop.Formatting;
@@ -26,6 +27,9 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
     private readonly ModInstallService _installService;
     private readonly ModUpdateChecker _updateChecker;
     private readonly IModUpdateCheckCache _updateCache;
+    private readonly GameLogInsightsService _logInsightsService;
+    private readonly IGameLogInsightsCache _logInsightsCache;
+    private readonly string _logFilePath;
     private readonly IClock _clock;
     private readonly IOverlayService _overlay;
     private readonly IToastService _toasts;
@@ -33,6 +37,7 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
     private readonly IModLogoCache _logoCache;
 
     private InstanceUpdateReport? _lastReport;
+    private InstanceLogInsights _logInsights = InstanceLogInsights.None;
     private string _instanceName;
 
     public InstanceModsTabViewModel(
@@ -41,6 +46,9 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
         ModInstallService installService,
         ModUpdateChecker updateChecker,
         IModUpdateCheckCache updateCache,
+        GameLogInsightsService logInsightsService,
+        IGameLogInsightsCache logInsightsCache,
+        string logFilePath,
         IClock clock,
         IOverlayService overlay,
         IToastService toasts,
@@ -52,6 +60,9 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
         ArgumentNullException.ThrowIfNull(installService);
         ArgumentNullException.ThrowIfNull(updateChecker);
         ArgumentNullException.ThrowIfNull(updateCache);
+        ArgumentNullException.ThrowIfNull(logInsightsService);
+        ArgumentNullException.ThrowIfNull(logInsightsCache);
+        ArgumentException.ThrowIfNullOrEmpty(logFilePath);
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(toasts);
@@ -63,6 +74,9 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
         _installService = installService;
         _updateChecker = updateChecker;
         _updateCache = updateCache;
+        _logInsightsService = logInsightsService;
+        _logInsightsCache = logInsightsCache;
+        _logFilePath = logFilePath;
         _clock = clock;
         _overlay = overlay;
         _toasts = toasts;
@@ -151,11 +165,19 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
         try
         {
             var mods = await _repository.ScanAsync(_slug, cancellationToken).ConfigureAwait(true);
+            await EnsureLogInsightsAsync(mods, cancellationToken).ConfigureAwait(true);
+            var displayNames = ModLogBadgePresenter.DisplayNames(mods);
 
             Mods.Clear();
             foreach (var mod in mods)
             {
-                Mods.Add(new InstalledModRowViewModel(mod, ToggleAsync, RequestUninstallAsync, RequestUpdateAsync, FindUpdateResult(mod)));
+                Mods.Add(new InstalledModRowViewModel(
+                    mod,
+                    ToggleAsync,
+                    RequestUninstallAsync,
+                    RequestUpdateAsync,
+                    FindUpdateResult(mod),
+                    ModLogBadgePresenter.Describe(mod, _logInsights, displayNames)));
             }
 
             HasMods = Mods.Count > 0;
@@ -164,6 +186,56 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Relit le journal du dernier lancement et reconstruit les lignes : appelé à la SORTIE du
+    /// jeu, quand le journal vient d'être écrit en entier et qu'il a enfin quelque chose à dire.
+    /// </summary>
+    public async Task ReloadAfterExitAsync(CancellationToken cancellationToken = default)
+    {
+        _logInsightsCache.Invalidate(_slug);
+        await RefreshAsync(cancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Oublie ce que le journal disait : appelé au LANCEMENT, parce que le lancement tronque le
+    /// journal (voir <c>GameLauncher.PrepareLogFile</c>). Garder les pastilles pendant que le jeu
+    /// tourne les ferait décrire une session qui n'existe plus.
+    /// </summary>
+    public async Task ResetLogInsightsAsync(CancellationToken cancellationToken = default)
+    {
+        _logInsightsCache.Invalidate(_slug);
+        _logInsights = InstanceLogInsights.None;
+        await RefreshAsync(cancellationToken).ConfigureAwait(true);
+    }
+
+    // Le journal est relu à la demande, jamais persisté ailleurs, et mémorisé pour la session par
+    // slug : c'est ce qui évite de le relire à chaque va-et-vient entre onglets. Un échec de
+    // lecture n'a aucune raison de faire tomber la liste des mods : dans le pire des cas la ligne
+    // n'affiche aucune pastille, ce qui est exactement ce qu'elle faisait avant cette feature.
+    private async Task EnsureLogInsightsAsync(IReadOnlyList<InstalledMod> mods, CancellationToken cancellationToken)
+    {
+        if (_logInsightsCache.TryGet(_slug) is { } cached)
+        {
+            _logInsights = cached;
+
+            return;
+        }
+
+        try
+        {
+            var insights = await _logInsightsService
+                .AnalyzeAsync(_slug, _logFilePath, mods, cancellationToken)
+                .ConfigureAwait(true);
+
+            _logInsightsCache.Store(_slug, insights);
+            _logInsights = insights;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            _logInsights = InstanceLogInsights.None;
         }
     }
 
@@ -425,6 +497,12 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
     {
         ApplyReport(null);
         _updateCache.Invalidate(_slug);
+
+        // Les intégrations, elles, dépendent de ce qui est INSTALLÉ à cet instant : installer le
+        // mod que ce zip visait transforme « attend du contenu de X » en « fonctionne avec X »,
+        // sans qu'aucun lancement n'ait eu lieu entre les deux. La lecture est donc refaite au
+        // rafraîchissement qui suit, à partir du même journal.
+        _logInsightsCache.Invalidate(_slug);
     }
 
     /// <summary>Libère le jeton d'annulation d'un éventuel « Tout mettre à jour » en cours.</summary>
@@ -451,12 +529,17 @@ public sealed partial class InstalledModRowViewModel : ObservableObject
     /// État de mise à jour connu pour ce mod, ou <see langword="null"/> si aucune vérification n'a
     /// encore eu lieu cette session.
     /// </param>
+    /// <param name="logBadges">
+    /// Ce que le journal du dernier lancement dit de ce mod, ou <see cref="ModLogBadges.None"/>
+    /// quand il n'en dit rien — c'est le cas sain, et le cas d'une instance jamais lancée.
+    /// </param>
     public InstalledModRowViewModel(
         InstalledMod installedMod,
         Func<InstalledModRowViewModel, bool, Task> toggle,
         Func<InstalledModRowViewModel, Task> remove,
         Func<InstalledModRowViewModel, Task> update,
-        ModUpdateResult? updateResult)
+        ModUpdateResult? updateResult,
+        ModLogBadges? logBadges = null)
     {
         ArgumentNullException.ThrowIfNull(installedMod);
         ArgumentNullException.ThrowIfNull(toggle);
@@ -497,6 +580,16 @@ public sealed partial class InstalledModRowViewModel : ObservableObject
         // mod de sa requête) : la maquette n'a donc rien de plus sobre à ajouter que ce badge déjà
         // affiché, pas de second indicateur redondant.
         IsUnknownToModDb = updateResult?.Status == ModUpdateStatus.UnknownToModDb;
+
+        var badges = logBadges ?? ModLogBadges.None;
+        HasLogErrors = badges.HasErrors;
+        LogErrorsText = badges.HasErrors ? UiText.Mods.LogErrorsBadge(badges.ErrorCount) : string.Empty;
+        HasLogWarnings = badges.HasWarnings;
+        LogWarningsText = badges.HasWarnings ? UiText.Mods.LogWarningsBadge(badges.WarningCount) : string.Empty;
+        LogProblemTooltip = badges.ProblemTooltip;
+        HasIntegration = badges.HasIntegration;
+        IntegrationText = badges.IntegrationText;
+        IntegrationTooltip = badges.IntegrationTooltip;
 
         _isEnabled = installedMod.IsEnabled;
     }
@@ -549,6 +642,30 @@ public sealed partial class InstalledModRowViewModel : ObservableObject
 
     /// <summary>Vrai si la dernière vérification n'a pas pu confirmer que ce mod est connu du ModDB.</summary>
     public bool IsUnknownToModDb { get; }
+
+    /// <summary>Vrai si le dernier lancement a écrit des erreurs attribuables à ce mod.</summary>
+    public bool HasLogErrors { get; }
+
+    /// <summary>« 2 erreurs au dernier lancement », vide quand il n'y en a pas.</summary>
+    public string LogErrorsText { get; }
+
+    /// <summary>Vrai si le dernier lancement a écrit des avertissements attribuables à ce mod.</summary>
+    public bool HasLogWarnings { get; }
+
+    /// <summary>« 1 avertissement », vide quand il n'y en a pas.</summary>
+    public string LogWarningsText { get; }
+
+    /// <summary>Les premières lignes en cause, telles que le jeu les a écrites.</summary>
+    public string LogProblemTooltip { get; }
+
+    /// <summary>Vrai si une intégration avec un autre mod a été relevée.</summary>
+    public bool HasIntegration { get; }
+
+    /// <summary>« fonctionne avec Carry On », vide quand rien n'a été relevé.</summary>
+    public string IntegrationText { get; }
+
+    /// <summary>Détail des intégrations relevées, une par ligne, avec leur nature.</summary>
+    public string IntegrationTooltip { get; }
 
     [ObservableProperty]
     private bool _isEnabled;

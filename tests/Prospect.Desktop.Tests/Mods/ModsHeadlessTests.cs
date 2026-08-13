@@ -311,6 +311,50 @@ public sealed class ModsHeadlessTests
         shell.Overlay.Active.ShouldBeNull();
     }
 
+    /// <summary>
+    /// Les pastilles du dernier lancement sont RENDUES, et leur libellé est celui qu'on lit dans
+    /// la fenêtre : un ViewModel qui compte juste ne prouve pas qu'un badge s'affiche.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task InstanceModsTab_AfterALaunchThatWentBadly_RendersTheBadgesOfTheGuiltyMod()
+    {
+        using var provider = TestServiceProviderFactory.Create(out var fileSystem);
+        provider.SeedInstalledVersion(fileSystem, "1.21.3");
+        var window = provider.GetRequiredService<MainWindow>();
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var home = provider.GetRequiredService<HomeViewModel>();
+        window.Show();
+        var record = await CreateInstanceAsync(shell, home, "Homestead", "1.21.3");
+
+        var mods = provider.GetRequiredService<IInstalledModRepository>();
+        ModDbDoubles.SeedMod(
+            fileSystem,
+            mods.GetModsDirectory(record.Slug),
+            "configlib-1.0.0.zip",
+            ModDbDoubles.ModInfo("configlib", "Config lib", "1.0.0"));
+        ResponsiveScenario.SeedLaunchLogBlaming(provider, fileSystem, record.Slug, "configlib");
+
+        shell.ShowInstanceDetail(record.Slug);
+        var detail = shell.CurrentPage.ShouldBeOfType<InstanceDetailViewModel>();
+        await detail.InitializeCommand.ExecuteAsync(null);
+        window.Settle();
+
+        var row = detail.ModsTab.Mods.ShouldHaveSingleItem();
+        row.LogErrorsText.ShouldBe("3 erreurs au dernier lancement");
+        row.IntegrationText.ShouldBe("attend du contenu de cartographieavancee");
+
+        var rendered = window.GetVisualDescendants().OfType<ContentControl>()
+            .Where(control => control.Classes.Contains("badge") && control.IsVisible)
+            .Select(control => control.Content as string)
+            .ToArray();
+
+        rendered.ShouldContain(row.LogErrorsText);
+        rendered.ShouldContain(row.LogWarningsText);
+        rendered.ShouldContain(row.IntegrationText);
+
+        window.Close();
+    }
+
     [AvaloniaFact]
     public async Task HomeCard_ReflectsAnUpdateCheckDoneFromTheInstanceTab_WithoutReloadingTheGrid()
     {

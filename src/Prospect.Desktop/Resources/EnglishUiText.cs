@@ -779,6 +779,34 @@ internal sealed class EnglishModsText : ModsText
         => failures.Count == 0
             ? string.Empty
             : $"Failed for {string.Join(", ", failures.Select(failure => failure.ModName))}.";
+
+    internal override string LogErrorsBadge(int count) => count == 1
+        ? "1 error at the last launch"
+        : $"{count} errors at the last launch";
+
+    internal override string LogWarningsBadge(int count) => count == 1
+        ? "1 warning"
+        : $"{count} warnings";
+
+    internal override string LogProblemTooltip(IReadOnlyList<string> samples) => samples.Count == 0
+        ? string.Empty
+        : "What the game wrote at the last launch:" + Environment.NewLine + string.Join(Environment.NewLine, samples);
+
+    internal override string WorksWithBadge(string modName, int others) => others <= 0
+        ? $"works with {modName}"
+        : $"works with {modName} and {others} other{(others == 1 ? string.Empty : "s")}";
+
+    internal override string ExpectsContentBadge(string modName, int others) => others <= 0
+        ? $"expects content from {modName}"
+        : $"expects content from {modName} and {others} other{(others == 1 ? string.Empty : "s")}";
+
+    internal override string IntegrationTooltipLine(string modName, bool resolved) => resolved
+        ? $"References content from {modName}, which is present."
+        : $"References content from {modName}, missing at the last launch.";
+
+    internal override string IntegrationTooltip(IReadOnlyList<string> lines) => lines.Count == 0
+        ? string.Empty
+        : string.Join(Environment.NewLine, lines) + Environment.NewLine + "Read from the log and the archives: a hint, never a blocker.";
 }
 
 

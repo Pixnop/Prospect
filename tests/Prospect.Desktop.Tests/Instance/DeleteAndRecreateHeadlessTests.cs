@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 
 using Prospect.Core.Common;
+using Prospect.Core.Diagnostics;
 using Prospect.Core.Instances;
 using Prospect.Core.Launching;
 using Prospect.Core.ModDb;
@@ -109,6 +110,35 @@ public sealed class DeleteAndRecreateHeadlessTests
 
         var second = await instances.CreateAsync("Homestead", SampleVersion);
         fileSystem.File.Exists(launcher.GetLogFilePath(second.Slug)).ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// La LECTURE du journal se garde en mémoire pour la session (voir
+    /// <see cref="IGameLogInsightsCache"/>) : elle doit partir avec l'instance, sans quoi une
+    /// instance recréée du même nom afficherait les pastilles d'erreurs de la précédente sur des
+    /// mods qui, eux, viennent d'être installés.
+    /// </summary>
+    [Fact]
+    public async Task DeletingAnInstance_ForgetsWhatItsJournalSaidAboutItsMods()
+    {
+        using var provider = TestServiceProviderFactory.Create(out _);
+        var instances = provider.GetRequiredService<InstanceService>();
+        var cache = provider.GetRequiredService<IGameLogInsightsCache>();
+
+        var first = await instances.CreateAsync("Homestead", SampleVersion);
+        cache.Store(first.Slug, new InstanceLogInsights(
+            DateTimeOffset.UnixEpoch,
+            HasLog: true,
+            [new ModLogInsight("carryon", 2, 0, ["une erreur"])],
+            []));
+        cache.TryGet(first.Slug).ShouldNotBeNull();
+
+        await instances.DeleteAsync(first.Slug);
+
+        cache.TryGet(first.Slug).ShouldBeNull();
+
+        var second = await instances.CreateAsync("Homestead", SampleVersion);
+        cache.TryGet(second.Slug).ShouldBeNull();
     }
 
     /// <summary>
