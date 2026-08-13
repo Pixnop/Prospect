@@ -209,6 +209,10 @@ internal sealed class FrenchVersionsText : VersionsText
             + "Il a probablement été installé par-dessus une installation existante de Vintage Story. "
             + "Rien n'a été marqué comme installé.";
 
+    internal override string ArchiveMissingExecutable(string targetDirectory)
+        => "L'archive du jeu a été extraite sans erreur, mais elle ne contenait pas l'exécutable attendu "
+            + $"à l'endroit attendu dans « {targetDirectory} ». Rien n'a été marqué comme installé.";
+
     internal override string Subtitle(int installedCount, string totalSize) => installedCount switch
     {
         0 => "Aucune version installée · dossier partagé entre les instances",

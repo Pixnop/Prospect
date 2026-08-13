@@ -243,11 +243,20 @@ internal abstract class VersionsText
     internal abstract string BrokenReason(GameInstallBrokenReason reason);
 
     /// <summary>
-    /// L'installeur s'est terminé sans erreur mais le jeu n'est pas dans le dossier de la version.
-    /// Le message NOMME le dossier attendu : c'est la seule information qui permette à quelqu'un de
-    /// comprendre qu'une installation système a capté l'installation, et d'aller vérifier.
+    /// WINDOWS : l'installeur s'est terminé sans erreur mais le jeu n'est pas dans le dossier de la
+    /// version. Le message NOMME le dossier attendu : c'est la seule information qui permette à
+    /// quelqu'un de comprendre qu'une installation système a capté l'installation, et d'aller
+    /// vérifier.
     /// </summary>
     internal abstract string InstallLandedElsewhere(string targetDirectory);
+
+    /// <summary>
+    /// LINUX ET MACOS : même fait rapporté, autre récit. Il n'y a pas d'installeur sur ces
+    /// systèmes, seulement une archive extraite, donc rien n'a pu « être installé ailleurs » :
+    /// ce que le message doit dire, c'est que l'archive ne portait pas l'exécutable à l'endroit
+    /// attendu. Voir <c>Formatting.GameInstallFailurePresenter</c>.
+    /// </summary>
+    internal abstract string ArchiveMissingExecutable(string targetDirectory);
 
     internal abstract string UninstallTitle(string version);
 

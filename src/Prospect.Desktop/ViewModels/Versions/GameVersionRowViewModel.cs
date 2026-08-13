@@ -141,8 +141,9 @@ public sealed partial class GameVersionRowViewModel : ObservableObject, IProgres
         {
             // Le seul échec d'installation dont le message du domaine ne suffit pas : ce qui compte
             // pour l'utilisateur n'est pas « aucun exécutable attendu », c'est OÙ Prospect
-            // l'attendait et pourquoi il n'y est pas. Traduit, donc, contrairement aux autres.
-            ErrorMessage = UiText.Versions.InstallLandedElsewhere(exception.TargetDirectory);
+            // l'attendait et pourquoi il n'y est pas. Traduit, donc, contrairement aux autres, et
+            // raconté selon l'OS : installeur sous Windows, archive ailleurs.
+            ErrorMessage = GameInstallFailurePresenter.IncompleteInstallMessage(_operatingSystem, exception.TargetDirectory);
         }
         catch (Exception exception) when (exception is GameVersionNotAvailableException or GameInstallFailedException or DownloadFailedException)
         {

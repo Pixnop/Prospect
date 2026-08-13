@@ -211,6 +211,10 @@ internal sealed class EnglishVersionsText : VersionsText
             + "It was most likely installed over an existing Vintage Story install. "
             + "Nothing was marked as installed.";
 
+    internal override string ArchiveMissingExecutable(string targetDirectory)
+        => "The game archive was extracted without an error, but it did not carry the expected executable "
+            + $"where it was expected in “{targetDirectory}”. Nothing was marked as installed.";
+
     internal override string Subtitle(int installedCount, string totalSize) => installedCount switch
     {
         0 => "No version installed · folder shared by every instance",
