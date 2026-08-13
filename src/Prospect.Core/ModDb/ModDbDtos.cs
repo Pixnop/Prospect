@@ -214,7 +214,13 @@ internal sealed record ModDbUpdatesResponseDto : IModDbV1Envelope
     [JsonPropertyName("statuscode")]
     public string? StatusCode { get; init; }
 
+    /// <summary>
+    /// Les mods en retard, par <c>modidstr</c>. Le convertisseur est OBLIGATOIRE : quand rien n'est
+    /// en retard, PHP encode la map vide en <c>[]</c> et non en <c>{}</c> (voir
+    /// <see cref="PhpAssociativeArrayConverter{TValue}"/>).
+    /// </summary>
     [JsonPropertyName("updates")]
+    [JsonConverter(typeof(PhpAssociativeArrayConverter<ModDbReleaseDto>))]
     public Dictionary<string, ModDbReleaseDto>? Updates { get; init; }
 }
 
@@ -283,10 +289,17 @@ internal sealed record ModDbV2ReleaseDto
 /// </summary>
 internal sealed record ModDbV2InstallInformationResponseDto
 {
+    /// <summary>Une entrée par identifiant explicitement demandé. Même piège de map vide que v1.</summary>
     [JsonPropertyName("data")]
+    [JsonConverter(typeof(PhpAssociativeArrayConverter<ModDbV2InstallInformationEntryDto>))]
     public Dictionary<string, ModDbV2InstallInformationEntryDto>? Data { get; init; }
 
+    /// <summary>
+    /// Dépendances transitives ajoutées par <c>resolve-deps</c>. C'est la map la PLUS exposée au
+    /// piège : un mod sans aucune dépendance la laisse vide, donc encodée <c>[]</c>.
+    /// </summary>
     [JsonPropertyName("resolved")]
+    [JsonConverter(typeof(PhpAssociativeArrayConverter<ModDbV2InstallInformationEntryDto>))]
     public Dictionary<string, ModDbV2InstallInformationEntryDto>? Resolved { get; init; }
 
     [JsonPropertyName("warnings")]

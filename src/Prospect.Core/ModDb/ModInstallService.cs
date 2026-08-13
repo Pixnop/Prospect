@@ -56,11 +56,20 @@ public sealed class ModInstallFailedException : Exception
 /// et proposer les dépendances manquantes sans jamais les installer d'autorité.
 /// </summary>
 /// <remarks>
+/// <para>
 /// L'installation se fait en DEUX temps, et ce n'est pas un détail. <see cref="PrepareAsync"/>
 /// télécharge l'archive dans le cache partagé et lit son <c>modinfo.json</c> : c'est le seul moyen
 /// de connaître les dépendances réelles, elles ne sont exposées nulle part dans l'API. Il en sort
 /// un plan, montré à l'utilisateur. <see cref="ApplyAsync"/> ne fait ensuite que copier dans
 /// <c>data/Mods/</c> ce qui a été accepté. Une dépendance non cochée n'est jamais installée.
+/// </para>
+/// <para>
+/// Corollaire de ces deux temps : le fichier ramené par la préparation est RÉUTILISÉ tel quel par
+/// l'application. Le plan en porte le chemin (<see cref="ModInstallItem.PreparedArchivePath"/>),
+/// sans quoi la deuxième phase redemandait un téléchargement pour un fichier déjà posé sur le
+/// disque : une ligne de plus dans le popover et deux de plus dans le journal, à deux secondes de
+/// la première. Le fichier disparu entre les deux retombe sur un téléchargement propre.
+/// </para>
 /// </remarks>
 public sealed class ModInstallService
 {
@@ -205,10 +214,14 @@ public sealed class ModInstallService
             ?? (candidates.Count > 0 ? candidates[0] : null)
             ?? throw new ModReleaseNotFoundException(detail.Name, gameVersion);
 
-        var primary = await BuildItemAsync(detail.ModId, detail.Name, choice, cancellationToken).ConfigureAwait(false);
+        var built = await BuildItemAsync(detail.ModId, detail.Name, choice, cancellationToken).ConfigureAwait(false);
 
-        var archivePath = await DownloadAsync(primary, progress, cancellationToken).ConfigureAwait(false);
+        var archivePath = await DownloadAsync(built, progress, cancellationToken).ConfigureAwait(false);
         var content = _archiveReader.Read(archivePath);
+
+        // L'archive est déjà là : le plan garde son chemin pour que l'application n'en redemande
+        // pas une deuxième (voir ModInstallItem.PreparedArchivePath).
+        var primary = built with { PreparedArchivePath = archivePath };
 
         var installed = await _repository.ScanAsync(slug, cancellationToken).ConfigureAwait(false);
         var remote = await ResolveRemoteDependenciesAsync(primary.ModIdString, gameVersion, cancellationToken).ConfigureAwait(false);
@@ -393,7 +406,7 @@ public sealed class ModInstallService
         var size = updateResult.AnnouncedSizeBytes
             ?? await _client.GetFileSizeAsync(release.DownloadUrl, cancellationToken).ConfigureAwait(false);
 
-        var updated = new ModInstallItem(
+        var built = new ModInstallItem(
             modDbModId,
             previous.DisplayName,
             release,
@@ -401,8 +414,9 @@ public sealed class ModInstallService
             BuildFileName(release.ModIdString, release.Version),
             size);
 
-        var archivePath = await DownloadAsync(updated, progress, cancellationToken).ConfigureAwait(false);
+        var archivePath = await DownloadAsync(built, progress, cancellationToken).ConfigureAwait(false);
         var content = _archiveReader.Read(archivePath);
+        var updated = built with { PreparedArchivePath = archivePath };
 
         var installed = await _repository.ScanAsync(slug, cancellationToken).ConfigureAwait(false);
         var remote = await ResolveRemoteDependenciesAsync(release.ModIdString, gameVersion, cancellationToken).ConfigureAwait(false);
@@ -714,7 +728,7 @@ public sealed class ModInstallService
         IProgress<DownloadProgress>? progress,
         CancellationToken cancellationToken)
     {
-        var archivePath = await DownloadAsync(item, progress, cancellationToken).ConfigureAwait(false);
+        var archivePath = await ResolveArchiveAsync(item, progress, cancellationToken).ConfigureAwait(false);
         var modsDirectory = _repository.GetModsDirectory(slug);
         _fileSystem.Directory.CreateDirectory(modsDirectory);
 
@@ -747,6 +761,59 @@ public sealed class ModInstallService
 
         return installed.FirstOrDefault(mod => string.Equals(mod.FileName, item.TargetFileName, StringComparison.OrdinalIgnoreCase))
             ?? throw new ModInstallFailedException($"Le fichier « {item.TargetFileName} » n'a pas été retrouvé après son installation.");
+    }
+
+    /// <summary>
+    /// L'archive à poser dans l'instance : celle que la préparation a déjà ramenée quand elle est
+    /// toujours là et toujours conforme, un téléchargement propre sinon.
+    /// </summary>
+    /// <remarks>
+    /// C'est la moitié « application » du correctif du double téléchargement (voir
+    /// <see cref="ModInstallItem.PreparedArchivePath"/>). Le repli n'est pas une politesse : le
+    /// cache de téléchargement est un dossier ordinaire, qu'un nettoyage manuel ou un outil système
+    /// peut vider entre l'ouverture du dialogue et le clic sur Installer. Un fichier disparu doit
+    /// coûter un téléchargement, jamais un échec d'installation.
+    /// </remarks>
+    private async Task<string> ResolveArchiveAsync(ModInstallItem item, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)
+        => TryReusePreparedArchive(item, out var prepared)
+            ? prepared
+            : await DownloadAsync(item, progress, cancellationToken).ConfigureAwait(false);
+
+    /// <summary>
+    /// Vrai quand l'archive préparée est encore sur le disque ET fait toujours la taille annoncée.
+    /// Le ModDB n'expose aucune empreinte (vérifié dans tout <c>lib/api/</c>), la taille du CDN est
+    /// donc le seul contrôle d'intégrité disponible, exactement comme pour <see cref="VerifySize"/>.
+    /// </summary>
+    private bool TryReusePreparedArchive(ModInstallItem item, out string archivePath)
+    {
+        archivePath = string.Empty;
+
+        if (item.PreparedArchivePath is not { Length: > 0 } candidate)
+        {
+            return false;
+        }
+
+        try
+        {
+            if (!_fileSystem.File.Exists(candidate))
+            {
+                return false;
+            }
+
+            if (item.AnnouncedSizeBytes is { } expected && expected > 0 && _fileSystem.FileInfo.New(candidate).Length != expected)
+            {
+                return false;
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Un cache devenu illisible n'est pas une erreur d'installation : on retélécharge.
+            return false;
+        }
+
+        archivePath = candidate;
+
+        return true;
     }
 
     private async Task<string> DownloadAsync(ModInstallItem item, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)

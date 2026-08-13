@@ -34,7 +34,18 @@ public sealed class ModInstallServiceUpdateTests
         ModInstallService Service,
         IInstalledModRepository Repository,
         MockFileSystem FileSystem,
-        FakeServer Server);
+        FakeServer Server,
+        DownloadManager Downloads,
+        FakeHttpMessageHandler Handler)
+    {
+        /// <summary>Téléchargements ENGAGÉS pour une archive : ce que le popover et le journal montrent.</summary>
+        public int DownloadOperations(string targetFileName) => Downloads.Operations.Count(
+            operation => operation.FileName == targetFileName);
+
+        /// <summary><c>GET</c> réellement partis vers le CDN pour une archive.</summary>
+        public int ArchiveRequests(string cdnFileName) => Handler.Requests.Count(
+            request => request.Method == HttpMethod.Get && request.Url.AbsolutePath == $"/{cdnFileName}");
+    }
 
     private static Harness Create(string gameVersion = "1.22.1", Func<IDownloadManager, IDownloadManager>? wrapDownloads = null)
     {
@@ -58,11 +69,8 @@ public sealed class ModInstallServiceUpdateTests
             Paths,
             clock,
             new RetryPolicy(RetryOptions.NoDelay, (_, _) => Task.CompletedTask));
-        IDownloadManager downloads = new DownloadManager(new HttpClient(handler), fileSystem, Paths, clock);
-        if (wrapDownloads is not null)
-        {
-            downloads = wrapDownloads(downloads);
-        }
+        var manager = new DownloadManager(new HttpClient(handler), fileSystem, Paths, clock);
+        IDownloadManager downloads = wrapDownloads is null ? manager : wrapDownloads(manager);
 
         SeedInstance(fileSystem, gameVersion);
         server.CdnFiles["/configlib_1.12.0.zip"] = ModInfoSamples.BuildArchive(ModInfo("configlib", "Config lib", "1.12.0"));
@@ -71,7 +79,9 @@ public sealed class ModInstallServiceUpdateTests
             new ModInstallService(client, downloads, repository, instances, archiveReader, fileSystem, clock),
             repository,
             fileSystem,
-            server);
+            server,
+            manager,
+            handler);
     }
 
     private static void SeedInstance(MockFileSystem fileSystem, string gameVersion)
@@ -332,6 +342,37 @@ public sealed class ModInstallServiceUpdateTests
 
         await Should.ThrowAsync<ArgumentException>(
             () => harness.Service.PrepareUpdateAsync(Slug, noUpdate, cancellationToken: CancellationToken.None));
+    }
+
+    // ── Un seul téléchargement par archive ──────────────────────────────────────────
+
+    /// <summary>Même défaut que sur l'installation : la mise à jour partait deux fois par zip.</summary>
+    [Fact]
+    public async Task PrepareThenApplyUpdate_EngagesExactlyOneDownloadPerArchive()
+    {
+        var harness = Create();
+        var previous = await SeedInstalledConfigLibAsync(harness);
+        var plan = await harness.Service.PrepareUpdateAsync(Slug, UpdateResultFor(previous), cancellationToken: CancellationToken.None);
+
+        await harness.Service.ApplyUpdateAsync(Slug, plan, cancellationToken: CancellationToken.None);
+
+        harness.DownloadOperations("configlib-1.12.0.zip").ShouldBe(1);
+        harness.ArchiveRequests("configlib_1.12.0.zip").ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task ApplyUpdateAsync_ThePreparedFileVanishedFromTheCache_DownloadsItAgainRatherThanFailing()
+    {
+        var harness = Create();
+        var previous = await SeedInstalledConfigLibAsync(harness);
+        var plan = await harness.Service.PrepareUpdateAsync(Slug, UpdateResultFor(previous), cancellationToken: CancellationToken.None);
+
+        harness.FileSystem.File.Delete(harness.FileSystem.Path.Combine(Paths.DownloadsCacheDirectory, "configlib-1.12.0.zip"));
+
+        var outcome = await harness.Service.ApplyUpdateAsync(Slug, plan, cancellationToken: CancellationToken.None);
+
+        outcome.Installed.ShouldHaveSingleItem().FileName.ShouldBe("configlib-1.12.0.zip");
+        harness.DownloadOperations("configlib-1.12.0.zip").ShouldBe(2);
     }
 
     // ── Tout mettre à jour ───────────────────────────────────────────────────────────

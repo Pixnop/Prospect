@@ -27,7 +27,21 @@ public sealed class ModInstallServiceTests
         ModInstallService Service,
         IInstalledModRepository Repository,
         MockFileSystem FileSystem,
-        FakeModDbServer Server);
+        FakeModDbServer Server,
+        FakeHttpMessageHandler Handler,
+        DownloadManager Downloads)
+    {
+        /// <summary>Nombre de <c>GET</c> réellement partis vers le CDN pour une archive donnée.</summary>
+        public int ArchiveRequests(string cdnFileName) => Handler.Requests.Count(
+            request => request.Method == HttpMethod.Get && request.Url.AbsolutePath == $"/{cdnFileName}");
+
+        /// <summary>
+        /// Nombre de téléchargements ENGAGÉS pour une archive : ce que le popover affiche et ce que
+        /// le journal consigne, réutilisation du cache comprise.
+        /// </summary>
+        public int DownloadOperations(string targetFileName) => Downloads.Operations.Count(
+            operation => operation.FileName == targetFileName);
+    }
 
     private static Harness Create(string gameVersion = "1.21.3")
     {
@@ -59,7 +73,9 @@ public sealed class ModInstallServiceTests
             new ModInstallService(client, downloads, repository, instances, archiveReader, fileSystem, clock),
             repository,
             fileSystem,
-            server);
+            server,
+            handler,
+            downloads);
     }
 
     private static void SeedInstance(MockFileSystem fileSystem, string gameVersion)
@@ -658,6 +674,60 @@ public sealed class ModInstallServiceTests
     [InlineData("!!!", "1.0.0", "mod-1.0.0.zip")]
     public void BuildFileName_KeepsASimpleNameThatCannotEscapeTheModsFolder(string modId, string version, string expected)
         => ModInstallService.BuildFileName(modId, ModVersion.Parse(version)).ShouldBe(expected);
+
+    // ── Un seul téléchargement par archive ──────────────────────────────────────────
+
+    /// <summary>
+    /// Le défaut de terrain : chaque zip de mod partait DEUX fois, à deux secondes d'intervalle,
+    /// une fois à la préparation et une fois à l'application.
+    /// </summary>
+    [Fact]
+    public async Task PrepareThenApply_EngagesExactlyOneDownloadPerArchive()
+    {
+        var harness = Create("1.21.3");
+
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, cancellationToken: CancellationToken.None);
+        await harness.Service.ApplyAsync(Slug, plan, cancellationToken: CancellationToken.None);
+
+        harness.DownloadOperations("configlib-1.11.1.zip").ShouldBe(1);
+        harness.ArchiveRequests("configlib_1.11.1.zip").ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task PrepareThenApply_WithADependency_EngagesExactlyOneDownloadPerArchive()
+    {
+        var harness = Create("1.21.3");
+
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, cancellationToken: CancellationToken.None);
+        await harness.Service.ApplyAsync(Slug, plan, ["vsimgui"], cancellationToken: CancellationToken.None);
+
+        harness.DownloadOperations("configlib-1.11.1.zip").ShouldBe(1);
+        harness.ArchiveRequests("configlib_1.11.1.zip").ShouldBe(1);
+
+        // La dépendance n'est téléchargée qu'à l'application : elle n'a jamais été préparée, donc
+        // son unique téléchargement est bien le sien.
+        harness.DownloadOperations("vsimgui-1.3.0.zip").ShouldBe(1);
+        harness.ArchiveRequests("vsimgui_1.3.0.zip").ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Le fichier préparé s'est évaporé entre les deux temps (nettoyage du cache, purge manuelle) :
+    /// l'application le retélécharge proprement plutôt que d'échouer.
+    /// </summary>
+    [Fact]
+    public async Task ApplyAsync_ThePreparedFileVanishedFromTheCache_DownloadsItAgainRatherThanFailing()
+    {
+        var harness = Create("1.21.3");
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, cancellationToken: CancellationToken.None);
+
+        harness.FileSystem.File.Delete(harness.FileSystem.Path.Combine(Paths.DownloadsCacheDirectory, "configlib-1.11.1.zip"));
+
+        var outcome = await harness.Service.ApplyAsync(Slug, plan, cancellationToken: CancellationToken.None);
+
+        outcome.Installed.ShouldHaveSingleItem().FileName.ShouldBe("configlib-1.11.1.zip");
+        harness.DownloadOperations("configlib-1.11.1.zip").ShouldBe(2);
+        harness.ArchiveRequests("configlib_1.11.1.zip").ShouldBe(2);
+    }
 
     private static async Task InstallDependencyAsync(Harness harness)
     {
