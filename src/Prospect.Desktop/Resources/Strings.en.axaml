@@ -264,7 +264,7 @@
   <x:String x:Key="Dialog_AdoptVsl_Close">Close</x:String>
   <x:String x:Key="Dialog_AdoptVsl_InstallationsSectionTitle">Installs</x:String>
   <x:String x:Key="Dialog_AdoptVsl_EnginesSectionTitle">Engines</x:String>
-  <x:String x:Key="Dialog_AdoptVsl_EnginesNotice">These files are copied from VS Launcher exactly as they are, with no fresh verification (none of the checksum a download gets). If in doubt, uninstall the version and download it again from the Versions screen.</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_EnginesNotice">These files are copied from VS Launcher exactly as they are, and nothing checks them again: a download gets a checksum, this does not. If in doubt, uninstall the version and download it again from the Versions screen.</x:String>
 
   <!-- ── Réglages ────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Settings_Title">Settings</x:String>
@@ -307,7 +307,7 @@
 
   <!-- Comptes -->
   <x:String x:Key="Settings_AccountsSectionTitle">Vintage Story account</x:String>
-  <x:String x:Key="Settings_AccountsIntro">Signing in only matters for multiplayer: your session is written into each instance at launch, and the game authenticates itself with it. Downloading and playing solo never needs it.</x:String>
+  <x:String x:Key="Settings_AccountsIntro">Signing in only matters for multiplayer: your session is written into each instance at launch, and the game authenticates with it. Downloading and playing solo never needs it.</x:String>
   <x:String x:Key="Settings_AccountsEmailLabel">Account email</x:String>
   <x:String x:Key="Settings_AccountsPasswordLabel">Password</x:String>
   <x:String x:Key="Settings_AccountsPasswordHint">Your password is used to obtain the session, then forgotten: Prospect keeps it nowhere.</x:String>
@@ -315,7 +315,7 @@
   <x:String x:Key="Settings_AccountsSigningIn">Signing in…</x:String>
   <x:String x:Key="Settings_AccountsTwoFactorTitle">Verification code</x:String>
   <x:String x:Key="Settings_AccountsTwoFactorLabel">Six-digit code</x:String>
-  <x:String x:Key="Settings_AccountsTwoFactorHint">Your account asks for two-factor authentication. Open your code app and type in the one it shows.</x:String>
+  <x:String x:Key="Settings_AccountsTwoFactorHint">Your account asks for two-factor authentication. Open your authenticator app and type in the code it shows.</x:String>
   <x:String x:Key="Settings_AccountsTwoFactorSubmit">Submit the code</x:String>
   <x:String x:Key="Settings_AccountsTwoFactorCancel">Cancel</x:String>
   <x:String x:Key="Settings_AccountsSignedInTitle">Signed in</x:String>

@@ -17,7 +17,7 @@ namespace Prospect.Desktop.Resources;
 /// </summary>
 /// <remarks>
 /// Des membres ABSTRAITS plutôt qu'un dictionnaire de clés : la parité des deux langues est alors
-/// une erreur de compilation, pas un test à écrire — oublier une phrase en anglais empêche la
+/// une erreur de compilation, pas un test à écrire : oublier une phrase en anglais empêche la
 /// solution de compiler, et aucune langue ne peut porter un texte que l'autre n'a pas. Les rares
 /// formats qui ne contiennent AUCUN mot (« nom · version », une date ISO) sont concrets sur la
 /// classe de base : les redéclarer par langue inviterait à les faire diverger sans raison.

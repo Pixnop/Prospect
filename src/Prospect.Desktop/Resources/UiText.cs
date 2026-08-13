@@ -20,8 +20,8 @@ namespace Prospect.Desktop.Resources;
 /// projet. La justification tient en deux points. D'abord, la langue est fixée UNE FOIS, avant que
 /// la moindre vue ne se construise (voir <c>Services.LanguageService.ApplyStartupLanguage</c>), et
 /// ne rebascule jamais à chaud : ce n'est donc pas un état qui varie pendant l'exécution, c'est une
-/// constante décidée au démarrage. Ensuite, l'alternative — injecter la table dans les quelque
-/// trente ViewModels qui écrivent du texte — ajouterait une dépendance de constructeur partout
+/// constante décidée au démarrage. Ensuite, l'alternative (injecter la table dans les quelque
+/// trente ViewModels qui écrivent du texte) ajouterait une dépendance de constructeur partout
 /// pour une valeur que personne ne peut changer, et rendrait chaque ViewModel plus lourd à
 /// construire en test sans rien rendre plus vrai. Le garde-fou est
 /// <see cref="Fix(string)"/> : une deuxième fixation lève, ce qui rend structurellement impossible

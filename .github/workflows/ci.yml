@@ -131,6 +131,13 @@ jobs:
       # (Environment, Process, chmod). Les tester reviendrait à tester la BCL, et certaines
       # n'existent même pas sur les trois OS de la matrice, donc aucune combinaison de tests ne
       # pourrait les couvrir partout.
+      #
+      # sonar.cpd.exclusions ne couvre que les deux tables de traduction. Elles sont
+      # structurellement identiques PAR CONSTRUCTION : même surface abstraite, un override par
+      # phrase, seule la phrase change (voir docs/architecture.md, « Langue de l'interface »).
+      # C'est exactement ce qui rend la parité des langues vérifiable par le compilateur, et le
+      # détecteur de copier-coller n'a rien à y dire : dédupliquer deux traductions reviendrait à
+      # n'en avoir qu'une.
       - name: Démarrage de l'analyse SonarCloud
         if: steps.sonar-token.outputs.has_token == 'true'
         run: >
@@ -141,6 +148,7 @@ jobs:
           /d:sonar.host.url="https://sonarcloud.io"
           /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
           /d:sonar.coverage.exclusions="src/Prospect.Desktop/**/*,src/Prospect.Core/Storage/SystemAppEnvironment.cs,src/Prospect.Core/Common/SystemProcessRunner.cs,src/Prospect.Core/Common/SystemUnixFilePermissions.cs"
+          /d:sonar.cpd.exclusions="src/Prospect.Desktop/Resources/FrenchUiText.cs,src/Prospect.Desktop/Resources/EnglishUiText.cs"
           /d:sonar.exclusions="src/Prospect.Desktop/Assets/**"
           /d:sonar.sourceEncoding="UTF-8"
           /d:sonar.qualitygate.wait=true
