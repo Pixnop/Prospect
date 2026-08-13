@@ -271,15 +271,17 @@ public class FileSystemInstanceRepositoryTests
     [Fact]
     public async Task LoadAsync_OlderSchemaWithMigrationRegistered_MigratesAndPersistsUpgradedFile()
     {
-        // Chaîne de deux migrations factices (0 -> 1 -> 2) : la mécanique générique du pipeline
+        // Chaîne de migrations factices, une par palier jusqu'au schéma courant : la mécanique
+        // générique du pipeline
         // s'exerce isolément d'InstanceMetadataV1ToV2Migration elle-même (voir son test dédié,
         // Migrations/InstanceMetadataV1ToV2MigrationTests.cs), ce test-ci ne prouve que
         // « FileSystemInstanceRepository migre puis persiste », pas le contenu d'une migration
         // précise.
         var fileSystem = new MockFileSystem();
-        var v0ToV1 = new FakeInstanceMetadataMigration(fromSchemaVersion: 0, markerPropertyName: "migratedFromV0");
-        var v1ToV2 = new FakeInstanceMetadataMigration(fromSchemaVersion: 1, markerPropertyName: "migratedFromV1");
-        var repository = CreateRepository(fileSystem, [v0ToV1, v1ToV2]);
+        var migrations = Enumerable.Range(0, InstanceMetadata.CurrentSchemaVersion)
+            .Select(from => new FakeInstanceMetadataMigration(from, $"migratedFromV{from}"))
+            .ToArray();
+        var repository = CreateRepository(fileSystem, migrations);
         var path = fileSystem.Path.Combine(repository.GetInstanceDirectory("legacy"), "instance.json");
         var json = ToJson(CreateSampleMetadata()).Replace(
             $"\"schemaVersion\":{InstanceMetadata.CurrentSchemaVersion}", "\"schemaVersion\":0", StringComparison.Ordinal);
@@ -310,12 +312,13 @@ public class FileSystemInstanceRepositoryTests
     }
 
     [Fact]
-    public async Task LoadAsync_RealV1ToV2Migration_MigratesWithSaneBackupDefaultsAndPersistsStably()
+    public async Task LoadAsync_RealMigrationChain_MigratesWithSaneDefaultsAndPersistsStably()
     {
-        // La première vraie migration du projet (voir sa docstring), testée dans les deux sens :
-        // v1 chargé → défauts de backups posés → sauvé en v2 ; v2 rechargé ensuite identique.
+        // Les VRAIES migrations du projet, enchaînées comme la composition root les enregistre :
+        // v1 chargé → défauts de backups posés → mesa_glthread promu en champ typé → sauvé au
+        // schéma courant, puis rechargé identique.
         var fileSystem = new MockFileSystem();
-        var repository = CreateRepository(fileSystem, [new InstanceMetadataV1ToV2Migration()]);
+        var repository = CreateRepository(fileSystem, [new InstanceMetadataV1ToV2Migration(), new InstanceMetadataV2ToV3Migration()]);
         var path = fileSystem.Path.Combine(repository.GetInstanceDirectory("legacy"), "instance.json");
         fileSystem.AddFile(path, new MockFileData("""
         {
@@ -329,16 +332,17 @@ public class FileSystemInstanceRepositoryTests
 
         var loaded = await repository.LoadAsync("legacy", CancellationToken.None);
 
-        loaded.Metadata.SchemaVersion.ShouldBe(2);
+        loaded.Metadata.SchemaVersion.ShouldBe(InstanceMetadata.CurrentSchemaVersion);
         loaded.Metadata.Backups.AutoBeforeLaunch.ShouldBeFalse();
         loaded.Metadata.Backups.KeepCount.ShouldBe(5);
+        loaded.Metadata.Launch.MesaGlThread.ShouldBeFalse();
 
-        // Sauvé en v2 : le fichier sur disque porte désormais le schéma courant et un bloc backups.
+        // Le fichier sur disque porte désormais le schéma courant et un bloc backups.
         var persisted = System.Text.Json.Nodes.JsonNode.Parse(fileSystem.File.ReadAllText(path))!.AsObject();
-        persisted["schemaVersion"]!.GetValue<int>().ShouldBe(2);
+        persisted["schemaVersion"]!.GetValue<int>().ShouldBe(InstanceMetadata.CurrentSchemaVersion);
         persisted["backups"].ShouldNotBeNull();
 
-        // Rechargé, le document v2 passe directement (sans migration) et reste identique.
+        // Rechargé, le document courant passe directement (sans migration) et reste identique.
         var reloaded = await repository.LoadAsync("legacy", CancellationToken.None);
         reloaded.ShouldBe(loaded);
     }

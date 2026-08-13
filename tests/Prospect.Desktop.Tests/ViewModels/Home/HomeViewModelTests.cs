@@ -124,7 +124,7 @@ public class HomeViewModelTests
     {
         var versions = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
         var catalog = new FakeGameVersionCatalog { Catalog = FakeGameVersionCatalog.Build("1.21.3") };
-        var installService = new GameInstallService(catalog, new FakeDownloadManager(), versions, new FakeGameInstallStrategy());
+        var installService = new GameInstallService(catalog, new FakeDownloadManager(), versions, new FakeGameInstallStrategy(fileSystem), fileSystem, NullAppLog.Instance);
 
         return () => new WizardViewModel(service, overlay, catalog, versions, installService, new ImmediateUiDispatcher());
     }
@@ -139,7 +139,7 @@ public class HomeViewModelTests
         var downloads = new FakeDownloadManager();
         var versions = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
         var catalog = new FakeGameVersionCatalog { Catalog = FakeGameVersionCatalog.Build("1.21.3") };
-        var gameInstall = new GameInstallService(catalog, downloads, versions, new FakeGameInstallStrategy());
+        var gameInstall = new GameInstallService(catalog, downloads, versions, new FakeGameInstallStrategy(fileSystem), fileSystem, NullAppLog.Instance);
         var importService = new ModpackImportService(modDbClient, downloads, mods, service, repository, gameInstall, versions, catalog, fileSystem, clock);
 
         return sourcePath => new ImportModpackViewModel(sourcePath, importService, overlay, new RecordingToastService(), new ImmediateUiDispatcher());

@@ -51,8 +51,8 @@ public class WizardViewModelTests
 
         var catalog = new FakeGameVersionCatalog { Catalog = FakeGameVersionCatalog.Build("1.22.0-rc.1", "1.21.3", "1.20.4") };
         var downloads = new FakeDownloadManager();
-        var strategy = new FakeGameInstallStrategy();
-        var installService = new GameInstallService(catalog, downloads, versions, strategy);
+        var strategy = new FakeGameInstallStrategy(fileSystem);
+        var installService = new GameInstallService(catalog, downloads, versions, strategy, fileSystem, NullAppLog.Instance);
         var viewModel = new WizardViewModel(service, overlay, catalog, versions, installService, new ImmediateUiDispatcher());
 
         return new Harness(viewModel, overlay, catalog, downloads, strategy, versions, fileSystem);

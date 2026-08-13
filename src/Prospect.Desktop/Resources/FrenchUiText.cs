@@ -78,6 +78,9 @@ internal sealed class FrenchWizardText : WizardText
 
     internal override string SummaryNoVersion => "Choisis une version du jeu à l'étape précédente.";
 
+    internal override string NameBeingDeleted
+        => "Une instance de ce nom est en cours de suppression. Attends qu'elle soit terminée, ou choisis un autre nom.";
+
     internal override IReadOnlyList<string> StepLabels { get; } = ["Nom", "Version", "Icône", "Résumé"];
 
     internal override string IconLabel(string iconChoiceKey) => iconChoiceKey switch
@@ -116,6 +119,11 @@ internal sealed class FrenchDialogsText : DialogsText
 
     internal override string DeleteMessage(string instanceName)
         => $"Toutes les données de « {instanceName} » seront supprimées définitivement, mondes et mods compris. Cette action est irréversible.";
+
+    internal override string DeleteInProgress => "Suppression en cours… Ça peut prendre un moment sur une instance avec de gros mondes.";
+
+    internal override string DeletePartialFailure(string directory)
+        => $"La suppression n'a pas pu aller jusqu'au bout : il reste des fichiers dans « {directory} ». Ferme le jeu s'il tourne encore, puis réessaie.";
 
     internal override string RestoreBackupTitle(string instanceName) => $"Restaurer « {instanceName} » ?";
 
@@ -186,6 +194,11 @@ internal sealed class FrenchVersionsText : VersionsText
 
     internal override string UnavailableCatalog
         => "Le catalogue est injoignable. Seules les versions déjà installées sont affichées.";
+
+    internal override string InstallLandedElsewhere(string targetDirectory)
+        => $"L'installeur s'est terminé sans erreur, mais le jeu n'est pas dans « {targetDirectory} ». "
+            + "Il a probablement été installé par-dessus une installation existante de Vintage Story. "
+            + "Rien n'a été marqué comme installé.";
 
     internal override string Subtitle(int installedCount, string totalSize) => installedCount switch
     {
@@ -529,6 +542,13 @@ internal sealed class FrenchModsText : ModsText
 
     internal override string PlanMessage(string version, string instanceName)
         => $"La version {version} sera ajoutée à « {instanceName} ».";
+
+    internal override string ReplacePlanTitle(string modName) => $"Remplacer « {modName} » ?";
+
+    internal override string ReplacePlanMessage(string currentVersion, string version, string instanceName)
+        => string.IsNullOrEmpty(currentVersion)
+            ? $"La copie déjà installée dans « {instanceName} » sera remplacée par la version {version}. Son état activé ou désactivé est conservé."
+            : $"La version {currentVersion} installée dans « {instanceName} » sera remplacée par la version {version}. Son état activé ou désactivé est conservé.";
 
     internal override string ApproximateWarning(string gameVersion)
         => $"Aucune version n'est déclarée compatible avec {gameVersion} : celle-ci est proposée parce qu'elle cible la même série. L'auteur ne l'a pas confirmée, elle peut ne pas fonctionner.";

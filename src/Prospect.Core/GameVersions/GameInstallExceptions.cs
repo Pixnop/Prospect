@@ -37,6 +37,74 @@ public sealed class GameInstallFailedException : Exception
 }
 
 /// <summary>
+/// L'installation s'est terminée sans erreur mais le dossier de la version ne contient aucun des
+/// exécutables attendus : le jeu n'est pas là où Prospect l'attendait.
+/// </summary>
+/// <remarks>
+/// Un type à part de <see cref="GameInstallFailedException"/>, parce que le fait rapporté n'est pas
+/// le même et que l'interface a un message différent à en tirer. Le cas est né d'un test réel sous
+/// Windows, où l'installeur Inno peut retomber sur le dossier d'une installation système
+/// préexistante ; il vaut pour les trois OS (une extraction qui n'a produit qu'un dossier vide se
+/// détecte exactement pareil). Tant qu'elle est levée, la sentinelle de complétude n'est PAS
+/// écrite et le dossier est nettoyé : un dossier de <c>versions/</c> porteur de la sentinelle
+/// reste, comme documenté, une installation complète.
+/// </remarks>
+public sealed class GameInstallIncompleteException : Exception
+{
+    public GameInstallIncompleteException()
+        : base("L'installation de la version du jeu n'a laissé aucun exécutable dans son dossier.")
+    {
+        TargetDirectory = string.Empty;
+        ExpectedExecutables = [];
+    }
+
+    public GameInstallIncompleteException(string message)
+        : base(message)
+    {
+        TargetDirectory = string.Empty;
+        ExpectedExecutables = [];
+    }
+
+    public GameInstallIncompleteException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+        TargetDirectory = string.Empty;
+        ExpectedExecutables = [];
+    }
+
+    private GameInstallIncompleteException(string message, string targetDirectory, IReadOnlyList<string> expectedExecutables)
+        : base(message)
+    {
+        TargetDirectory = targetDirectory;
+        ExpectedExecutables = expectedExecutables;
+    }
+
+    /// <summary>Dossier où l'installation était attendue.</summary>
+    public string TargetDirectory { get; }
+
+    /// <summary>Noms des exécutables cherchés, en chemins relatifs lisibles.</summary>
+    public IReadOnlyList<string> ExpectedExecutables { get; }
+
+    /// <summary>Aucun des exécutables attendus n'est présent après une installation pourtant terminée sans erreur.</summary>
+    public static GameInstallIncompleteException For(
+        GameVersion version,
+        string targetDirectory,
+        IReadOnlyList<GameExecutableLocation> expectedExecutables)
+    {
+        ArgumentNullException.ThrowIfNull(expectedExecutables);
+
+        var names = expectedExecutables.Select(location => location.ToString()).ToArray();
+
+        return new GameInstallIncompleteException(
+            $"L'installation de la version {version} s'est terminée sans erreur, mais « {targetDirectory} » "
+            + $"ne contient aucun des exécutables attendus ({string.Join(", ", names)}). "
+            + "Le jeu a probablement été installé ailleurs.",
+            targetDirectory,
+            names);
+    }
+}
+
+/// <summary>
 /// Le catalogue ne propose pas cette version, ou ne propose aucun fichier pour la plateforme
 /// courante (par exemple une version trop ancienne pour laquelle il n'existe pas de build mac).
 /// </summary>

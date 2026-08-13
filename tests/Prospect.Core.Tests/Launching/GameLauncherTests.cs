@@ -232,6 +232,60 @@ public sealed class GameLauncherTests
         request.EnvironmentVariables!["MESA_GLTHREAD"].ShouldBe("true");
     }
 
+    /// <summary>
+    /// L'option <c>mesa_glthread</c> vue depuis le processus réellement lancé : présente sur Linux
+    /// quand elle est cochée, absente ailleurs, absente quand elle ne l'est pas. C'est la stratégie
+    /// qui la pose, pas le lanceur, qui continue d'ignorer sur quel système il tourne.
+    /// </summary>
+    [Fact]
+    public async Task LaunchAsync_MesaGlThreadOnLinux_PutsTheVariableInTheProcessEnvironment()
+    {
+        var fixture = CreateFixture(fileSystem => new LinuxGameLaunchStrategy(fileSystem));
+        var slug = await CreateInstalledInstanceAsync(fixture);
+        await fixture.InstanceService.UpdateLaunchSettingsAsync(
+            slug,
+            new InstanceLaunchSettings { MesaGlThread = true },
+            CancellationToken.None);
+
+        await fixture.Launcher.LaunchAsync(slug, cancellationToken: CancellationToken.None);
+
+        var request = fixture.ProcessRunner.StartRequests.ShouldHaveSingleItem();
+        request.EnvironmentVariables.ShouldNotBeNull();
+        request.EnvironmentVariables!["mesa_glthread"].ShouldBe("true");
+    }
+
+    [Fact]
+    public async Task LaunchAsync_MesaGlThreadNotEnabled_PutsNothingInTheProcessEnvironment()
+    {
+        var fixture = CreateFixture(fileSystem => new LinuxGameLaunchStrategy(fileSystem));
+        var slug = await CreateInstalledInstanceAsync(fixture);
+        await fixture.InstanceService.UpdateLaunchSettingsAsync(
+            slug,
+            new InstanceLaunchSettings { MesaGlThread = false },
+            CancellationToken.None);
+
+        await fixture.Launcher.LaunchAsync(slug, cancellationToken: CancellationToken.None);
+
+        fixture.ProcessRunner.StartRequests.ShouldHaveSingleItem().EnvironmentVariables!.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task LaunchAsync_MesaGlThreadOnWindows_IsIgnored()
+    {
+        var fixture = CreateFixture(fileSystem => new WindowsGameLaunchStrategy(fileSystem));
+        var slug = await CreateInstalledInstanceAsync(fixture);
+        await fixture.InstanceService.UpdateLaunchSettingsAsync(
+            slug,
+            new InstanceLaunchSettings { MesaGlThread = true },
+            CancellationToken.None);
+
+        await fixture.Launcher.LaunchAsync(slug, cancellationToken: CancellationToken.None);
+
+        var environment = fixture.ProcessRunner.StartRequests.ShouldHaveSingleItem().EnvironmentVariables!;
+        environment.ShouldNotContainKey("mesa_glthread");
+        environment.ShouldNotContainKey("MESA_GLTHREAD");
+    }
+
     [Fact]
     public async Task LaunchAsync_NoExtraArgsOrEnv_OnlyDataPathArgumentAndEmptyEnv()
     {

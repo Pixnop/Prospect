@@ -27,16 +27,15 @@ namespace Prospect.Desktop.ViewModels.Instance;
 /// qu'une ligne par argument correspond une fois pour toutes à un élément de la liste
 /// <see cref="InstanceLaunchSettings.ExtraArgs"/>, sans règle de découpage à documenter ni à
 /// maintenir. Les variables d'environnement (<see cref="EnvVarsText"/>) suivent le même principe,
-/// au format <c>CLE=valeur</c> par ligne. <c>MESA_GLTHREAD</c> (confort Linux mentionné par la
+/// au format <c>CLE=valeur</c> par ligne. <c>mesa_glthread</c> (confort Linux mentionné par la
 /// recherche) a sa propre case à cocher plutôt que de vivre dans le texte libre : c'est la seule
 /// variable que Prospect connaît par son nom, une case dédiée évite à l'utilisateur de retenir sa
-/// syntaxe exacte.
+/// syntaxe exacte. Elle est stockée en champ TYPÉ de <see cref="InstanceLaunchSettings"/> et posée
+/// par la seule stratégie de lancement Linux : rangée dans les variables libres, elle suivrait
+/// l'instance sur les systèmes où elle n'a aucun effet.
 /// </remarks>
 public sealed partial class InstanceOptionsTabViewModel : ObservableObject
 {
-    private const string MesaGlThreadKey = "MESA_GLTHREAD";
-    private const string MesaGlThreadValue = "true";
-
     private readonly string _slug;
     private readonly InstanceService _instanceService;
     private readonly IToastService _toasts;
@@ -70,18 +69,13 @@ public sealed partial class InstanceOptionsTabViewModel : ObservableObject
         ShowMesaGlThreadToggle = appEnvironment.CurrentOperatingSystem == AppOperatingSystem.Linux;
 
         _extraArgsText = string.Join(Environment.NewLine, launchSettings.ExtraArgs);
-        _envVarsText = string.Join(
-            Environment.NewLine,
-            launchSettings.Env
-                .Where(pair => !string.Equals(pair.Key, MesaGlThreadKey, StringComparison.Ordinal))
-                .Select(pair => $"{pair.Key}={pair.Value}"));
-        _mesaGlThreadEnabled = launchSettings.Env.TryGetValue(MesaGlThreadKey, out var mesaValue)
-            && string.Equals(mesaValue, MesaGlThreadValue, StringComparison.Ordinal);
+        _envVarsText = string.Join(Environment.NewLine, launchSettings.Env.Select(pair => $"{pair.Key}={pair.Value}"));
+        _mesaGlThreadEnabled = launchSettings.MesaGlThread;
 
         Backups = new InstanceBackupsSectionViewModel(slug, instanceName, backupSettings, instanceService, backupService, overlay, clock, toasts);
     }
 
-    /// <summary>Vrai uniquement sur Linux : <c>MESA_GLTHREAD</c> n'a d'effet que sur les pilotes Mesa de cette plateforme.</summary>
+    /// <summary>Vrai uniquement sur Linux : <c>mesa_glthread</c> n'a d'effet que sur les pilotes Mesa de cette plateforme.</summary>
     public bool ShowMesaGlThreadToggle { get; }
 
     /// <summary>Bloc Sauvegardes de l'onglet Options : toggle auto-avant-lancement, rétention, liste, création/restauration/suppression.</summary>
@@ -116,15 +110,15 @@ public sealed partial class InstanceOptionsTabViewModel : ObservableObject
             return;
         }
 
-        if (MesaGlThreadEnabled)
-        {
-            env[MesaGlThreadKey] = MesaGlThreadValue;
-        }
-
         IsSaving = true;
         try
         {
-            var settings = new InstanceLaunchSettings { ExtraArgs = ParseExtraArgs(ExtraArgsText), Env = env };
+            var settings = new InstanceLaunchSettings
+            {
+                ExtraArgs = ParseExtraArgs(ExtraArgsText),
+                Env = env,
+                MesaGlThread = MesaGlThreadEnabled,
+            };
             await _instanceService.UpdateLaunchSettingsAsync(_slug, settings, CancellationToken.None).ConfigureAwait(true);
             _toasts.Show(ToastTone.Success, UiText.Toasts.LaunchSettingsSavedTitle);
         }

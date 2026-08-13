@@ -25,6 +25,8 @@ public sealed class RichTextDocumentViewModel : IDisposable
     private readonly IExternalUrlOpener _urlOpener;
     private readonly Dictionary<RichTextImage, RichTextImageViewModel> _images = [];
 
+    private bool _disposed;
+
     /// <summary>Construit la description.</summary>
     /// <param name="document">Blocs analysés.</param>
     /// <param name="urlOpener">Ouverture des liens dans le navigateur du système.</param>
@@ -88,9 +90,19 @@ public sealed class RichTextDocumentViewModel : IDisposable
         _ = _urlOpener.OpenAsync(target, CancellationToken.None);
     }
 
-    /// <summary>Annule les chargements d'images encore en vol. Ne libère AUCUN bitmap : ils appartiennent au cache.</summary>
+    /// <summary>
+    /// Annule les chargements d'images encore en vol. Ne libère AUCUN bitmap : ils appartiennent au
+    /// cache. Idempotent : voir la remarque de <see cref="RichTextImageViewModel.Dispose"/>.
+    /// </summary>
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+
         foreach (var image in _images.Values)
         {
             image.Dispose();
@@ -143,6 +155,8 @@ public sealed partial class RichTextImageViewModel : ObservableObject, IDisposab
     private readonly CancellationTokenSource _cancellation = new();
     private readonly Task _loadTask;
 
+    private bool _disposed;
+
     /// <summary>Construit l'illustration et lance son chargement.</summary>
     /// <param name="block">Bloc image analysé.</param>
     /// <param name="images">Cache d'images.</param>
@@ -178,8 +192,21 @@ public sealed partial class RichTextImageViewModel : ObservableObject, IDisposab
     internal Task LoadCompletion => _loadTask;
 
     /// <summary>Annule un chargement encore en vol. Ne libère PAS le bitmap, qui appartient au cache.</summary>
+    /// <remarks>
+    /// Idempotent, et ce n'est pas de la politesse défensive : <c>CancellationTokenSource.Cancel</c>
+    /// lève une <see cref="ObjectDisposedException"/> sur une source déjà libérée, alors qu'un
+    /// panneau modal peut légitimement être disposé deux fois (l'overlay possède le cycle de vie de
+    /// ce qu'il affiche, et un appelant peut disposer explicitement en plus). C'est exactement ce
+    /// qui faisait planter l'application à la fermeture d'une fiche de mod.
+    /// </remarks>
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         _cancellation.Cancel();
         _cancellation.Dispose();
     }

@@ -178,6 +178,45 @@ public class VersionsHeadlessTests
         window.Close();
     }
 
+    /// <summary>
+    /// La barre de progression de la rangée en cours d'installation occupe sa colonne au lieu de se
+    /// réduire à la largeur du libellé qui vit sous elle. Relevé en test réel : « la barre de
+    /// progression est minuscule », une soixantaine de points au lieu des 420 du design.
+    /// </summary>
+    [AvaloniaTheory]
+    [InlineData(1280d)]
+    [InlineData(900d)]
+    public async Task VersionRow_WhileInstalling_StretchesItsProgressBarAcrossTheColumn(double windowWidth)
+    {
+        using var provider = TestServiceProviderFactory.Create(out _);
+        var window = provider.GetRequiredService<MainWindow>();
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var versions = provider.GetRequiredService<VersionsViewModel>();
+        window.Width = windowWidth;
+
+        window.Show();
+        shell.LibraryNavItems.First(item => item.Label == "Versions").SelectCommand.Execute(null);
+        await versions.RefreshCommand.ExecuteAsync(null);
+        window.Settle();
+
+        var row = versions.Available.First();
+        row.IsWorking = true;
+        row.PhaseText = "Installation";
+        window.Settle();
+
+        var view = window.GetVisualDescendants().OfType<VersionsView>().Single();
+        var bar = view.GetVisualDescendants()
+            .OfType<ProgressBar>()
+            .Single(candidate => ReferenceEquals(candidate.DataContext, row));
+
+        // Le libellé « Installation » fait une soixantaine de points : la barre doit être
+        // franchement plus large que lui, et plafonnée par le MaxWidth du design.
+        bar.Bounds.Width.ShouldBeGreaterThan(200d);
+        bar.Bounds.Width.ShouldBeLessThanOrEqualTo(420d);
+
+        window.Close();
+    }
+
     [AvaloniaFact]
     public void DownloadsPopover_WithAnEmptyQueue_KeepsItsEmptyState()
     {

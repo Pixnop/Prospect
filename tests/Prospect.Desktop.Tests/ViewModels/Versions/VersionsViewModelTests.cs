@@ -52,8 +52,8 @@ public class VersionsViewModelTests
 
         var catalog = new FakeGameVersionCatalog { Catalog = FakeGameVersionCatalog.Build("1.22.0-rc.1", "1.21.3", "1.20.4") };
         var downloads = new FakeDownloadManager();
-        var strategy = new FakeGameInstallStrategy();
-        var installService = new GameInstallService(catalog, downloads, versions, strategy);
+        var strategy = new FakeGameInstallStrategy(fileSystem);
+        var installService = new GameInstallService(catalog, downloads, versions, strategy, fileSystem, NullAppLog.Instance);
         var overlay = new RecordingOverlayService();
         var toasts = new RecordingToastService();
         var viewModel = new VersionsViewModel(
@@ -332,7 +332,7 @@ public class VersionsViewModelTests
         var fileSystem = new MockFileSystem();
         var instanceRepository = new FileSystemInstanceRepository(fileSystem, Paths, new JsonFileStore(fileSystem), new InstanceMetadataMigrationPipeline([]));
         var versions = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
-        var install = new GameInstallService(harness.Catalog, harness.Downloads, versions, harness.Strategy);
+        var install = new GameInstallService(harness.Catalog, harness.Downloads, versions, harness.Strategy, fileSystem, NullAppLog.Instance);
         var dispatcher = new ImmediateUiDispatcher();
 
         Should.Throw<ArgumentNullException>(() => new VersionsViewModel(null!, versions, install, instanceRepository, Paths, harness.Overlay, harness.Toasts, dispatcher));

@@ -10,35 +10,37 @@ namespace Prospect.Core.Migration;
 /// </summary>
 public static class VslInstanceMapper
 {
-    private const string MesaGlThreadKey = "MESA_GLTHREAD";
-    private const string MesaGlThreadValue = "true";
+    private static bool IsMesaGlThreadKey(string key)
+        => string.Equals(key, Instances.Migrations.InstanceMetadataV2ToV3Migration.LegacyEnvKey, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Construit les réglages de lancement Prospect depuis une installation VSL :
     /// <see cref="VslInstallation.StartParams"/> devient une vraie liste via
     /// <see cref="VslStartParamsTokenizer"/>, <see cref="VslInstallation.EnvVars"/> devient un
     /// dictionnaire via <see cref="VslEnvVarsParser"/>, et <see cref="VslInstallation.MesaGlThread"/>
-    /// — une case à cocher dédiée côté VSL — devient la variable d'environnement
-    /// <c>MESA_GLTHREAD=true</c>, exactement comme VS Launcher l'injecte lui-même au lancement
-    /// (<c>gameHandlers.ts</c>, <c>EXECUTE_GAME</c>). Une variable <c>MESA_GLTHREAD</c> déjà
-    /// présente dans <see cref="VslInstallation.EnvVars"/> est écrasée par la case à cocher : c'est
-    /// aussi la variable que Prospect connaît par son nom dans l'onglet Options d'une instance
-    /// (voir <c>InstanceOptionsTabViewModel</c>), la cohérence veut que la case l'emporte.
+    /// — une case à cocher dédiée côté VSL — devient la case à cocher dédiée côté Prospect
+    /// (<see cref="InstanceLaunchSettings.MesaGlThread"/>), et non une entrée du dictionnaire : chez
+    /// nous la variable est posée par la seule stratégie de lancement Linux, sous le nom
+    /// <c>mesa_glthread</c> que Mesa lit réellement, là où VS Launcher écrivait
+    /// <c>MESA_GLTHREAD</c> (<c>gameHandlers.ts</c>, <c>EXECUTE_GAME</c>). L'ancienne clé, si elle
+    /// traîne dans <see cref="VslInstallation.EnvVars"/>, est retirée : gardée, elle ferait deux
+    /// variables pour une seule intention, dont une inerte.
     /// </summary>
     public static InstanceLaunchSettings ToLaunchSettings(VslInstallation installation)
     {
         ArgumentNullException.ThrowIfNull(installation);
 
-        var env = VslEnvVarsParser.Parse(installation.EnvVars);
-        if (installation.MesaGlThread)
-        {
-            env = new Dictionary<string, string>(env, StringComparer.Ordinal) { [MesaGlThreadKey] = MesaGlThreadValue };
-        }
+        var parsed = VslEnvVarsParser.Parse(installation.EnvVars);
+        var legacy = parsed.Keys.Where(IsMesaGlThreadKey).ToArray();
+        var env = legacy.Length == 0
+            ? parsed
+            : parsed.Where(pair => !IsMesaGlThreadKey(pair.Key)).ToDictionary(StringComparer.Ordinal);
 
         return new InstanceLaunchSettings
         {
             ExtraArgs = VslStartParamsTokenizer.Tokenize(installation.StartParams),
             Env = env,
+            MesaGlThread = installation.MesaGlThread || legacy.Length > 0,
         };
     }
 

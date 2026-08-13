@@ -80,6 +80,9 @@ internal sealed class EnglishWizardText : WizardText
 
     internal override string SummaryNoVersion => "Choose a game version at the previous step.";
 
+    internal override string NameBeingDeleted
+        => "An instance with this name is being deleted. Wait for it to finish, or pick another name.";
+
     internal override IReadOnlyList<string> StepLabels { get; } = ["Name", "Version", "Icon", "Summary"];
 
     internal override string IconLabel(string iconChoiceKey) => iconChoiceKey switch
@@ -118,6 +121,11 @@ internal sealed class EnglishDialogsText : DialogsText
 
     internal override string DeleteMessage(string instanceName)
         => $"Everything in “{instanceName}” will be deleted for good, worlds and mods included. This cannot be undone.";
+
+    internal override string DeleteInProgress => "Deleting… This can take a while on an instance with large worlds.";
+
+    internal override string DeletePartialFailure(string directory)
+        => $"The deletion could not finish: files are left in “{directory}”. Close the game if it is still running, then try again.";
 
     internal override string RestoreBackupTitle(string instanceName) => $"Restore “{instanceName}”?";
 
@@ -188,6 +196,11 @@ internal sealed class EnglishVersionsText : VersionsText
 
     internal override string UnavailableCatalog
         => "The catalog is unreachable. Only versions already installed are shown.";
+
+    internal override string InstallLandedElsewhere(string targetDirectory)
+        => $"The installer finished without an error, but the game is not in “{targetDirectory}”. "
+            + "It was most likely installed over an existing Vintage Story install. "
+            + "Nothing was marked as installed.";
 
     internal override string Subtitle(int installedCount, string totalSize) => installedCount switch
     {
@@ -533,6 +546,13 @@ internal sealed class EnglishModsText : ModsText
 
     internal override string PlanMessage(string version, string instanceName)
         => $"Version {version} will be added to “{instanceName}”.";
+
+    internal override string ReplacePlanTitle(string modName) => $"Replace “{modName}”?";
+
+    internal override string ReplacePlanMessage(string currentVersion, string version, string instanceName)
+        => string.IsNullOrEmpty(currentVersion)
+            ? $"The copy already installed in “{instanceName}” will be replaced by version {version}. Whether it is enabled or disabled is kept."
+            : $"Version {currentVersion} installed in “{instanceName}” will be replaced by version {version}. Whether it is enabled or disabled is kept.";
 
     internal override string ApproximateWarning(string gameVersion)
         => $"No release declares itself compatible with {gameVersion}: this one is offered because it targets the same series. The author has not confirmed it, so it may not work.";

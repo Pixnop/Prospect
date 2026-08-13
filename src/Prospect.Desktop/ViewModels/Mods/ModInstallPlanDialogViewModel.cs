@@ -249,8 +249,20 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
         try
         {
             Plan = plan;
-            Title = UiText.Mods.PlanTitle(plan.Primary.DisplayName);
-            Message = UiText.Mods.PlanMessage(plan.Primary.Version.ToString(), _instanceName);
+
+            // « Remplacer » plutôt qu'« installer » dès qu'une copie est déjà là : c'est ce que
+            // l'opération fait réellement depuis qu'elle suit la discipline de la mise à jour, et
+            // l'écran d'un joueur qui change de version de mod ne doit pas lui laisser croire qu'il
+            // en ajoute une deuxième à côté.
+            Title = plan.IsReplacement
+                ? UiText.Mods.ReplacePlanTitle(plan.Primary.DisplayName)
+                : UiText.Mods.PlanTitle(plan.Primary.DisplayName);
+            Message = plan.IsReplacement
+                ? UiText.Mods.ReplacePlanMessage(
+                    plan.ExistingVersion?.ToString() ?? string.Empty,
+                    plan.Primary.Version.ToString(),
+                    _instanceName)
+                : UiText.Mods.PlanMessage(plan.Primary.Version.ToString(), _instanceName);
             FileNameText = plan.Primary.TargetFileName;
 
             // Les deux avertissements sont exclusifs et disent deux choses différentes : « même
@@ -315,12 +327,10 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
         }
     }
 
+    // Comme la fiche : l'overlay dispose ce qu'il ferme, un second Dispose ici relancerait un
+    // Cancel sur des sources d'annulation déjà libérées.
     [RelayCommand]
-    private void Cancel()
-    {
-        _overlay.Close();
-        Dispose();
-    }
+    private void Cancel() => _overlay.Close();
 
     [RelayCommand]
     private async Task ConfirmAsync()

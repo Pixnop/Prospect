@@ -161,8 +161,29 @@ public sealed class ModInstallService
 
         var (dependencies, unresolved) = await ResolveDependencyItemsAsync(issues, gameVersion, mode, cancellationToken).ConfigureAwait(false);
 
-        return new ModInstallPlan(primary, dependencies, issues, unresolved, gameVersion) { AvailableReleases = candidates };
+        return new ModInstallPlan(primary, dependencies, issues, unresolved, gameVersion)
+        {
+            AvailableReleases = candidates,
+            Existing = FindExisting(installed, primary),
+        };
     }
+
+    /// <summary>
+    /// La copie déjà installée du mod demandé, s'il y en a une.
+    /// </summary>
+    /// <remarks>
+    /// Deux clés, dans cet ordre. La PROVENANCE d'abord (<c>prospect-mods.json</c>), qui porte
+    /// l'identifiant ModDB exact de ce que Prospect a installé. Le <c>modid</c> du
+    /// <c>modinfo.json</c> ensuite, qui rattrape les zips déposés à la main par le joueur, pour qui
+    /// aucune provenance n'existe — c'est le principe du dépôt : le disque est la vérité, le fichier
+    /// de provenance n'est qu'un cache.
+    /// </remarks>
+    private static InstalledMod? FindExisting(IReadOnlyList<InstalledMod> installed, ModInstallItem primary)
+        => installed.FirstOrDefault(mod => Matches(mod.Provenance?.ModIdString, primary.ModIdString))
+            ?? installed.FirstOrDefault(mod => Matches(mod.Info?.ModId, primary.ModIdString));
+
+    private static bool Matches(string? candidate, string modIdString)
+        => !string.IsNullOrEmpty(candidate) && string.Equals(candidate, modIdString, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Exécute un plan : installe le mod demandé, plus les dépendances explicitement retenues.
@@ -187,7 +208,7 @@ public sealed class ModInstallService
         ArgumentNullException.ThrowIfNull(plan);
 
         var selected = new HashSet<string>(selectedDependencies ?? [], StringComparer.OrdinalIgnoreCase);
-        var installed = new List<InstalledMod> { await InstallItemAsync(slug, plan.Primary, progress, cancellationToken).ConfigureAwait(false) };
+        var installed = new List<InstalledMod> { await InstallPrimaryAsync(slug, plan, progress, cancellationToken).ConfigureAwait(false) };
         var skipped = new List<string>();
 
         foreach (var dependency in plan.MissingDependencies)
@@ -218,6 +239,45 @@ public sealed class ModInstallService
         }
 
         return new ModInstallOutcome(installed, skipped);
+    }
+
+    /// <summary>
+    /// Pose le mod demandé. Quand une copie est déjà installée, c'est un REMPLACEMENT, mené avec
+    /// exactement la discipline de la mise à jour (voir <see cref="ApplyUpdateAsync"/>) : le nouveau
+    /// fichier d'abord, l'état activé/désactivé reporté, l'ancien retiré seulement ensuite.
+    /// </summary>
+    /// <remarks>
+    /// L'ordre n'est pas cosmétique. Retirer d'abord laisserait l'instance sans le mod si le
+    /// téléchargement se coupait ; empiler sans retirer, ce que faisait le code précédent, laisse
+    /// deux versions du même modid dans <c>Mods/</c>, ce dont le comportement au chargement du jeu
+    /// n'est défini nulle part. Le retrait est sauté quand le nouveau fichier porte le même nom que
+    /// l'ancien (réinstallation de la même version) : il vient d'être écrasé, le supprimer
+    /// reviendrait à retirer ce qu'on vient de poser.
+    /// </remarks>
+    private async Task<InstalledMod> InstallPrimaryAsync(
+        string slug,
+        ModInstallPlan plan,
+        IProgress<DownloadProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        if (plan.Existing is not { } previous)
+        {
+            return await InstallItemAsync(slug, plan.Primary, progress, cancellationToken).ConfigureAwait(false);
+        }
+
+        var wasEnabled = previous.IsEnabled;
+        var installed = await InstallItemAsync(slug, plan.Primary, progress, cancellationToken).ConfigureAwait(false);
+        if (!wasEnabled)
+        {
+            installed = await _repository.SetEnabledAsync(slug, installed, enabled: false, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (!string.Equals(previous.FileName, installed.FileName, StringComparison.OrdinalIgnoreCase))
+        {
+            await _repository.RemoveAsync(slug, previous, cancellationToken).ConfigureAwait(false);
+        }
+
+        return installed;
     }
 
     /// <summary>

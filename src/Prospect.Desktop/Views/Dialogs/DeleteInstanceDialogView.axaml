@@ -20,14 +20,29 @@
                    FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
       </Border>
 
-      <StackPanel Margin="22">
+      <StackPanel Margin="22" Spacing="12">
         <TextBlock Text="{Binding Message}" TextWrapping="Wrap" LineHeight="20"
                    FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text2}" />
+
+        <!-- Le dialogue reste vivant pendant la suppression : le travail est déporté hors du thread
+             d'interface, donc l'écran continue de se dessiner et peut dire ce qu'il se passe. Pas
+             d'annulation offerte : une instance à moitié supprimée est pire que les deux états
+             francs (voir InstanceService.DeleteAsync). -->
+        <StackPanel Spacing="8" IsVisible="{Binding IsDeleting}">
+          <ProgressBar IsIndeterminate="True" HorizontalAlignment="Stretch" />
+          <TextBlock Text="{Binding ProgressText}" TextWrapping="Wrap"
+                     FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+        </StackPanel>
+
+        <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" LineHeight="18"
+                   FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource DangerText}"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
       </StackPanel>
 
       <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}" Background="{DynamicResource GlassRowOdd}">
         <Grid ColumnDefinitions="*,Auto,Auto" Margin="22,16">
-          <Button Grid.Column="0" Classes="ghost" Content="{StaticResource Dialog_Cancel}" Command="{Binding CancelCommand}" HorizontalAlignment="Left" />
+          <Button Grid.Column="0" Classes="ghost" Content="{StaticResource Dialog_Cancel}" Command="{Binding CancelCommand}"
+                  HorizontalAlignment="Left" IsEnabled="{Binding !IsDeleting}" />
           <Button Grid.Column="2" Classes="danger" Content="{StaticResource Dialog_Delete_Confirm}"
                   Command="{Binding ConfirmCommand}" IsEnabled="{Binding !IsDeleting}" />
         </Grid>

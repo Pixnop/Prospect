@@ -23,7 +23,7 @@ public sealed record ProcessRunResult(int ExitCode, string StandardOutput, strin
 /// Requête de démarrage d'un processus long à suivre plutôt qu'à attendre (le jeu), à la
 /// différence de <see cref="ProcessRunRequest"/> consommé par <see cref="IProcessRunner.RunAsync"/>
 /// qui bloque jusqu'à la sortie. Porte en plus les variables d'environnement (utile par exemple
-/// pour <c>MESA_GLTHREAD</c> sur Linux) et le dossier de travail (celui de l'installation du jeu),
+/// pour <c>mesa_glthread</c> sur Linux) et le dossier de travail (celui de l'installation du jeu),
 /// dont un processus de jeu a besoin.
 /// </summary>
 public sealed record ProcessStartRequest(

@@ -61,9 +61,9 @@ public sealed class ModpackImportServiceTests
         var downloads = new DownloadManager(new HttpClient(handler), fileSystem, Paths, clock);
 
         var gameVersionRepository = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
-        var strategy = new FakeGameInstallStrategy();
+        var strategy = new FakeGameInstallStrategy(fileSystem);
         var gameCatalog = new FakeGameVersionCatalog(ModpackTestServer.BuildGameCatalog());
-        var gameInstall = new GameInstallService(gameCatalog, downloads, gameVersionRepository, strategy);
+        var gameInstall = new GameInstallService(gameCatalog, downloads, gameVersionRepository, strategy, fileSystem, NullAppLog.Instance);
 
         if (gameVersionPreinstalled)
         {
@@ -221,7 +221,7 @@ public sealed class ModpackImportServiceTests
         var modDbClient = new ModDbClient(new HttpClient(handler), store, Paths, clock, new RetryPolicy(RetryOptions.NoDelay, (_, _) => Task.CompletedTask));
         var downloads = new DownloadManager(new HttpClient(handler), fileSystem, Paths, clock);
         var gameVersionRepository = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
-        var gameInstall = new GameInstallService(new UnavailableGameVersionCatalog(), downloads, gameVersionRepository, new FakeGameInstallStrategy());
+        var gameInstall = new GameInstallService(new UnavailableGameVersionCatalog(), downloads, gameVersionRepository, new FakeGameInstallStrategy(fileSystem), fileSystem, NullAppLog.Instance);
         var service = new ModpackImportService(
             modDbClient, downloads, modsRepository, instanceService, instanceRepository, gameInstall,
             gameVersionRepository, new UnavailableGameVersionCatalog(), fileSystem, clock);
@@ -733,7 +733,7 @@ public sealed class ModpackImportServiceTests
             gameCatalog,
             new DownloadManager(new HttpClient(new FakeHttpMessageHandler(harness.Server.Respond)), fileSystem, Paths, new FakeClock(Noon)),
             harness.GameVersions,
-            harness.Strategy);
+            harness.Strategy, fileSystem, NullAppLog.Instance);
         var modDb = new ModDbClient(
             new HttpClient(new FakeHttpMessageHandler(harness.Server.Respond)),
             store,

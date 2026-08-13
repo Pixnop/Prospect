@@ -73,10 +73,16 @@ public static class CompositionRoot
         services.AddSingleton<AppPaths>();
         services.AddSingleton<JsonFileStore>();
 
+        // Journal de diagnostic partagé (logs/prospect.log). Il n'existe pas pour tracer le
+        // développement mais pour qu'un rapport de terrain soit arbitrable sur pièce : la ligne de
+        // commande exacte de l'installeur du jeu, et le verdict de la vérification qui suit.
+        services.AddSingleton<IAppLog, FileAppLog>();
+
         // Domaine Instances. InstanceMetadataV1ToV2Migration (chantier Sauvegardes) est la
         // première vraie migration enregistrée : IEnumerable<IInstanceMetadataMigration> ne
         // donnait qu'une séquence vide jusqu'ici, le schéma v1 étant le premier schéma réel.
         services.AddSingleton<IInstanceMetadataMigration, InstanceMetadataV1ToV2Migration>();
+        services.AddSingleton<IInstanceMetadataMigration, InstanceMetadataV2ToV3Migration>();
         services.AddSingleton<InstanceMetadataMigrationPipeline>();
         services.AddSingleton<IInstanceRepository, FileSystemInstanceRepository>();
         services.AddSingleton<InstanceService>();
@@ -322,6 +328,10 @@ public static class CompositionRoot
 
         services.AddSingleton<RunningInstanceTracker>();
         services.AddSingleton<GameLauncher>();
+
+        // Résolu au démarrage (App.axaml.cs) : il n'a pas de client, son seul rôle est de rester
+        // abonné aux suppressions d'instances pour que rien ne survive à un slug (voir sa docstring).
+        services.AddSingleton<DeletedInstanceStateCleaner>();
     }
 
     // disposeHandler: false parce qu'un même gestionnaire factice sert les deux clients d'un test.

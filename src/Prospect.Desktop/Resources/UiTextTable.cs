@@ -87,6 +87,9 @@ internal abstract class WizardText
 
     internal abstract string SummaryNoVersion { get; }
 
+    /// <summary>Le nom demandé appartient à une instance en cours de suppression.</summary>
+    internal abstract string NameBeingDeleted { get; }
+
     /// <summary>Les quatre étapes, dans l'ordre.</summary>
     internal abstract IReadOnlyList<string> StepLabels { get; }
 
@@ -116,6 +119,12 @@ internal abstract class DialogsText
     internal abstract string DeleteTitle(string instanceName);
 
     internal abstract string DeleteMessage(string instanceName);
+
+    /// <summary>Affiché pendant la suppression, qui prend des dizaines de secondes sur un gros dossier de mondes.</summary>
+    internal abstract string DeleteInProgress { get; }
+
+    /// <summary>La suppression n'est pas allée jusqu'au bout : le dossier restant est nommé.</summary>
+    internal abstract string DeletePartialFailure(string directory);
 
     internal abstract string RestoreBackupTitle(string instanceName);
 
@@ -207,6 +216,13 @@ internal abstract class VersionsText
     internal abstract string InstallDetail(int percent);
 
     internal abstract string BrokenReason(GameInstallBrokenReason reason);
+
+    /// <summary>
+    /// L'installeur s'est terminé sans erreur mais le jeu n'est pas dans le dossier de la version.
+    /// Le message NOMME le dossier attendu : c'est la seule information qui permette à quelqu'un de
+    /// comprendre qu'une installation système a capté l'installation, et d'aller vérifier.
+    /// </summary>
+    internal abstract string InstallLandedElsewhere(string targetDirectory);
 
     internal abstract string UninstallTitle(string version);
 
@@ -484,6 +500,16 @@ internal abstract class ModsText
     internal abstract string PlanTitle(string modName);
 
     internal abstract string PlanMessage(string version, string instanceName);
+
+    /// <summary>
+    /// Titre quand une copie du mod est déjà installée : ce n'est plus un ajout mais un
+    /// remplacement, et le dire est la moitié du travail (l'autre moitié est de le FAIRE, voir
+    /// <c>ModInstallService.ApplyAsync</c>).
+    /// </summary>
+    internal abstract string ReplacePlanTitle(string modName);
+
+    /// <summary>Message de remplacement. <paramref name="currentVersion"/> est vide si la version installée est illisible.</summary>
+    internal abstract string ReplacePlanMessage(string currentVersion, string version, string instanceName);
 
     internal abstract string ApproximateWarning(string gameVersion);
 

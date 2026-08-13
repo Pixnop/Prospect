@@ -15,6 +15,21 @@ public interface IGameInstallStrategy
     IReadOnlyList<string> PlatformKeys { get; }
 
     /// <summary>
+    /// Exécutables du jeu attendus dans le dossier d'installation une fois
+    /// <see cref="InstallAsync"/> terminé, par ordre de préférence. AU MOINS UN doit exister pour
+    /// que l'installation soit tenue pour réussie.
+    /// </summary>
+    /// <remarks>
+    /// C'est la contrepartie vérifiable de <see cref="InstallAsync"/> : sans elle, une extraction
+    /// qui n'a rien produit ou un installeur qui a posé le jeu ailleurs se solde par un dossier de
+    /// version vide MARQUÉ COMPLET, c'est-à-dire une fausse réussite qu'on ne découvre qu'au
+    /// premier lancement. Le cas s'est produit en test réel sous Windows, où l'installeur Inno peut
+    /// retomber sur le dossier d'une installation système préexistante. Les listes suivent ce que
+    /// cherche déjà le lancement (<c>Launching.IGameLaunchStrategy.ResolveExecutablePath</c>).
+    /// </remarks>
+    IReadOnlyList<GameExecutableLocation> ExpectedExecutables { get; }
+
+    /// <summary>
     /// Installe le fichier téléchargé dans <paramref name="targetDirectory"/>. La méthode ne
     /// s'occupe ni du téléchargement, ni du fichier sentinelle : elle ne fait que produire le
     /// contenu.

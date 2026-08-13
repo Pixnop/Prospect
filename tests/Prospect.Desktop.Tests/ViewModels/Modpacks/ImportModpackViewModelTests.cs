@@ -47,7 +47,7 @@ public sealed class ImportModpackViewModelTests
         var mods = ModDbDoubles.CreateRepository(fileSystem, repository, Paths);
         var gameVersions = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
         var catalog = new FakeGameVersionCatalog { Catalog = FakeGameVersionCatalog.Build("1.21.3") };
-        var gameInstall = new GameInstallService(catalog, downloads, gameVersions, new FakeGameInstallStrategy());
+        var gameInstall = new GameInstallService(catalog, downloads, gameVersions, new FakeGameInstallStrategy(fileSystem), fileSystem, NullAppLog.Instance);
 
         if (gameVersionInstalled)
         {

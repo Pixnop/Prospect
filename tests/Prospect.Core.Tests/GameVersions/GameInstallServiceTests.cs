@@ -65,13 +65,74 @@ public sealed class GameInstallServiceTests
             new FakeGameVersionCatalog(CatalogFor(server)),
             downloads,
             repository,
-            new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions()));
+            new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions()), fileSystem, NullAppLog.Instance);
 
         var installed = await service.InstallAsync(Version, cancellationToken: CancellationToken.None);
 
         installed.Version.ShouldBe(Version);
         repository.IsInstalled(Version).ShouldBeTrue();
         fileSystem.File.ReadAllText(fileSystem.Path.Combine(installed.Directory, "Vintagestory")).ShouldBe("#!/bin/sh");
+    }
+
+    /// <summary>
+    /// Le défaut rapporté en test réel sous Windows, mais posé au niveau du service pour qu'il vaille
+    /// sur les TROIS OS : la stratégie rend la main sans erreur alors que rien n'a atterri dans le
+    /// dossier de la version. Avant, c'était marqué complet. Maintenant, c'est un échec typé.
+    /// </summary>
+    [Theory]
+    [InlineData(GamePlatforms.Windows, "Vintagestory.exe")]
+    [InlineData(GamePlatforms.Linux, "Vintagestory")]
+    [InlineData(GamePlatforms.MacArm64, "Vintagestory.app/Contents/MacOS/Vintagestory")]
+    public async Task InstallAsync_StrategySucceedsButLeavesNoExecutable_FailsAndMarksNothing(string platformKey, string expectedName)
+    {
+        var server = new FakeDownloadServer(SampleArchive());
+        using var handler = new FakeHttpMessageHandler(server.Handle);
+        var fileSystem = new MockFileSystem();
+        using var downloads = CreateDownloads(handler, fileSystem);
+        var repository = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
+        var log = new RecordingAppLog();
+        var strategy = new FakeGameInstallStrategy(fileSystem)
+        {
+            PlatformKeys = [platformKey],
+            ExpectedExecutables = [GameExecutableLocation.Of(expectedName.Split('/'))],
+            ProducesExecutable = false,
+        };
+        var service = new GameInstallService(
+            new FakeGameVersionCatalog(CatalogFor(server, platformKey)), downloads, repository, strategy, fileSystem, log);
+
+        var exception = await Should.ThrowAsync<GameInstallIncompleteException>(
+            () => service.InstallAsync(Version, cancellationToken: CancellationToken.None));
+
+        exception.TargetDirectory.ShouldBe(repository.GetVersionDirectory(Version));
+        exception.ExpectedExecutables.ShouldBe([expectedName]);
+        repository.IsInstalled(Version).ShouldBeFalse();
+        fileSystem.Directory.Exists(repository.GetVersionDirectory(Version)).ShouldBeFalse();
+        log.Lines.ShouldContain(line => line.Level == AppLogLevel.Error);
+    }
+
+    /// <summary>
+    /// Le pendant positif : la vérification s'accommode d'un exécutable de REPLI, et le journal en
+    /// garde la trace pour que le prochain rapport de terrain soit lisible.
+    /// </summary>
+    [Fact]
+    public async Task InstallAsync_ExecutableFoundThroughTheFallbackName_StillCountsAsComplete()
+    {
+        var server = new FakeDownloadServer(TarGzSamples.Create(("Vintagestory.exe", TarGzSamples.Text("MZ"))));
+        using var handler = new FakeHttpMessageHandler(server.Handle);
+        var fileSystem = new MockFileSystem();
+        using var downloads = CreateDownloads(handler, fileSystem);
+        var repository = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
+        var log = new RecordingAppLog();
+        var service = new GameInstallService(
+            new FakeGameVersionCatalog(CatalogFor(server)),
+            downloads,
+            repository,
+            new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions()), fileSystem, log);
+
+        await service.InstallAsync(Version, cancellationToken: CancellationToken.None);
+
+        repository.IsInstalled(Version).ShouldBeTrue();
+        log.Lines.ShouldContain(line => line.Level == AppLogLevel.Info && line.Message.Contains("Vintagestory.exe", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -83,11 +144,11 @@ public sealed class GameInstallServiceTests
         using var downloads = CreateDownloads(handler, fileSystem);
         var repository = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
         var markerDuringInstall = true;
-        var strategy = new FakeGameInstallStrategy
+        var strategy = new FakeGameInstallStrategy(fileSystem)
         {
             BeforeReturning = _ => markerDuringInstall = repository.IsInstalled(Version),
         };
-        var service = new GameInstallService(new FakeGameVersionCatalog(CatalogFor(server)), downloads, repository, strategy);
+        var service = new GameInstallService(new FakeGameVersionCatalog(CatalogFor(server)), downloads, repository, strategy, fileSystem, NullAppLog.Instance);
 
         await service.InstallAsync(Version, cancellationToken: CancellationToken.None);
 
@@ -107,7 +168,7 @@ public sealed class GameInstallServiceTests
             new FakeGameVersionCatalog(CatalogFor(server)),
             downloads,
             new FileSystemInstalledGameVersionRepository(fileSystem, Paths),
-            new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions()));
+            new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions()), fileSystem, NullAppLog.Instance);
 
         await service.InstallAsync(
             Version,
@@ -140,7 +201,7 @@ public sealed class GameInstallServiceTests
             new FakeGameVersionCatalog(CatalogFor(server)),
             downloads,
             new FileSystemInstalledGameVersionRepository(fileSystem, Paths),
-            new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions()));
+            new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions()), fileSystem, NullAppLog.Instance);
 
         await service.InstallAsync(
             Version,
@@ -182,11 +243,20 @@ public sealed class GameInstallServiceTests
         using var downloads = CreateDownloads(handler, fileSystem);
         var reports = new List<GameInstallProgress>();
         var repository = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
+
+        // L'installeur factice pose l'exécutable, comme le vrai : sans ça, c'est la vérification
+        // post-installation qui parlerait, pas la progression que ce test observe.
+        var runner = new FakeProcessRunner
+        {
+            OnRun = request => fileSystem.AddFile(
+                fileSystem.Path.Combine(repository.GetVersionDirectory(Version), "Vintagestory.exe"),
+                new MockFileData("MZ")),
+        };
         var service = new GameInstallService(
             new FakeGameVersionCatalog(CatalogFor(server, GamePlatforms.Windows)),
             downloads,
             repository,
-            new WindowsGameInstallStrategy(fileSystem, new FakeProcessRunner()));
+            new WindowsGameInstallStrategy(fileSystem, runner, NullAppLog.Instance), fileSystem, NullAppLog.Instance);
 
         await service.InstallAsync(
             Version,
@@ -208,7 +278,7 @@ public sealed class GameInstallServiceTests
             new FakeGameVersionCatalog(new GameVersionCatalog([], Noon, GameCatalogFreshness.Live)),
             downloads,
             new FileSystemInstalledGameVersionRepository(fileSystem, Paths),
-            new FakeGameInstallStrategy());
+            new FakeGameInstallStrategy(fileSystem), fileSystem, NullAppLog.Instance);
 
         var exception = await Should.ThrowAsync<GameVersionNotAvailableException>(
             () => service.InstallAsync(Version, cancellationToken: CancellationToken.None));
@@ -227,7 +297,7 @@ public sealed class GameInstallServiceTests
             new FakeGameVersionCatalog(CatalogFor(server, GamePlatforms.Windows)),
             downloads,
             new FileSystemInstalledGameVersionRepository(fileSystem, Paths),
-            new MacOsGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions()));
+            new MacOsGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions()), fileSystem, NullAppLog.Instance);
 
         var exception = await Should.ThrowAsync<GameVersionNotAvailableException>(
             () => service.InstallAsync(Version, cancellationToken: CancellationToken.None));
@@ -243,12 +313,12 @@ public sealed class GameInstallServiceTests
         var fileSystem = new MockFileSystem();
         using var downloads = CreateDownloads(handler, fileSystem);
         var repository = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
-        var strategy = new FakeGameInstallStrategy
+        var strategy = new FakeGameInstallStrategy(fileSystem)
         {
             Failure = new GameInstallFailedException("l'installeur a rendu l'âme"),
             BeforeReturning = target => fileSystem.AddFile(fileSystem.Path.Combine(target, "moitie.bin"), new MockFileData("x")),
         };
-        var service = new GameInstallService(new FakeGameVersionCatalog(CatalogFor(server)), downloads, repository, strategy);
+        var service = new GameInstallService(new FakeGameVersionCatalog(CatalogFor(server)), downloads, repository, strategy, fileSystem, NullAppLog.Instance);
 
         await Should.ThrowAsync<GameInstallFailedException>(
             () => service.InstallAsync(Version, cancellationToken: CancellationToken.None));
@@ -265,7 +335,7 @@ public sealed class GameInstallServiceTests
         var fileSystem = new MockFileSystem();
         using var downloads = CreateDownloads(handler, fileSystem);
         var repository = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
-        var strategy = new FakeGameInstallStrategy();
+        var strategy = new FakeGameInstallStrategy(fileSystem);
         var catalog = CatalogFor(server);
         var tampered = new GameVersionCatalog(
             [
@@ -276,7 +346,7 @@ public sealed class GameInstallServiceTests
             ],
             Noon,
             GameCatalogFreshness.Live);
-        var service = new GameInstallService(new FakeGameVersionCatalog(tampered), downloads, repository, strategy);
+        var service = new GameInstallService(new FakeGameVersionCatalog(tampered), downloads, repository, strategy, fileSystem, NullAppLog.Instance);
 
         await Should.ThrowAsync<DownloadChecksumMismatchException>(
             () => service.InstallAsync(Version, cancellationToken: CancellationToken.None));
@@ -305,7 +375,7 @@ public sealed class GameInstallServiceTests
             new FakeGameVersionCatalog(CatalogFor(server)),
             downloads,
             repository,
-            new FakeGameInstallStrategy());
+            new FakeGameInstallStrategy(fileSystem), fileSystem, NullAppLog.Instance);
 
         await Should.ThrowAsync<OperationCanceledException>(() => service.InstallAsync(Version, cancellationToken: cancellation.Token));
 
@@ -329,7 +399,7 @@ public sealed class GameInstallServiceTests
             new FakeGameVersionCatalog(CatalogFor(server)),
             downloads,
             repository,
-            new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions()));
+            new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions()), fileSystem, NullAppLog.Instance);
 
         await service.InstallAsync(Version, cancellationToken: CancellationToken.None);
 
@@ -349,7 +419,7 @@ public sealed class GameInstallServiceTests
             new FakeGameVersionCatalog(new GameVersionCatalog([], Noon, GameCatalogFreshness.Live)),
             new FakeDownloadManagerStub(),
             repository,
-            new FakeGameInstallStrategy());
+            new FakeGameInstallStrategy(fileSystem), fileSystem, NullAppLog.Instance);
 
         service.Uninstall(Version);
 
@@ -363,12 +433,14 @@ public sealed class GameInstallServiceTests
         var catalog = new FakeGameVersionCatalog(new GameVersionCatalog([], Noon, GameCatalogFreshness.Live));
         var downloads = new FakeDownloadManagerStub();
         var repository = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
-        var strategy = new FakeGameInstallStrategy();
+        var strategy = new FakeGameInstallStrategy(fileSystem);
 
-        Should.Throw<ArgumentNullException>(() => new GameInstallService(null!, downloads, repository, strategy));
-        Should.Throw<ArgumentNullException>(() => new GameInstallService(catalog, null!, repository, strategy));
-        Should.Throw<ArgumentNullException>(() => new GameInstallService(catalog, downloads, null!, strategy));
-        Should.Throw<ArgumentNullException>(() => new GameInstallService(catalog, downloads, repository, null!));
+        Should.Throw<ArgumentNullException>(() => new GameInstallService(null!, downloads, repository, strategy, fileSystem, NullAppLog.Instance));
+        Should.Throw<ArgumentNullException>(() => new GameInstallService(catalog, null!, repository, strategy, fileSystem, NullAppLog.Instance));
+        Should.Throw<ArgumentNullException>(() => new GameInstallService(catalog, downloads, null!, strategy, fileSystem, NullAppLog.Instance));
+        Should.Throw<ArgumentNullException>(() => new GameInstallService(catalog, downloads, repository, null!, fileSystem, NullAppLog.Instance));
+        Should.Throw<ArgumentNullException>(() => new GameInstallService(catalog, downloads, repository, strategy, null!, NullAppLog.Instance));
+        Should.Throw<ArgumentNullException>(() => new GameInstallService(catalog, downloads, repository, strategy, fileSystem, null!));
     }
 
     private sealed class FakeDownloadManagerStub : IDownloadManager

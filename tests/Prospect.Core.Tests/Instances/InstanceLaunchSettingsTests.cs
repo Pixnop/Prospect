@@ -73,6 +73,20 @@ public class InstanceLaunchSettingsTests
     }
 
     [Fact]
+    public void Equals_DifferentMesaGlThread_ReturnsFalse()
+    {
+        var enabled = new InstanceLaunchSettings { MesaGlThread = true };
+        var disabled = new InstanceLaunchSettings { MesaGlThread = false };
+
+        enabled.Equals(disabled).ShouldBeFalse();
+        enabled.GetHashCode().ShouldNotBe(disabled.GetHashCode());
+    }
+
+    [Fact]
+    public void Empty_LeavesMesaGlThreadOff()
+        => InstanceLaunchSettings.Empty.MesaGlThread.ShouldBeFalse();
+
+    [Fact]
     public void Equals_Null_ReturnsFalse()
     {
         var a = InstanceLaunchSettings.Empty;

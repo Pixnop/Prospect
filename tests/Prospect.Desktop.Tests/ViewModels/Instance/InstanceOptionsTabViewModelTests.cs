@@ -48,11 +48,12 @@ public sealed class InstanceOptionsTabViewModelTests
     }
 
     [Fact]
-    public void Constructor_ExistingEnvVars_ExcludesMesaGlThreadFromFreeTextAndTogglesCheckbox()
+    public void Constructor_ExistingSettings_ShowsFreeTextVariablesAndTheTypedToggle()
     {
         var settings = new InstanceLaunchSettings
         {
-            Env = new Dictionary<string, string> { ["MESA_GLTHREAD"] = "true", ["FOO"] = "bar" },
+            Env = new Dictionary<string, string> { ["FOO"] = "bar" },
+            MesaGlThread = true,
         };
 
         var (viewModel, _, _) = Create(settings);
@@ -134,7 +135,7 @@ public sealed class InstanceOptionsTabViewModelTests
     }
 
     [Fact]
-    public async Task SaveAsync_MesaGlThreadEnabled_AddsTheVariable()
+    public async Task SaveAsync_MesaGlThreadEnabled_PersistsTheTypedOption()
     {
         var (viewModel, repository, slug) = Create();
         viewModel.MesaGlThreadEnabled = true;
@@ -142,13 +143,18 @@ public sealed class InstanceOptionsTabViewModelTests
         await viewModel.SaveCommand.ExecuteAsync(null);
 
         var reloaded = await repository.LoadAsync(slug, CancellationToken.None);
-        reloaded.Metadata.Launch.Env["MESA_GLTHREAD"].ShouldBe("true");
+        reloaded.Metadata.Launch.MesaGlThread.ShouldBeTrue();
+
+        // Rangée en champ typé, JAMAIS en variable : c'est la stratégie de lancement Linux qui la
+        // pose, et elle seule (voir InstanceLaunchSettings.MesaGlThread).
+        reloaded.Metadata.Launch.Env.ShouldNotContainKey("MESA_GLTHREAD");
+        reloaded.Metadata.Launch.Env.ShouldNotContainKey("mesa_glthread");
     }
 
     [Fact]
-    public async Task SaveAsync_MesaGlThreadDisabledAfterBeingEnabled_RemovesTheVariable()
+    public async Task SaveAsync_MesaGlThreadDisabledAfterBeingEnabled_ClearsTheTypedOption()
     {
-        var settings = new InstanceLaunchSettings { Env = new Dictionary<string, string> { ["MESA_GLTHREAD"] = "true" } };
+        var settings = new InstanceLaunchSettings { MesaGlThread = true };
         var (viewModel, repository, slug) = Create(settings);
         viewModel.MesaGlThreadEnabled.ShouldBeTrue();
 
@@ -156,7 +162,7 @@ public sealed class InstanceOptionsTabViewModelTests
         await viewModel.SaveCommand.ExecuteAsync(null);
 
         var reloaded = await repository.LoadAsync(slug, CancellationToken.None);
-        reloaded.Metadata.Launch.Env.ShouldNotContainKey("MESA_GLTHREAD");
+        reloaded.Metadata.Launch.MesaGlThread.ShouldBeFalse();
     }
 
     [Fact]

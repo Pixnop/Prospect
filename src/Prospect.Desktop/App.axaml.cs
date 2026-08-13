@@ -70,6 +70,10 @@ public partial class App : Application
             // jamais, elle laisse simplement l'application déconnectée (voir ISecretStore.LoadAsync).
             _serviceProvider.GetRequiredService<VsAccountService>().LoadAsync().GetAwaiter().GetResult();
 
+            // Résolu pour son abonnement, pas pour sa valeur : sans cette ligne, personne n'oublie
+            // l'état par slug d'une instance supprimée (voir DeletedInstanceStateCleaner).
+            _serviceProvider.GetRequiredService<DeletedInstanceStateCleaner>();
+
             desktop.MainWindow = _serviceProvider.GetRequiredService<MainWindow>();
 
             // Après la fenêtre : l'écran de premier lancement s'affiche sur le panneau modal du

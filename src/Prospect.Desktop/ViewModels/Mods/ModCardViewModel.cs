@@ -19,6 +19,8 @@ public sealed partial class ModCardViewModel : ObservableObject, IDisposable
     private readonly Func<ModCardViewModel, Task> _open;
     private readonly Func<ModCardViewModel, Task> _install;
     private readonly CancellationTokenSource _logoCancellation = new();
+
+    private bool _disposed;
     private readonly Task _logoLoadTask = Task.CompletedTask;
 
     /// <summary>Construit la carte.</summary>
@@ -150,6 +152,12 @@ public sealed partial class ModCardViewModel : ObservableObject, IDisposable
     /// </summary>
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         _logoCancellation.Cancel();
         _logoCancellation.Dispose();
     }

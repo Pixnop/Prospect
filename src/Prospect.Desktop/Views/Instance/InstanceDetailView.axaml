@@ -265,8 +265,11 @@
                            IsVisible="{Binding EnvVarsError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
               </StackPanel>
 
-              <CheckBox Content="{StaticResource Instance_Options_MesaGlThread}" IsChecked="{Binding MesaGlThreadEnabled, Mode=TwoWay}"
-                        IsVisible="{Binding ShowMesaGlThreadToggle}" />
+              <StackPanel Spacing="4" IsVisible="{Binding ShowMesaGlThreadToggle}">
+                <CheckBox Content="{StaticResource Instance_Options_MesaGlThread}" IsChecked="{Binding MesaGlThreadEnabled, Mode=TwoWay}" />
+                <TextBlock Text="{StaticResource Instance_Options_MesaGlThreadHelp}" TextWrapping="Wrap" Margin="26,0,0,0"
+                           FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+              </StackPanel>
 
               <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
                 <TextBlock Grid.Column="0" Text="{StaticResource Instance_Options_ApplyNote}" VerticalAlignment="Center"

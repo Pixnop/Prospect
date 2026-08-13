@@ -27,9 +27,12 @@ public sealed record InstanceMetadata
     /// un Prospect plus récent) fait lever <see cref="InstanceSchemaVersionUnsupportedException"/>.
     /// Passée à 2 par le chantier Sauvegardes (<see cref="Backups"/>) : voir
     /// <see cref="Migrations.InstanceMetadataV1ToV2Migration"/>, la première vraie migration du
-    /// pipeline.
+    /// pipeline. Passée à 3 quand <c>MESA_GLTHREAD</c> a quitté le dictionnaire
+    /// <see cref="InstanceLaunchSettings.Env"/> pour devenir le champ typé
+    /// <see cref="InstanceLaunchSettings.MesaGlThread"/>, posé par la seule stratégie de lancement
+    /// Linux (voir <see cref="Migrations.InstanceMetadataV2ToV3Migration"/>).
     /// </summary>
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 
     /// <summary>Version de schéma à laquelle ce document est conforme.</summary>
     public required int SchemaVersion { get; init; }
