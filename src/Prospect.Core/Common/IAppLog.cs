@@ -44,15 +44,23 @@ public enum AppLogLevel
 /// </para>
 /// <para>
 /// COMMENT IL S'INJECTE. C'est un port TRANSVERSE, présent dans presque tous les services du
-/// domaine, et il est le seul du projet à être un paramètre de constructeur OPTIONNEL, en dernière
-/// position, avec <see cref="NullAppLog.Instance"/> pour valeur de repli. Le conteneur le résout
-/// comme les autres et la composition root en passe donc toujours un vrai ; l'optionnalité ne sert
-/// qu'aux tests, qui construisent ces services par dizaines et pour qui un journal n'est presque
-/// jamais le sujet. L'imposer partout aurait ajouté un argument mécanique à quatre-vingts appels
-/// sans rendre un seul test plus vrai. La contrepartie est nommée pour qu'elle ne se perde pas :
-/// un service dont le journal manquerait en production n'écrirait rien sans se plaindre, et c'est
-/// pourquoi <c>CompositionRootTests</c> vérifie que le conteneur livre bien un
-/// <see cref="FileAppLog"/> à ces services-là.
+/// domaine, et c'est le seul du projet qui s'autorise un paramètre de constructeur OPTIONNEL, en
+/// dernière position, avec <see cref="NullAppLog.Instance"/> pour repli. Il reste REQUIS là où il
+/// l'a toujours été, c'est-à-dire dans les services dont il est une raison d'être et dont les
+/// appels se comptent sur les doigts d'une main (<c>GameInstallService</c>,
+/// <c>WindowsGameInstallStrategy</c>, <c>ModUpdateChecker</c>) : quand un service existe en partie
+/// pour ce qu'il consigne, l'oublier doit être une erreur de compilation.
+/// </para>
+/// <para>
+/// Il est optionnel partout où il a été ajouté EN NOMBRE, sur des services déjà construits par
+/// dizaines dans la suite de tests et pour qui un journal n'est presque jamais le sujet
+/// (<c>InstanceService</c>, <c>GameLauncher</c>, <c>DownloadManager</c>...). L'imposer là aurait
+/// ajouté un argument mécanique à quatre-vingts appels sans rendre un seul test plus vrai. Le
+/// conteneur résout ce paramètre comme les autres, donc la production en reçoit toujours un vrai,
+/// et les fabriques écrites à la main dans la composition root le passent explicitement. La
+/// contrepartie est nommée pour qu'elle ne se perde pas : un service dont le journal manquerait
+/// n'écrirait rien SANS SE PLAINDRE, et c'est pourquoi <c>AppLogWiringTests</c> vérifie que le
+/// conteneur livre bien un <see cref="FileAppLog"/> à chacun d'eux.
 /// </para>
 /// </remarks>
 public interface IAppLog

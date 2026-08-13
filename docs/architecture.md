@@ -116,10 +116,11 @@ version installée ou retirée, instance créée, dupliquée ou supprimée, lanc
 sortie avec son code, mod posé, remplacé, activé ou retiré, vérification de mises à jour avec son
 verdict compté, et toute erreur montrée à l'utilisateur. Jamais un secret, et jamais une ligne à la
 fréquence d'une boucle : un téléchargement journalise ses deux bouts, pas ses mille rapports
-d'avancement. C'est le SEUL port du projet à s'injecter par un paramètre de constructeur optionnel,
-en dernière position, avec `NullAppLog.Instance` pour repli ; l'exception est argumentée sur
-l'interface elle-même et gardée par `AppLogWiringTests`, qui vérifie que le conteneur livre bien un
-vrai `FileAppLog` à chacun de ces services.
+d'avancement. C'est le seul port du projet qui s'autorise un paramètre de constructeur optionnel, en
+dernière position, avec `NullAppLog.Instance` pour repli — requis là où il est une raison d'être du
+service, optionnel là où il a été ajouté en nombre à des services que les tests construisent par
+dizaines. L'arbitrage est argumenté sur l'interface elle-même et gardé par `AppLogWiringTests`, qui
+vérifie que le conteneur livre bien un vrai `FileAppLog` à chacun de ces services.
 
 Une seule exception à « jamais d'état statique muable » est admise, et elle est nommée ici
 pour qu'elle reste unique : `Prospect.Desktop.Resources.UiText`, la table de textes de la
