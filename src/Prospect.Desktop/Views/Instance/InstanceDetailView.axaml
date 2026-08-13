@@ -10,7 +10,7 @@
 
   <!--
     Port de design/ui_kits/launcher/screen-instance.jsx : bouton retour, en-tête (vignette, nom,
-    version badgée, ligne meta, actions Jouer/Arrêter + Exporter + menu), bandeau d'erreur de
+    version badgée, ligne meta, actions Jouer/Arrêter + menu), bandeau d'erreur de
     pré-lancement, onglets. Écart assumé par rapport à la maquette : pas de bouton Dossier dans
     l'en-tête, aucun domaine du Core n'exposant encore d'ouverture de dossier système.
   -->
@@ -82,13 +82,6 @@
               <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.square}"
                     Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
               <TextBlock Text="{StaticResource Instance_Stop}" />
-            </StackPanel>
-          </Button>
-          <Button Classes="lg secondary" Command="{Binding ExportCommand}">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.upload}"
-                    Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
-              <TextBlock Text="{StaticResource Instance_Export}" />
             </StackPanel>
           </Button>
           <Button Classes="icon lg bordered" ToolTip.Tip="{StaticResource Instance_MoreActions}">

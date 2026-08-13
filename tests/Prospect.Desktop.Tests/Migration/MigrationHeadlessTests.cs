@@ -122,7 +122,7 @@ public sealed class MigrationHeadlessTests
     public async Task Settings_PickFolderPickerCanceled_LeavesDetectionUnchanged()
     {
         // Le mode headless n'a pas de fenêtre système : le sélecteur de dossier rend toujours null,
-        // exactement comme si l'utilisateur avait annulé (même remarque que ModpackHeadlessTests).
+        // exactement comme si l'utilisateur avait annulé.
         using var provider = TestServiceProviderFactory.Create(out _);
         var window = provider.GetRequiredService<MainWindow>();
         var shell = provider.GetRequiredService<ShellViewModel>();

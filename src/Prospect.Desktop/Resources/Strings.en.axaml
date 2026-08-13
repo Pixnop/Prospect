@@ -50,7 +50,6 @@
   <x:String x:Key="Home_SortLastLaunched">Last launched</x:String>
   <x:String x:Key="Home_SortName">Name</x:String>
   <x:String x:Key="Home_NewInstance">New instance</x:String>
-  <x:String x:Key="Home_ImportModpack">Import a modpack</x:String>
   <x:String x:Key="Home_EmptyTitle">No instances</x:String>
   <x:String x:Key="Home_EmptyDescription">An instance keeps a game version, its mods and its saves to itself. Create your first one to get started.</x:String>
   <x:String x:Key="Home_NoResultsTitle">Nothing found</x:String>
@@ -144,7 +143,6 @@
   <x:String x:Key="Instance_Launching">Starting…</x:String>
   <x:String x:Key="Instance_Playing">Running</x:String>
   <x:String x:Key="Instance_MoreActions">More actions</x:String>
-  <x:String x:Key="Instance_Export">Export</x:String>
   <x:String x:Key="Instance_CheckInstance">Check the instance</x:String>
   <x:String x:Key="Instance_Rename">Rename</x:String>
   <x:String x:Key="Instance_Duplicate">Duplicate</x:String>
@@ -256,26 +254,6 @@
   <x:String x:Key="Mods_Row_UndeclaredUpdate">newer, not declared</x:String>
   <x:String x:Key="Mods_Row_Update">Update</x:String>
   <x:String x:Key="Mods_UpdatePlan_Confirm">Update</x:String>
-
-  <!-- ── Dialogue d'export de modpack ────────────────────────────────────────────── -->
-  <x:String x:Key="Dialog_Export_FormatLabel">Format</x:String>
-  <x:String x:Key="Dialog_Export_FormatManifestOnly">Manifest only (.json)</x:String>
-  <x:String x:Key="Dialog_Export_FormatArchive">Archive (.zip)</x:String>
-  <x:String x:Key="Dialog_Export_IncludeModConfig">Include mod settings (ModConfig)</x:String>
-  <x:String x:Key="Dialog_Export_Confirm">Export</x:String>
-  <x:String x:Key="Dialog_Export_Close">Close</x:String>
-  <x:String x:Key="Dialog_Export_SkippedNotice">Without a readable modinfo.json, or without a usable version, these mods cannot travel in the manifest.</x:String>
-  <x:String x:Key="Dialog_Export_ErrorTitle">Export failed</x:String>
-
-  <!-- ── Dialogue d'import de modpack ────────────────────────────────────────────── -->
-  <x:String x:Key="Dialog_Import_PreviewTitle">Modpack preview</x:String>
-  <x:String x:Key="Dialog_Import_InstanceNameLabel">Instance name</x:String>
-  <x:String x:Key="Dialog_Import_Confirm">Import</x:String>
-  <x:String x:Key="Dialog_Import_Cancel">Cancel</x:String>
-  <x:String x:Key="Dialog_Import_CancelImport">Cancel the import</x:String>
-  <x:String x:Key="Dialog_Import_ReportTitle">Import report</x:String>
-  <x:String x:Key="Dialog_Import_Close">Close</x:String>
-  <x:String x:Key="Dialog_Import_ErrorTitle">Import failed</x:String>
 
   <!-- ── Dialogue d'adoption VS Launcher ─────────────────────────────────────────── -->
   <x:String x:Key="Dialog_AdoptVsl_Title">Adopt your VS Launcher installs</x:String>

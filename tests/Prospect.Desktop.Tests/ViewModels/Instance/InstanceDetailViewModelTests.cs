@@ -8,7 +8,6 @@ using Prospect.Core.Instances;
 using Prospect.Core.Instances.Migrations;
 using Prospect.Core.Launching;
 using Prospect.Core.ModDb;
-using Prospect.Core.Modpacks;
 using Prospect.Core.Runtime;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Services;
@@ -50,8 +49,6 @@ public sealed class InstanceDetailViewModelTests
         MockFileSystem FileSystem,
         RecordingOverlayService Overlay,
         RecordingToastService Toasts,
-        ModpackExportService ExportService,
-        FakeFilePickerService FilePicker,
         string Slug);
 
     private static async Task<Fixture> CreateAsync(bool installVersion = true, bool linux = true)
@@ -84,17 +81,15 @@ public sealed class InstanceDetailViewModelTests
         var updateChecker = ModDbDoubles.CreateUpdateChecker(fileSystem, repository, mods, Paths, clock);
         var updateCache = new ModUpdateCheckCache();
         var doctor = new InstanceDoctor(repository, versions, dotnetLocator, mods, fileSystem, Paths);
-        var exportService = new ModpackExportService(repository, mods, fileSystem);
-        var filePicker = new FakeFilePickerService();
 
         var detail = new InstanceDetailViewModel(
             record.Slug, service, repository, launcher, tracker, backups, mods, modInstallService, updateChecker, updateCache, doctor,
-            environment, fileSystem, overlay, toasts, new ImmediateUiDispatcher(), clock, exportService, filePicker,
+            environment, fileSystem, overlay, toasts, new ImmediateUiDispatcher(), clock,
             new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache());
 
         return new Fixture(
             detail, service, repository, versions, tracker, backups, processRunner, dotnetLocator, mods, modInstallService,
-            updateChecker, updateCache, doctor, fileSystem, overlay, toasts, exportService, filePicker, record.Slug);
+            updateChecker, updateCache, doctor, fileSystem, overlay, toasts, record.Slug);
     }
 
     [Fact]
@@ -275,8 +270,6 @@ public sealed class InstanceDetailViewModelTests
             fixture.Toasts,
             new ImmediateUiDispatcher(),
             new FakeClock(Now),
-            fixture.ExportService,
-            fixture.FilePicker,
             new FakeExternalUrlOpener(),
             ModDbDoubles.CreateLogoCache());
 
@@ -396,43 +389,43 @@ public sealed class InstanceDetailViewModelTests
         var clock = new FakeClock(Now);
 
         Should.Throw<ArgumentException>(() => new InstanceDetailViewModel(
-            string.Empty, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            string.Empty, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, null!, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, null!, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, null!, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, null!, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, null!, fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, fixture.Repository, null!, fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), null!, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), null!, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, null!, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, null!, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, null!, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, null!, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, null!, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, null!, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, null!, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, null!, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, null!, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, null!, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, null!, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, null!, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, null!, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, null!, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, null!, fixture.Overlay, fixture.Toasts, dispatcher, clock, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, null!, fixture.Overlay, fixture.Toasts, dispatcher, clock, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, null!, fixture.Toasts, dispatcher, clock, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, null!, fixture.Toasts, dispatcher, clock, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, null!, dispatcher, clock, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, null!, dispatcher, clock, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, null!, clock, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, null!, clock, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, null!, fixture.ExportService, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, null!, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, null!, fixture.FilePicker, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, null!, ModDbDoubles.CreateLogoCache()));
         Should.Throw<ArgumentNullException>(() => new InstanceDetailViewModel(
-            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, fixture.ExportService, null!, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            fixture.Slug, fixture.Service, fixture.Repository, MakeLauncher(fixture), fixture.Tracker, fixture.Backups, fixture.Mods, fixture.ModInstallService, fixture.UpdateChecker, fixture.UpdateCache, fixture.Doctor, environment, fixture.FileSystem, fixture.Overlay, fixture.Toasts, dispatcher, clock, new FakeExternalUrlOpener(), null!));
     }
 
     private static GameLauncher MakeLauncher(Fixture fixture) => new(

@@ -7,7 +7,7 @@ namespace Prospect.Desktop.Services;
 
 /// <summary>
 /// Sélecteur de fichiers du système, pour les flux qui ont besoin d'un chemin choisi par
-/// l'utilisateur (export et import de modpack aujourd'hui). N'expose que des chemins simples :
+/// l'utilisateur (export des journaux, choix de dossier). N'expose que des chemins simples :
 /// aucun type Avalonia ne fuit au-delà de son implémentation, ce qui garde les ViewModels qui en
 /// dépendent testables sans fenêtre réelle.
 /// </summary>
@@ -52,7 +52,7 @@ public interface IFilePickerService
 /// <remarks>
 /// Prend une fabrique plutôt que la fenêtre elle-même : <see cref="MainWindow"/> dépend de
 /// <c>ShellViewModel</c>, qui dépend de <c>HomeViewModel</c>, qui dépend de ce service pour
-/// l'import de modpack. Résoudre <see cref="MainWindow"/> à la construction créerait un cycle ; la
+/// des journaux. Résoudre <see cref="MainWindow"/> à la construction créerait un cycle ; la
 /// fabrique (même pattern que <c>Func&lt;WizardViewModel&gt;</c> dans <see cref="CompositionRoot"/>)
 /// diffère la résolution jusqu'au premier appel, quand la fenêtre existe déjà.
 /// </remarks>

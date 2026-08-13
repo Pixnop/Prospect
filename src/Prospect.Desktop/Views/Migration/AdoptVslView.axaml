@@ -10,7 +10,7 @@
 
   <!-- Un seul panneau qui traverse AdoptVslStep (voir AdoptVslViewModel) : sélection (cases à
        cocher, installations puis moteurs), progression par élément, rapport final groupé par
-       catégorie. Même construction que ImportModpackView, sans étape de chargement : la
+       catégorie. Un seul panneau qui traverse toutes les étapes, sans étape de chargement : la
        détection est déjà faite avant l'ouverture du dialogue. -->
 
   <Border Width="520" MaxHeight="680" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
@@ -59,7 +59,7 @@
       </Border>
 
       <!-- Marge portée par le contenu, jamais par le Padding du ScrollViewer (voir la remarque
-           identique dans ImportModpackView : mesuré large sinon, puis débordant). -->
+           mesuré large sinon, puis débordant). -->
       <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <Grid Margin="22">
 

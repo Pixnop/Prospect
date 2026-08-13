@@ -5,7 +5,6 @@ using Prospect.Core.Diagnostics;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
 using Prospect.Core.ModDb;
-using Prospect.Core.Modpacks;
 using Prospect.Core.Runtime;
 
 namespace Prospect.Desktop.Resources;
@@ -49,7 +48,6 @@ internal abstract class UiTextTable
 
     internal abstract ModsText Mods { get; }
 
-    internal abstract ModpacksText Modpacks { get; }
 
     internal abstract MigrationText Migration { get; }
 
@@ -157,7 +155,6 @@ internal abstract class ToastsText
 
     internal abstract string LaunchSettingsSavedTitle { get; }
 
-    internal abstract string ModpackExportedTitle { get; }
 
     internal abstract string LogsExportedTitle { get; }
 
@@ -688,48 +685,11 @@ internal abstract class ModsText
         => $"{completedCount + 1}/{totalCount} · {modName}";
 }
 
-/// <summary>
-/// Textes de l'export et de l'import de modpacks (feature 5, docs/architecture.md « 5.
-/// Modpacks »). Voix produit pour le rapport final : jamais de trace technique, des phrases
-/// qui nomment ce qui a manqué plutôt qu'un code d'erreur.
-/// </summary>
-internal abstract class ModpacksText
-{
-    internal abstract string ExportPickerTitle { get; }
-
-    internal abstract string ImportPickerTitle { get; }
-
-    internal abstract string ImportModConfigNotice { get; }
-
-    internal abstract string InstallingGameVersionPhase { get; }
-
-    internal abstract string ExportTitle(string instanceName);
-
-    internal abstract string ExportedToastDescription(int modsExported);
-
-    internal abstract string ExportSkippedSectionTitle(int count);
-
-    internal abstract string ExportSkipReason(ModpackExportSkipReason reason);
-
-    internal abstract string ImportPreviewSubtitle(string gameVersion, int modCount);
-
-    internal abstract string ImportGameVersionWarning(string gameVersion, string displaySize);
-
-    internal abstract string InstallingModsPhase(int completedMods, int totalMods, string? currentModId);
-
-    internal abstract string ReportGroupTitle(ModpackModImportStatus status, int count);
-
-    internal abstract string ReportRowDetail(ModpackImportModReport report);
-
-    internal abstract string ImportedToastTitle(string instanceName);
-
-    internal abstract string ImportedToastDescription(int installedCount, int totalCount);
-}
 
 /// <summary>
 /// Textes de l'adoption des installations VS Launcher (chantier « migration »,
 /// docs/research/vslauncher-et-distribution.md). Voix produit pour le rapport final, même
-/// principe que <see cref="ModpacksText"/> : jamais de trace technique quand une raison courte
+/// principe que le reste de cette table : jamais de trace technique quand une raison courte
 /// suffit.
 /// </summary>
 internal abstract class MigrationText

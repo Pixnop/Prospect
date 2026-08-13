@@ -10,7 +10,6 @@ using Prospect.Core.Common;
 using Prospect.Core.Instances;
 using Prospect.Core.Launching;
 using Prospect.Core.ModDb;
-using Prospect.Core.Modpacks;
 using Prospect.Desktop.Tests.TestDoubles;
 using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Shell;
@@ -104,34 +103,6 @@ internal static class ResponsiveScenario
                 Enumerable.Range(0, 12).Select(line => $"[Server Event] 12:0{line % 10}:11 [Notification] Chargement du monde, étape {line} sur 12"))));
     }
 
-    /// <summary>
-    /// Écrit un manifeste de modpack lisible sur le système de fichiers factice, pour ouvrir le
-    /// dialogue d'import sur son étape d'aperçu (celle qui a du contenu) plutôt que sur un échec.
-    /// </summary>
-    public static async Task<string> WriteModpackManifestAsync(
-        MockFileSystem fileSystem,
-        string name,
-        string gameVersion,
-        string path = "/import/pack.json")
-    {
-        fileSystem.Directory.CreateDirectory(fileSystem.Path.GetDirectoryName(path)!);
-        var stream = fileSystem.File.Create(path);
-        await using (stream.ConfigureAwait(false))
-        {
-            await ModpackManifestSerializer.WriteAsync(
-                stream,
-                new ModpackManifest
-                {
-                    SchemaVersion = ModpackManifest.CurrentSchemaVersion,
-                    Name = name,
-                    GameVersion = GameVersion.Parse(gameVersion),
-                    Mods = [],
-                },
-                CancellationToken.None);
-        }
-
-        return path;
-    }
 
     /// <summary>Installe un mod dans l'instance, pour que l'onglet Mods ait une vraie ligne à mesurer.</summary>
     public static void SeedInstalledMod(ServiceProvider provider, MockFileSystem fileSystem, string slug)

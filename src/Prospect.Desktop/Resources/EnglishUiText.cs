@@ -4,7 +4,6 @@ using Prospect.Core.Diagnostics;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
 using Prospect.Core.ModDb;
-using Prospect.Core.Modpacks;
 using Prospect.Core.Runtime;
 using Prospect.Core.Settings;
 
@@ -48,7 +47,6 @@ internal sealed class EnglishUiText : UiTextTable
 
     internal override ModsText Mods => _mods;
 
-    internal override ModpacksText Modpacks { get; } = new EnglishModpacksText();
 
     internal override MigrationText Migration { get; } = new EnglishMigrationText();
 
@@ -158,7 +156,6 @@ internal sealed class EnglishToastsText : ToastsText
 
     internal override string LaunchSettingsSavedTitle => "Launch settings saved";
 
-    internal override string ModpackExportedTitle => "Modpack exported";
 
     internal override string LogsExportedTitle => "Logs exported";
 
@@ -781,87 +778,6 @@ internal sealed class EnglishModsText : ModsText
             : $"Failed for {string.Join(", ", failures.Select(failure => failure.ModName))}.";
 }
 
-internal sealed class EnglishModpacksText : ModpacksText
-{
-    internal override string ExportPickerTitle => "Export the modpack";
-
-    internal override string ImportPickerTitle => "Choose a modpack to import";
-
-    internal override string ImportModConfigNotice
-        => "The mod settings (ModConfig) in this pack will be carried over to the new instance.";
-
-    internal override string InstallingGameVersionPhase => "Installing the game version";
-
-    internal override string ExportTitle(string instanceName) => $"Export “{instanceName}”";
-
-    internal override string ExportedToastDescription(int modsExported) => modsExported switch
-    {
-        0 => "No mod in the manifest.",
-        1 => "1 mod in the manifest.",
-        _ => $"{modsExported} mods in the manifest.",
-    };
-
-    internal override string ExportSkippedSectionTitle(int count)
-        => count == 1 ? "1 mod left out" : $"{count} mods left out";
-
-    internal override string ExportSkipReason(ModpackExportSkipReason reason) => reason switch
-    {
-        ModpackExportSkipReason.UnreadableModInfo => "no readable modinfo.json in the archive",
-        ModpackExportSkipReason.MissingVersion => "unreadable version",
-        _ => "unknown reason",
-    };
-
-    internal override string ImportPreviewSubtitle(string gameVersion, int modCount) => modCount switch
-    {
-        0 => gameVersion,
-        1 => $"{gameVersion} · 1 mod",
-        _ => $"{gameVersion} · {modCount} mods",
-    };
-
-    internal override string ImportGameVersionWarning(string gameVersion, string displaySize)
-        => string.IsNullOrEmpty(displaySize)
-            ? $"Game version {gameVersion} is not installed. It will be downloaded before the import."
-            : $"Game version {gameVersion} is not installed: {displaySize} to download before the import.";
-
-    internal override string InstallingModsPhase(int completedMods, int totalMods, string? currentModId)
-        => string.IsNullOrEmpty(currentModId)
-            ? $"Mods {completedMods}/{totalMods}"
-            : $"Mods {completedMods}/{totalMods} · {currentModId}";
-
-    internal override string ReportGroupTitle(ModpackModImportStatus status, int count) => status switch
-    {
-        ModpackModImportStatus.Installed => count == 1 ? "1 mod installed" : $"{count} mods installed",
-        ModpackModImportStatus.NotFound => count == 1 ? "1 mod not found on ModDB" : $"{count} mods not found on ModDB",
-        ModpackModImportStatus.VersionMissing => count == 1 ? "1 version unavailable" : $"{count} versions unavailable",
-        ModpackModImportStatus.Sha256Mismatch => count == 1 ? "1 checksum mismatch" : $"{count} checksum mismatches",
-        ModpackModImportStatus.NetworkFailure => count == 1 ? "1 network failure" : $"{count} network failures",
-        _ => string.Empty,
-    };
-
-    internal override string ReportRowDetail(ModpackImportModReport report)
-    {
-        ArgumentNullException.ThrowIfNull(report);
-
-        return report.Status switch
-        {
-            ModpackModImportStatus.Installed => report.InstalledVersion?.ToString() ?? string.Empty,
-            ModpackModImportStatus.VersionMissing when report.SuggestedVersion is { } suggestion
-                => $"asked for {report.RequestedVersion} · closest compatible: {suggestion}",
-            ModpackModImportStatus.VersionMissing => $"asked for {report.RequestedVersion}",
-            ModpackModImportStatus.NetworkFailure => report.Detail ?? string.Empty,
-            _ => string.Empty,
-        };
-    }
-
-    internal override string ImportedToastTitle(string instanceName) => $"“{instanceName}” imported";
-
-    internal override string ImportedToastDescription(int installedCount, int totalCount) => totalCount switch
-    {
-        0 => "No mod in this pack.",
-        _ when installedCount == totalCount => $"{installedCount}/{totalCount} mods installed.",
-        _ => $"{installedCount}/{totalCount} mods installed, see the report for the rest.",
-    };
-}
 
 internal sealed class EnglishMigrationText : MigrationText
 {
