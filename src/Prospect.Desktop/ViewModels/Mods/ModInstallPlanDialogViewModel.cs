@@ -315,12 +315,10 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
         }
     }
 
+    // Comme la fiche : l'overlay dispose ce qu'il ferme, un second Dispose ici relancerait un
+    // Cancel sur des sources d'annulation déjà libérées.
     [RelayCommand]
-    private void Cancel()
-    {
-        _overlay.Close();
-        Dispose();
-    }
+    private void Cancel() => _overlay.Close();
 
     [RelayCommand]
     private async Task ConfirmAsync()

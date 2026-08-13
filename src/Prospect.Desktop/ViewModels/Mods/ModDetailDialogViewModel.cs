@@ -138,18 +138,19 @@ public sealed partial class ModDetailDialogViewModel : ObservableObject, IDispos
     private bool _openFailed;
 
     /// <summary>Annule les chargements d'images encore en vol quand la fiche se referme.</summary>
+    /// <remarks>Idempotent, comme celui de <see cref="RichTextImageViewModel"/> et pour la même raison.</remarks>
     public void Dispose()
     {
         Description.Dispose();
         Logo?.Dispose();
     }
 
+    // Ne dispose PAS : c'est l'overlay qui possède le cycle de vie de ce qu'il affiche
+    // (IOverlayService), et Close le fait déjà. Le faire ici en plus provoquait un second passage
+    // de Dispose, donc un Cancel sur une CancellationTokenSource libérée, donc une
+    // ObjectDisposedException fatale — le plantage rapporté en test réel à la fermeture d'une fiche.
     [RelayCommand]
-    private void Close()
-    {
-        _overlay.Close();
-        Dispose();
-    }
+    private void Close() => _overlay.Close();
 
     [RelayCommand]
     private async Task OpenOnModDbAsync()

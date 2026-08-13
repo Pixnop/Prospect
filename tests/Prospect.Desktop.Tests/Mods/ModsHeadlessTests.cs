@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Prospect.Core.Instances;
 using Prospect.Core.ModDb;
 using Prospect.Desktop.Tests.TestDoubles;
+using Prospect.Desktop.ViewModels.Dialogs;
 using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Instance;
 using Prospect.Desktop.ViewModels.Mods;
@@ -159,6 +160,64 @@ public sealed class ModsHeadlessTests
 
         shell.Overlay.Active.ShouldBeOfType<ModDetailDialogViewModel>();
         window.GetVisualDescendants().OfType<ModDetailDialogView>().ShouldNotBeEmpty();
+    }
+
+    /// <summary>
+    /// Le chemin exact du plantage rapporté en test réel : ouvrir une fiche, la refermer par son
+    /// bouton, puis laisser l'interface se remettre en page. Le shell réel est utilisé, donc le VRAI
+    /// <c>OverlayService</c>, qui dispose ce qu'il ferme.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task ModDetailDialog_ClosedFromItsButton_LeavesTheBrowserAlive()
+    {
+        using var provider = TestServiceProviderFactory.Create(out _);
+        var window = provider.GetRequiredService<MainWindow>();
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        window.Show();
+        shell.ShowModBrowser();
+        await shell.ModBrowser.InitializeCommand.ExecuteAsync(null);
+        window.Settle();
+
+        await shell.ModBrowser.Results.Single(card => card.Name == "Config lib").OpenCommand.ExecuteAsync(null);
+        window.Settle();
+        var dialog = shell.Overlay.Active.ShouldBeOfType<ModDetailDialogViewModel>();
+
+        Should.NotThrow(() => dialog.CloseCommand.Execute(null));
+
+        // Plusieurs passes : le défaut d'origine se manifestait à la mise en page qui suit la
+        // fermeture, pas au clic lui-même.
+        window.Settle();
+        window.Settle();
+
+        shell.Overlay.Active.ShouldBeNull();
+        window.GetVisualDescendants().OfType<ModDetailDialogView>().ShouldBeEmpty();
+        window.GetVisualDescendants().OfType<ModBrowserView>().ShouldNotBeEmpty();
+    }
+
+    /// <summary>
+    /// La même fermeture, mais par REMPLACEMENT de panneau et pendant qu'un chargement d'image est
+    /// encore en vol : l'autre moitié du contrat de possession de l'overlay.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task ModDetailDialog_ReplacedWhileImagesAreStillLoading_DoesNotThrow()
+    {
+        using var provider = TestServiceProviderFactory.Create(out _);
+        var window = provider.GetRequiredService<MainWindow>();
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        window.Show();
+        shell.ShowModBrowser();
+        await shell.ModBrowser.InitializeCommand.ExecuteAsync(null);
+        window.Settle();
+
+        await shell.ModBrowser.Results.Single(card => card.Name == "Config lib").OpenCommand.ExecuteAsync(null);
+        var dialog = shell.Overlay.Active.ShouldBeOfType<ModDetailDialogViewModel>();
+
+        // Aucun Settle avant : la fiche est remplacée alors que ses images sont encore en vol.
+        Should.NotThrow(() => shell.Overlay.Show(new StopInstanceDialogViewModel("Homestead", () => { }, shell.Overlay)));
+        window.Settle();
+
+        Should.NotThrow(dialog.Dispose);
+        shell.Overlay.Active.ShouldBeOfType<StopInstanceDialogViewModel>();
     }
 
     [AvaloniaFact]
