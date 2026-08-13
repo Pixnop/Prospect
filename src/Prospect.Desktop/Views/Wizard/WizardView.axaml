@@ -254,6 +254,11 @@
                          FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
               <Button Grid.Column="2" Classes="ghost sm" Content="{StaticResource Wizard_CancelInstall}" Command="{Binding CancelInstallCommand}" />
             </Grid>
+            <!-- Même notice que sur l'écran Versions : c'est ici, à la création de la toute
+                 première instance, que la boîte de l'installeur du jeu surprend le plus. -->
+            <Border Classes="alert warning" IsVisible="{Binding ShowInstallerPromptNotice}">
+              <TextBlock Text="{Binding InstallerPromptNotice}" TextWrapping="Wrap" />
+            </Border>
           </StackPanel>
 
           <TextBlock Text="{Binding CreateError}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource DangerText}"

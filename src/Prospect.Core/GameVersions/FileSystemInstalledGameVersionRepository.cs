@@ -103,6 +103,23 @@ public sealed class FileSystemInstalledGameVersionRepository : IInstalledGameVer
         }
     }
 
+    /// <inheritdoc />
+    public Task RemoveAsync(
+        GameVersion version,
+        IProgress<DirectoryDeleteProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var directory = GetVersionDirectory(version);
+
+        // Task.Run assumé, pour la même raison qu'InstanceService.DeleteAsync : une installation
+        // pèse plusieurs centaines de mégaoctets, System.IO.Abstractions est synchrone de bout en
+        // bout, et attendre un appel synchrone ne déporte rien. Sans ça, l'interface gèle le temps
+        // de la suppression.
+        return Task.Run(() => DirectoryDeleter.Delete(_fileSystem, directory, progress), CancellationToken.None);
+    }
+
     private void Classify(string directory, List<InstalledGameVersion> installed, List<BrokenGameInstall> broken)
     {
         var folderName = _fileSystem.Path.GetFileName(directory);

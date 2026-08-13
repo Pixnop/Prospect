@@ -102,9 +102,10 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         }
         catch (OperationCanceledException)
         {
-            // Annulé avant même d'obtenir un créneau : rien n'a été écrit, il suffit de sortir de la file.
+            // Annulé avant même d'obtenir un créneau : rien n'a été écrit, mais la ligne reste,
+            // barrée « annulé ». Un utilisateur qui annule a le droit de voir que c'est fait.
             operation.SetState(DownloadState.Canceled);
-            Remove(operation);
+            Finish(operation);
             throw;
         }
 
@@ -112,7 +113,7 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         {
             var path = await ExecuteAsync(request, operation, progress, token).ConfigureAwait(false);
             operation.SetState(DownloadState.Completed);
-            Remove(operation);
+            Finish(operation);
 
             return path;
         }
@@ -120,18 +121,20 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         {
             DeleteQuietly(GetPartialPath(request.FileName));
             operation.SetState(DownloadState.Canceled);
-            Remove(operation);
+            Finish(operation);
             throw;
         }
         catch (DownloadFailedException exception)
         {
             operation.Fail(exception.Message);
+            Finish(operation);
             throw;
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException or TimeoutException or UnauthorizedAccessException)
         {
             var failure = DownloadFailedException.ForFile(request.FileName, exception);
             operation.Fail(failure.Message);
+            Finish(operation);
 
             throw failure;
         }
@@ -147,6 +150,21 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         ArgumentNullException.ThrowIfNull(operation);
 
         Remove(operation);
+    }
+
+    /// <inheritdoc />
+    public void DismissFinished()
+    {
+        var removed = false;
+        lock (_gate)
+        {
+            removed = _operations.RemoveAll(candidate => candidate.IsFinished) > 0;
+        }
+
+        if (removed)
+        {
+            OperationsChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     /// <summary>Libère le sémaphore qui borne le parallélisme.</summary>
@@ -450,6 +468,40 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
         if (removed)
         {
             OperationsChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Marque la fin d'une opération et taille l'historique. La ligne RESTE dans la file : c'est
+    /// tout l'intérêt, un téléchargement abouti doit pouvoir se relire après coup. Ce qui la fait
+    /// partir, c'est un retrait explicite ou l'arrivée d'opérations plus récentes.
+    /// </summary>
+    private void Finish(DownloadOperation operation)
+    {
+        operation.MarkFinished(_clock.UtcNow);
+        Trim();
+        OperationsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    // Les opérations VIVANTES ne sont jamais évincées, quel que soit leur nombre : une file de
+    // trente téléchargements en cours reste affichée en entier. Seul l'historique est borné, et il
+    // perd toujours ses lignes les plus anciennes.
+    private void Trim()
+    {
+        lock (_gate)
+        {
+            var excess = _operations.Count(candidate => candidate.IsFinished) - _options.HistoryLimit;
+            for (var index = 0; index < _operations.Count && excess > 0; index++)
+            {
+                if (!_operations[index].IsFinished)
+                {
+                    continue;
+                }
+
+                _operations.RemoveAt(index);
+                index--;
+                excess--;
+            }
         }
     }
 }

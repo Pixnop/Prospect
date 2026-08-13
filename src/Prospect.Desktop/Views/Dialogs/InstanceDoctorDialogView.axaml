@@ -74,8 +74,13 @@
                             <StackPanel Grid.Column="1" Spacing="8">
                               <TextBlock Text="{Binding Message}" TextWrapping="Wrap" LineHeight="18"
                                          FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
-                              <Button Classes="sm secondary" Content="{Binding ActionLabel}" Command="{Binding ActionCommand}"
-                                      HorizontalAlignment="Left" IsVisible="{Binding HasAction}" />
+                              <!-- Le libellé NOMME le mod concerné (« Installer « carryonlib »… »),
+                                   et un modid peut être long : le texte se tronque plutôt que de
+                                   déborder du bouton, qui reste borné par la largeur du dialogue. -->
+                              <Button Classes="sm secondary" Command="{Binding ActionCommand}"
+                                      HorizontalAlignment="Left" MaxWidth="360" IsVisible="{Binding HasAction}">
+                                <TextBlock Text="{Binding ActionLabel}" TextTrimming="CharacterEllipsis" />
+                              </Button>
                             </StackPanel>
                           </Grid>
                         </Border>

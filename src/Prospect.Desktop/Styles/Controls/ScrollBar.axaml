@@ -3,14 +3,18 @@
 
   <!-- Port de .pr-scroll (tokens/base.css) : fine (10px), pouce seul, pas de flèches,
        pilule, stone-700 au repos et stone-600 au survol (ScrollbarThumb / ScrollbarThumbHover,
-       déjà des alias sémantiques de Colors.axaml). -->
+       déjà des alias sémantiques de Colors.axaml).
+
+       La gouttière qui écarte la barre du bord de sa fenêtre vit à côté, dans
+       Styles/Controls/ScrollViewer.axaml : elle ne concerne que les barres appartenant à un
+       ScrollViewer, pas une ScrollBar posée à la main. -->
 
   <ControlTheme x:Key="{x:Type ScrollBar}" TargetType="ScrollBar">
     <Setter Property="Cursor" Value="Arrow" />
 
     <Style Selector="^:horizontal">
-      <Setter Property="Height" Value="10" />
-      <Setter Property="MinHeight" Value="10" />
+      <Setter Property="Height" Value="{StaticResource ScrollbarW}" />
+      <Setter Property="MinHeight" Value="{StaticResource ScrollbarW}" />
       <Setter Property="Template">
         <ControlTemplate>
           <Track Orientation="Horizontal"
@@ -25,8 +29,8 @@
     </Style>
 
     <Style Selector="^:vertical">
-      <Setter Property="Width" Value="10" />
-      <Setter Property="MinWidth" Value="10" />
+      <Setter Property="Width" Value="{StaticResource ScrollbarW}" />
+      <Setter Property="MinWidth" Value="{StaticResource ScrollbarW}" />
       <Setter Property="Template">
         <ControlTemplate>
           <Track Orientation="Vertical"

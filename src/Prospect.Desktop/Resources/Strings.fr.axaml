@@ -45,6 +45,7 @@
   <x:String x:Key="Downloads_EmptyDescription">Les téléchargements de versions du jeu et de mods apparaîtront ici.</x:String>
   <x:String x:Key="Downloads_Close">Fermer</x:String>
   <x:String x:Key="Downloads_Cancel">Annuler</x:String>
+  <x:String x:Key="Downloads_ClearAll">Tout effacer</x:String>
 
   <!-- ── Accueil ─────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Home_Title">Instances</x:String>
@@ -65,6 +66,7 @@
   <x:String x:Key="Card_Launching">Lancement…</x:String>
   <x:String x:Key="Card_Playing">En cours</x:String>
   <x:String x:Key="Card_Actions">Actions</x:String>
+  <x:String x:Key="Card_Open">Ouvrir</x:String>
   <x:String x:Key="Card_Rename">Renommer</x:String>
   <x:String x:Key="Card_Duplicate">Dupliquer</x:String>
   <x:String x:Key="Card_Delete">Supprimer</x:String>
@@ -236,6 +238,7 @@
   <x:String x:Key="Mods_Plan_Changelog">Notes de version</x:String>
   <x:String x:Key="Mods_Plan_NoChangelog">L'auteur n'a rien publié pour cette version.</x:String>
   <x:String x:Key="Mods_Plan_InstallAnyway">Installer quand même</x:String>
+  <x:String x:Key="Mods_Plan_NoDependencies">Ce mod ne demande rien d'autre.</x:String>
   <x:String x:Key="Mods_Plan_ReleaseReloadFailed">Cette version n'a pas pu être préparée. Le plan affiché reste celui de la version précédente.</x:String>
 
   <!-- ── Onglet Mods d'une instance ──────────────────────────────────────────────── -->

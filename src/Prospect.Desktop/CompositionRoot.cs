@@ -198,7 +198,9 @@ public static class CompositionRoot
             provider.GetRequiredService<IUiDispatcher>(),
             provider.GetRequiredService<IClock>(),
             provider.GetRequiredService<ModpackExportService>(),
-            provider.GetRequiredService<IFilePickerService>()));
+            provider.GetRequiredService<IFilePickerService>(),
+            provider.GetRequiredService<IExternalUrlOpener>(),
+            provider.GetRequiredService<IModLogoCache>()));
 
         // Fenêtre.
         services.AddSingleton<MainWindow>();

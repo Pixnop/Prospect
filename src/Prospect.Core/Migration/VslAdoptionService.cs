@@ -217,7 +217,7 @@ public sealed class VslAdoptionService
     {
         try
         {
-            await _instanceService.DeleteAsync(slug, CancellationToken.None).ConfigureAwait(false);
+            await _instanceService.DeleteAsync(slug, progress: null, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InstanceNotFoundException)
         {

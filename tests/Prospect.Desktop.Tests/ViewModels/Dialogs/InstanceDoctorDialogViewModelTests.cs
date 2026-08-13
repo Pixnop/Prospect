@@ -30,18 +30,25 @@ public sealed class InstanceDoctorDialogViewModelTests
         InstanceDoctorReport report,
         Action? navigateToVersions = null,
         Action? openModsTab = null,
-        RecordingOverlayService? overlay = null)
-        => new(report, navigateToVersions ?? (() => { }), openModsTab ?? (() => { }), overlay ?? new RecordingOverlayService());
+        RecordingOverlayService? overlay = null,
+        Func<string, Task>? installMod = null)
+        => new(
+            report,
+            navigateToVersions ?? (() => { }),
+            openModsTab ?? (() => { }),
+            installMod ?? (_ => Task.CompletedTask),
+            overlay ?? new RecordingOverlayService());
 
     [Fact]
     public void Constructor_NullArguments_ThrowArgumentNullException()
     {
         var overlay = new RecordingOverlayService();
 
-        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(null!, () => { }, () => { }, overlay));
-        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(HealthyReport(), null!, () => { }, overlay));
-        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(HealthyReport(), () => { }, null!, overlay));
-        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(HealthyReport(), () => { }, () => { }, null!));
+        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(null!, () => { }, () => { }, _ => Task.CompletedTask, overlay));
+        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(HealthyReport(), null!, () => { }, _ => Task.CompletedTask, overlay));
+        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(HealthyReport(), () => { }, null!, _ => Task.CompletedTask, overlay));
+        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(HealthyReport(), () => { }, () => { }, null!, overlay));
+        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(HealthyReport(), () => { }, () => { }, _ => Task.CompletedTask, null!));
     }
 
     [Fact]
@@ -104,32 +111,102 @@ public sealed class InstanceDoctorDialogViewModelTests
         row.Severity.ShouldBe(InstanceDoctorSeverity.Warning);
     }
 
+    /// <summary>
+    /// « Voir les mods » sur une dépendance MANQUANTE renvoyait l'utilisateur regarder une liste où
+    /// le mod manquant, par définition, n'est pas. L'action nomme donc le mod et mène au plan
+    /// d'installation. Le cas de l'archive non identifiée, lui, garde « Voir les mods » : c'est bien
+    /// là qu'on va la retirer.
+    /// </summary>
     [Fact]
-    public void ModIssues_EachProducesItsOwnRowWithTheOpenModsAction()
+    public void AMissingDependency_OffersToInstallItByName()
     {
-        var dependency = new ModDependencyIssue("vsimgui", VersionRequirement.Parse("1.0.0"), ModDependencyStatus.Missing, null, false);
+        var dependency = new ModDependencyIssue("carryonlib", VersionRequirement.Parse("1.0.0"), ModDependencyStatus.Missing, null, false);
         var issues = new[]
         {
-            new ModDoctorIssue(ModDoctorIssueKind.UnsatisfiedDependency, "Config lib", Dependency: dependency),
+            new ModDoctorIssue(ModDoctorIssueKind.UnsatisfiedDependency, "Carry On", Dependency: dependency),
             new ModDoctorIssue(ModDoctorIssueKind.Unidentified, "mystere.zip", Problem: ModInfoProblem.MissingModInfo),
         };
         var report = HealthyReport() with { ModIssues = issues };
         var opened = false;
-        var dialog = Create(report, openModsTab: () => opened = true);
+        string? requested = null;
+        var dialog = Create(
+            report,
+            openModsTab: () => opened = true,
+            installMod: identifier =>
+            {
+                requested = identifier;
+
+                return Task.CompletedTask;
+            });
 
         var errorGroup = dialog.Groups.Single(group => group.Title.Contains("corriger"));
         var warningGroup = dialog.Groups.Single(group => group.Title.Contains("surveiller"));
         var dependencyRow = errorGroup.Rows.ShouldHaveSingleItem();
         var unidentifiedRow = warningGroup.Rows.ShouldHaveSingleItem();
 
-        dependencyRow.Message.ShouldContain("Config lib");
-        dependencyRow.Message.ShouldContain("vsimgui");
-        dependencyRow.ActionLabel.ShouldBe("Voir les mods");
+        dependencyRow.Message.ShouldContain("Carry On");
+        dependencyRow.Message.ShouldContain("carryonlib");
+        dependencyRow.ActionLabel.ShouldBe("Installer « carryonlib »…");
 
         unidentifiedRow.Message.ShouldContain("mystere.zip");
         unidentifiedRow.ActionLabel.ShouldBe("Voir les mods");
 
         dependencyRow.ActionCommand!.Execute(null);
+        requested.ShouldBe("carryonlib");
+        opened.ShouldBeFalse();
+
+        unidentifiedRow.ActionCommand!.Execute(null);
+        opened.ShouldBeTrue();
+    }
+
+    /// <summary>Une dépendance présente mais trop ancienne mène au même plan, sous le verbe qui convient.</summary>
+    [Fact]
+    public void ADependencyTooOld_OffersToUpdateItByName()
+    {
+        var dependency = new ModDependencyIssue(
+            "configlib",
+            VersionRequirement.Parse("1.11.0"),
+            ModDependencyStatus.TooOld,
+            ModVersion.Parse("1.0.0"),
+            ReportedByModDb: false);
+        var report = HealthyReport() with
+        {
+            ModIssues = [new ModDoctorIssue(ModDoctorIssueKind.UnsatisfiedDependency, "Carry On", Dependency: dependency)],
+        };
+        string? requested = null;
+        var dialog = Create(report, installMod: identifier =>
+        {
+            requested = identifier;
+
+            return Task.CompletedTask;
+        });
+
+        var row = dialog.Groups.ShouldHaveSingleItem().Rows.ShouldHaveSingleItem();
+        row.ActionLabel.ShouldBe("Mettre à jour « configlib »…");
+
+        row.ActionCommand!.Execute(null);
+        requested.ShouldBe("configlib");
+    }
+
+    /// <summary>
+    /// Une dépendance simplement DÉSACTIVÉE n'a rien à télécharger : le zip est là, il dort. Son
+    /// action reste « Voir les mods », qui est exactement l'endroit où le réveiller.
+    /// </summary>
+    [Fact]
+    public void ADisabledDependency_KeepsTheSeeTheModsAction()
+    {
+        var dependency = new ModDependencyIssue("configlib", VersionRequirement.Parse("*"), ModDependencyStatus.Disabled, ModVersion.Parse("1.11.1"), false);
+        var report = HealthyReport() with
+        {
+            ModIssues = [new ModDoctorIssue(ModDoctorIssueKind.UnsatisfiedDependency, "Carry On", Dependency: dependency)],
+        };
+        var opened = false;
+        var dialog = Create(report, openModsTab: () => opened = true);
+
+        var row = dialog.Groups.ShouldHaveSingleItem().Rows.ShouldHaveSingleItem();
+        row.ActionLabel.ShouldBe("Voir les mods");
+
+        row.ActionCommand!.Execute(null);
         opened.ShouldBeTrue();
     }
 

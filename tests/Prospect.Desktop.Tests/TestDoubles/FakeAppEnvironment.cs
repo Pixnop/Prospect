@@ -12,7 +12,13 @@ internal sealed class FakeAppEnvironment : IAppEnvironment
 {
     public AppOperatingSystem CurrentOperatingSystem { get; set; } = AppOperatingSystem.Linux;
 
+    /// <summary>
+    /// Racine rendue pour tout dossier spécial. Réglable pour les tests qui feignent l'OS dans le
+    /// conteneur RÉEL : là, les chemins doivent rester ceux de la machine, seul l'OS est feint.
+    /// </summary>
+    public string HomeDirectory { get; set; } = "/home/test";
+
     public string? GetEnvironmentVariable(string name) => null;
 
-    public string GetFolderPath(Environment.SpecialFolder folder) => "/home/test";
+    public string GetFolderPath(Environment.SpecialFolder folder) => HomeDirectory;
 }

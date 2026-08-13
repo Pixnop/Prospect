@@ -1,6 +1,7 @@
 using System.IO.Abstractions;
 
 using Prospect.Core.Common;
+using Prospect.Core.Storage;
 
 namespace Prospect.Core.Instances;
 
@@ -277,7 +278,10 @@ public sealed class InstanceService
     /// </remarks>
     /// <exception cref="InstanceNotFoundException">Aucune instance pour <paramref name="slug"/>.</exception>
     /// <exception cref="InstanceDeleteFailedException">La suppression a échoué, en tout ou en partie.</exception>
-    public async Task DeleteAsync(string slug, CancellationToken cancellationToken = default)
+    public async Task DeleteAsync(
+        string slug,
+        IProgress<DirectoryDeleteProgress>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -290,7 +294,7 @@ public sealed class InstanceService
         _deleting[slug] = 0;
         try
         {
-            await Task.Run(() => DeleteDirectoryTree(slug, directory), CancellationToken.None).ConfigureAwait(false);
+            await Task.Run(() => DeleteDirectoryTree(slug, directory, progress), CancellationToken.None).ConfigureAwait(false);
         }
         finally
         {
@@ -302,19 +306,17 @@ public sealed class InstanceService
         Deleted?.Invoke(this, slug);
     }
 
-    // Le catch est large exprès, et le message reste honnête : un fichier verrouillé par le jeu, un
-    // dossier synchronisé, un antivirus qui tient un zip ouvert produisent des exceptions
-    // différentes selon l'OS, mais le seul fait utile à l'utilisateur est le même — il reste
-    // quelque chose sur le disque.
-    private void DeleteDirectoryTree(string slug, string directory)
+    // Le verdict d'échec est retraduit dans le vocabulaire du domaine des instances : l'appelant
+    // sait quelle INSTANCE n'a pas pu être supprimée, pas seulement quel dossier.
+    private void DeleteDirectoryTree(string slug, string directory, IProgress<DirectoryDeleteProgress>? progress)
     {
         try
         {
-            _fileSystem.Directory.Delete(directory, recursive: true);
+            DirectoryDeleter.Delete(_fileSystem, directory, progress);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (DirectoryDeleteFailedException exception)
         {
-            throw InstanceDeleteFailedException.For(slug, directory, exception);
+            throw InstanceDeleteFailedException.For(slug, directory, exception.InnerException ?? exception);
         }
     }
 

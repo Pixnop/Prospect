@@ -45,6 +45,8 @@ public sealed class WindowsGameInstallStrategy : IGameInstallStrategy
     private readonly IFileSystem _fileSystem;
     private readonly IProcessRunner _processRunner;
     private readonly IAppLog _log;
+    private readonly TimeSpan _sampleInterval;
+    private readonly Func<TimeSpan, CancellationToken, Task> _delay;
 
     /// <summary>Construit la stratégie.</summary>
     /// <param name="fileSystem">Système de fichiers abstrait.</param>
@@ -54,7 +56,19 @@ public sealed class WindowsGameInstallStrategy : IGameInstallStrategy
     /// la seule pièce qui permette d'arbitrer, depuis un rapport de terrain, entre « les arguments
     /// ne sont pas arrivés » et « l'installeur ne les a pas honorés ».
     /// </param>
-    public WindowsGameInstallStrategy(IFileSystem fileSystem, IProcessRunner processRunner, IAppLog log)
+    /// <param name="sampleInterval">Période d'échantillonnage du dossier cible. Défaut : une seconde.</param>
+    /// <param name="delay">
+    /// Attente entre deux échantillons. Paramètre injectable plutôt qu'un appel direct à
+    /// <see cref="Task.Delay(TimeSpan, CancellationToken)"/>, même idiome que
+    /// <see cref="Prospect.Core.Http.RetryPolicy"/> : <see cref="IClock"/> ne rend que l'heure, pas
+    /// un battement, et un test qui attendrait de vraies secondes ne serait pas un test.
+    /// </param>
+    public WindowsGameInstallStrategy(
+        IFileSystem fileSystem,
+        IProcessRunner processRunner,
+        IAppLog log,
+        TimeSpan? sampleInterval = null,
+        Func<TimeSpan, CancellationToken, Task>? delay = null)
     {
         ArgumentNullException.ThrowIfNull(fileSystem);
         ArgumentNullException.ThrowIfNull(processRunner);
@@ -63,6 +77,8 @@ public sealed class WindowsGameInstallStrategy : IGameInstallStrategy
         _fileSystem = fileSystem;
         _processRunner = processRunner;
         _log = log;
+        _sampleInterval = sampleInterval ?? InstallDirectoryGrowthReporter.DefaultInterval;
+        _delay = delay ?? Task.Delay;
     }
 
     /// <inheritdoc />
@@ -95,11 +111,14 @@ public sealed class WindowsGameInstallStrategy : IGameInstallStrategy
 
     /// <inheritdoc />
     /// <remarks>
-    /// <paramref name="progress"/> n'est jamais alimenté ici, et c'est un fait de l'installeur, pas
-    /// un oubli : <c>/VERYSILENT</c> ne publie aucun avancement et le processus ne rend la main
-    /// qu'une fois terminé, sans rien écrire d'exploitable entre-temps. La phase reste donc
-    /// indéterminée, ce que l'interface sait afficher — inventer un pourcentage serait pire que ne
-    /// rien annoncer.
+    /// L'installeur lui-même ne publie RIEN : <c>/VERYSILENT</c> n'écrit aucun avancement et le
+    /// processus ne rend la main qu'une fois terminé. Ce qu'il fait en revanche, c'est écrire ses
+    /// fichiers progressivement dans le dossier <c>/DIR</c>, et cette croissance est observable.
+    /// L'avancement publié ici est donc une ESTIMATION, marquée comme telle
+    /// (<see cref="GameInstallProgress.IsEstimated"/>) et bornée sous 100 % jusqu'au retour du
+    /// processus — voir <see cref="InstallDirectoryGrowthReporter"/> pour le facteur retenu et les
+    /// garde-fous. Une estimation étiquetée vaut mieux qu'une barre indéterminée pendant plusieurs
+    /// minutes ; un pourcentage inventé et présenté comme exact vaudrait moins que les deux.
     /// </remarks>
     public async Task InstallAsync(
         string archivePath,
@@ -114,7 +133,7 @@ public sealed class WindowsGameInstallStrategy : IGameInstallStrategy
 
         _log.Write(AppLogLevel.Info, $"Installeur Vintage Story : {ProcessCommandLine.Render(request)}");
 
-        var result = await _processRunner.RunAsync(request, cancellationToken).ConfigureAwait(false);
+        var result = await RunWatchedAsync(request, archivePath, targetDirectory, progress, cancellationToken).ConfigureAwait(false);
 
         if (result.ExitCode != 0)
         {
@@ -124,5 +143,33 @@ public sealed class WindowsGameInstallStrategy : IGameInstallStrategy
         }
 
         _log.Write(AppLogLevel.Info, $"Installeur Vintage Story : terminé avec le code 0, cible attendue « {targetDirectory} ».");
+    }
+
+    // L'observation s'arrête TOUJOURS avec le processus, succès comme échec : le finally annule la
+    // boucle et l'attend, pour qu'aucun échantillon n'arrive après que l'appelant ait tourné la page.
+    private async Task<ProcessRunResult> RunWatchedAsync(
+        ProcessRunRequest request,
+        string archivePath,
+        string targetDirectory,
+        IProgress<GameInstallProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        var reporter = InstallDirectoryGrowthReporter.TryCreate(_fileSystem, archivePath, targetDirectory, progress);
+        if (reporter is null)
+        {
+            return await _processRunner.RunAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+
+        using var watching = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var loop = reporter.RunAsync(_sampleInterval, _delay, watching.Token);
+        try
+        {
+            return await _processRunner.RunAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            await watching.CancelAsync().ConfigureAwait(false);
+            await loop.ConfigureAwait(false);
+        }
     }
 }

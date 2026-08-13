@@ -1,4 +1,5 @@
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -7,6 +8,7 @@ using Prospect.Core.ModDb;
 using Prospect.Desktop.Tests.TestDoubles;
 using Prospect.Desktop.ViewModels.Dialogs;
 using Prospect.Desktop.ViewModels.Instance;
+using Prospect.Desktop.ViewModels.Mods;
 using Prospect.Desktop.ViewModels.Shell;
 using Prospect.Desktop.ViewModels.Versions;
 
@@ -92,5 +94,100 @@ public sealed class InstanceDoctorHeadlessTests
 
         shell.Overlay.Active.ShouldBeNull();
         detail.SelectedTab.ShouldBe(InstanceDetailTab.Mods);
+    }
+
+    /// <summary>
+    /// Le cas réel remonté : Carry On installé, carryonlib absent, le docteur ne proposait que
+    /// « Voir les mods ». L'action installe désormais la dépendance nommée, et le plan qui s'ouvre
+    /// est bien celui de CE mod, dans CETTE instance.
+    ///
+    /// La séquence importe autant que le résultat : le diagnostic est produit hors ligne, le
+    /// dialogue se referme, et le réseau n'entre en jeu qu'ensuite, dans la machinerie
+    /// d'installation partagée avec le navigateur de mods.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task CheckInstance_MissingDependency_InstallActionOpensThePlanForThatMod()
+    {
+        using var provider = TestServiceProviderFactory.Create(out var fileSystem, out var catalogHandler);
+        provider.SeedInstalledVersion(fileSystem, "1.21.3");
+        var slug = await provider.SeedTargetInstanceAsync(gameVersion: "1.21.3");
+        var mods = provider.GetRequiredService<IInstalledModRepository>();
+        ModDbDoubles.SeedMod(
+            fileSystem,
+            mods.GetModsDirectory(slug),
+            "carryon-1.14.3.zip",
+            ModDbDoubles.ModInfo("carryon", "Carry On", "1.14.3", dependency: "carryonlib"));
+
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        shell.ShowInstanceDetail(slug);
+        var detail = shell.CurrentPage.ShouldBeOfType<InstanceDetailViewModel>();
+
+        // Le diagnostic lui-même se fait sans réseau : le gestionnaire est coupé pendant qu'il court.
+        catalogHandler.IsOnline = false;
+        await detail.CheckInstanceCommand.ExecuteAsync(null);
+        var dialog = shell.Overlay.Active.ShouldBeOfType<InstanceDoctorDialogViewModel>();
+
+        var row = dialog.Groups.SelectMany(group => group.Rows).Single(candidate => candidate.Message.Contains("carryonlib"));
+        row.ActionLabel.ShouldBe("Installer « carryonlib »…");
+
+        // Le réseau ne revient qu'AU CLIC, c'est-à-dire dans la machinerie d'installation.
+        catalogHandler.IsOnline = true;
+        row.ActionCommand!.Execute(null);
+        await WaitForOverlayAsync<ModInstallPlanDialogViewModel>(shell);
+
+        var plan = shell.Overlay.Active.ShouldBeOfType<ModInstallPlanDialogViewModel>();
+        plan.Plan.Primary.ModIdString.ShouldBe("carryonlib");
+        plan.FileNameText.ShouldBe("carryonlib-1.2.0.zip");
+        detail.SelectedTab.ShouldBe(InstanceDetailTab.Mods);
+    }
+
+    /// <summary>
+    /// ModDB injoignable au moment du clic : message honnête, aucun plan ouvert, et surtout rien qui
+    /// tombe. Le rapport, lui, a déjà été rendu — il n'a jamais eu besoin du réseau.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task CheckInstance_InstallActionWhileOffline_ReportsItWithoutCrashing()
+    {
+        using var provider = TestServiceProviderFactory.Create(out var fileSystem, out var catalogHandler);
+        provider.SeedInstalledVersion(fileSystem, "1.21.3");
+        var slug = await provider.SeedTargetInstanceAsync(gameVersion: "1.21.3");
+        var mods = provider.GetRequiredService<IInstalledModRepository>();
+        ModDbDoubles.SeedMod(
+            fileSystem,
+            mods.GetModsDirectory(slug),
+            "carryon-1.14.3.zip",
+            ModDbDoubles.ModInfo("carryon", "Carry On", "1.14.3", dependency: "carryonlib"));
+
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        shell.ShowInstanceDetail(slug);
+        var detail = shell.CurrentPage.ShouldBeOfType<InstanceDetailViewModel>();
+
+        catalogHandler.IsOnline = false;
+        await detail.CheckInstanceCommand.ExecuteAsync(null);
+        var dialog = shell.Overlay.Active.ShouldBeOfType<InstanceDoctorDialogViewModel>();
+        var row = dialog.Groups.SelectMany(group => group.Rows).Single(candidate => candidate.Message.Contains("carryonlib"));
+
+        row.ActionCommand!.Execute(null);
+        await WaitForAsync(() => shell.Toasts.Toasts.Count > 0);
+
+        shell.Overlay.Active.ShouldBeNull();
+        shell.Toasts.Toasts.ShouldNotBeEmpty();
+    }
+
+    private static Task WaitForOverlayAsync<T>(ShellViewModel shell)
+        => WaitForAsync(() => shell.Overlay.Active is T);
+
+    // Généreux exprès : ce conteneur est celui de PRODUCTION, donc le client ModDB y porte la vraie
+    // politique de réessai (trois tentatives espacées de 1 s puis 2 s). Un échec réseau met donc
+    // quelques secondes à devenir un verdict, et c'est le comportement voulu.
+    private static async Task WaitForAsync(Func<bool> condition)
+    {
+        for (var attempt = 0; attempt < 1000 && !condition(); attempt++)
+        {
+            await Task.Delay(10);
+            Dispatcher.UIThread.RunJobs();
+        }
+
+        condition().ShouldBeTrue("La condition attendue n'est jamais survenue.");
     }
 }

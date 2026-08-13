@@ -41,6 +41,7 @@ public sealed partial class VersionsViewModel : ObservableObject
     private readonly IOverlayService _overlay;
     private readonly IToastService _toasts;
     private readonly IUiDispatcher _dispatcher;
+    private readonly AppOperatingSystem _operatingSystem;
 
     private IReadOnlyList<InstalledGameVersion> _installedVersions = [];
     private IReadOnlyList<GameVersionCatalogEntry> _catalogVersions = [];
@@ -63,7 +64,8 @@ public sealed partial class VersionsViewModel : ObservableObject
         AppPaths appPaths,
         IOverlayService overlay,
         IToastService toasts,
-        IUiDispatcher dispatcher)
+        IUiDispatcher dispatcher,
+        IAppEnvironment appEnvironment)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(repository);
@@ -73,6 +75,7 @@ public sealed partial class VersionsViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(toasts);
         ArgumentNullException.ThrowIfNull(dispatcher);
+        ArgumentNullException.ThrowIfNull(appEnvironment);
 
         _catalog = catalog;
         _repository = repository;
@@ -81,6 +84,7 @@ public sealed partial class VersionsViewModel : ObservableObject
         _overlay = overlay;
         _toasts = toasts;
         _dispatcher = dispatcher;
+        _operatingSystem = appEnvironment.CurrentOperatingSystem;
         VersionsDirectoryText = appPaths.VersionsDirectory;
     }
 
@@ -254,6 +258,7 @@ public sealed partial class VersionsViewModel : ObservableObject
             isInstalled: true,
             _installService,
             _dispatcher,
+            _operatingSystem,
             OnInstalledAsync,
             RequestUninstallAsync);
 
@@ -265,6 +270,7 @@ public sealed partial class VersionsViewModel : ObservableObject
             isInstalled: false,
             _installService,
             _dispatcher,
+            _operatingSystem,
             OnInstalledAsync,
             RequestUninstallAsync);
 
@@ -289,13 +295,18 @@ public sealed partial class VersionsViewModel : ObservableObject
         _overlay.Show(new UninstallVersionDialogViewModel(
             row.VersionText,
             dependents,
-            () => ConfirmUninstallAsync(row),
-            _overlay));
+            progress => ConfirmUninstallAsync(row, progress),
+            _overlay,
+            _dispatcher));
     }
 
-    private async Task ConfirmUninstallAsync(GameVersionRowViewModel row)
+    // Le dialogue reste ouvert le temps de la suppression et suit son avancement ; il ne se referme
+    // qu'une fois le dossier réellement parti. Un échec partiel remonte au dialogue, qui le dit,
+    // plutôt que d'être avalé ici.
+    private async Task ConfirmUninstallAsync(GameVersionRowViewModel row, IProgress<DirectoryDeleteProgress> progress)
     {
-        _installService.Uninstall(row.Version);
+        await _installService.UninstallAsync(row.Version, progress, CancellationToken.None).ConfigureAwait(true);
+
         _overlay.Close();
         _toasts.Show(ToastTone.Info, UiText.Toasts.VersionUninstalledTitle, row.VersionText);
         await RefreshAsync(CancellationToken.None).ConfigureAwait(true);

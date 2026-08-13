@@ -33,6 +33,7 @@
   <x:String x:Key="Downloads_EmptyDescription">Game versions and mods you download will show up here.</x:String>
   <x:String x:Key="Downloads_Close">Close</x:String>
   <x:String x:Key="Downloads_Cancel">Cancel</x:String>
+  <x:String x:Key="Downloads_ClearAll">Clear all</x:String>
 
   <!-- ── Accueil ─────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Home_Title">Instances</x:String>
@@ -53,6 +54,7 @@
   <x:String x:Key="Card_Launching">Starting…</x:String>
   <x:String x:Key="Card_Playing">Running</x:String>
   <x:String x:Key="Card_Actions">Actions</x:String>
+  <x:String x:Key="Card_Open">Open</x:String>
   <x:String x:Key="Card_Rename">Rename</x:String>
   <x:String x:Key="Card_Duplicate">Duplicate</x:String>
   <x:String x:Key="Card_Delete">Delete</x:String>
@@ -222,6 +224,7 @@
   <x:String x:Key="Mods_Plan_Changelog">Release notes</x:String>
   <x:String x:Key="Mods_Plan_NoChangelog">The author published nothing for this version.</x:String>
   <x:String x:Key="Mods_Plan_InstallAnyway">Install anyway</x:String>
+  <x:String x:Key="Mods_Plan_NoDependencies">This mod needs nothing else.</x:String>
   <x:String x:Key="Mods_Plan_ReleaseReloadFailed">This version could not be prepared. The plan on screen is still the previous one.</x:String>
 
   <!-- ── Onglet Mods d'une instance ──────────────────────────────────────────────── -->

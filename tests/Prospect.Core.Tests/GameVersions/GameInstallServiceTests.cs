@@ -235,7 +235,7 @@ public sealed class GameInstallServiceTests
     /// un pourcentage — l'interface sait afficher une barre indéterminée.
     /// </summary>
     [Fact]
-    public async Task InstallAsync_WindowsInstaller_KeepsTheInstallPhaseHonestlyIndeterminate()
+    public async Task InstallAsync_WindowsInstallerThatWritesNothing_KeepsTheInstallPhaseIndeterminate()
     {
         var server = new FakeDownloadServer(SampleArchive());
         using var handler = new FakeHttpMessageHandler(server.Handle);
@@ -263,8 +263,79 @@ public sealed class GameInstallServiceTests
             new SynchronousProgress<GameInstallProgress>(reports.Add),
             CancellationToken.None);
 
+        // Le processus factice rend la main tout de suite : l'observateur du dossier n'a pas eu un
+        // seul battement pour échantillonner, donc la phase reste franchement indéterminée. C'est
+        // le repli, et il est intact.
         var installing = reports.Where(report => report.Phase == GameInstallPhase.Installing).ToArray();
         installing.ShouldHaveSingleItem().Ratio.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// L'installeur Inno silencieux ne publie rien, mais il écrit ses fichiers progressivement dans
+    /// le dossier <c>/DIR</c>. L'avancement de la phase d'installation vient de là, et il est marqué
+    /// comme ESTIMÉ pour que l'interface l'étiquette au lieu de le présenter comme un décompte.
+    /// </summary>
+    [Fact]
+    public async Task InstallAsync_WindowsInstaller_EstimatesItsProgressFromTheTargetFolderGrowing()
+    {
+        var server = new FakeDownloadServer(SampleArchive());
+        using var handler = new FakeHttpMessageHandler(server.Handle);
+        var fileSystem = new MockFileSystem();
+        using var downloads = CreateDownloads(handler, fileSystem);
+        var reports = new List<GameInstallProgress>();
+        var repository = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
+        var target = repository.GetVersionDirectory(Version);
+
+        // Un battement autorisé par Release() : le test contrôle exactement quand un échantillon
+        // est pris, plutôt que d'attendre de vraies secondes.
+        using var beat = new SemaphoreSlim(0);
+        var runner = new FakeProcessRunner
+        {
+            OnRunAsync = async (_, _) =>
+            {
+                fileSystem.AddFile(fileSystem.Path.Combine(target, "assets.dat"), new MockFileData(new byte[200]));
+                beat.Release();
+                await WaitForAsync(() => reports.Any(report => report.IsEstimated));
+
+                fileSystem.AddFile(fileSystem.Path.Combine(target, "Vintagestory.exe"), new MockFileData(new byte[400]));
+                beat.Release();
+                await WaitForAsync(() => reports.Count(report => report.IsEstimated) >= 2);
+            },
+        };
+
+        var service = new GameInstallService(
+            new FakeGameVersionCatalog(CatalogFor(server, GamePlatforms.Windows)),
+            downloads,
+            repository,
+            new WindowsGameInstallStrategy(fileSystem, runner, NullAppLog.Instance, delay: (_, token) => beat.WaitAsync(token)),
+            fileSystem,
+            NullAppLog.Instance);
+
+        await service.InstallAsync(
+            Version,
+            new SynchronousProgress<GameInstallProgress>(reports.Add),
+            CancellationToken.None);
+
+        var estimated = reports.Where(report => report.IsEstimated).ToArray();
+        estimated.Length.ShouldBeGreaterThanOrEqualTo(2);
+        estimated.ShouldAllBe(report => report.Phase == GameInstallPhase.Installing);
+
+        var ratios = estimated.Select(report => report.Ratio!.Value).ToArray();
+        ratios.ShouldBe(ratios.Order().ToArray());
+        ratios.ShouldAllBe(ratio => ratio <= InstallDirectoryGrowthReporter.MaxReportedRatio);
+
+        // Les compteurs d'octets restent ceux du téléchargement, jamais réutilisés pour l'installation.
+        estimated.ShouldAllBe(report => report.ReceivedBytes == 0L);
+    }
+
+    private static async Task WaitForAsync(Func<bool> condition)
+    {
+        for (var attempt = 0; attempt < 500 && !condition(); attempt++)
+        {
+            await Task.Delay(2);
+        }
+
+        condition().ShouldBeTrue("La condition attendue n'est jamais survenue.");
     }
 
     [Fact]
@@ -408,7 +479,7 @@ public sealed class GameInstallServiceTests
     }
 
     [Fact]
-    public void Uninstall_RemovesTheInstalledFolder()
+    public async Task Uninstall_RemovesTheInstalledFolderAndCountsItsFiles()
     {
         var fileSystem = new MockFileSystem();
         var repository = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
@@ -421,9 +492,14 @@ public sealed class GameInstallServiceTests
             repository,
             new FakeGameInstallStrategy(fileSystem), fileSystem, NullAppLog.Instance);
 
-        service.Uninstall(Version);
+        var reports = new List<DirectoryDeleteProgress>();
+        await service.UninstallAsync(Version, new SynchronousProgress<DirectoryDeleteProgress>(reports.Add), CancellationToken.None);
 
         repository.IsInstalled(Version).ShouldBeFalse();
+
+        // L'avancement est DÉTERMINÉ : les fichiers sont comptés avant d'être effacés.
+        reports.ShouldNotBeEmpty();
+        reports[^1].Ratio.ShouldBe(1d);
     }
 
     [Fact]
@@ -457,6 +533,10 @@ public sealed class GameInstallServiceTests
         }
 
         public void Dismiss(DownloadOperation operation)
+        {
+        }
+
+        public void DismissFinished()
         {
         }
     }

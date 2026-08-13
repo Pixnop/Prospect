@@ -41,12 +41,12 @@ public sealed class GlassTokensTests
     private static readonly string[] Brushes =
     [
         "GlassVeil", "GlassPane", "GlassChrome", "GlassItem", "GlassMenu",
-        "GlassEdge", "GlassEdgeStrong", "GlassRowOdd", "GlassRowEven",
+        "GlassEdge", "GlassEdgeStrong", "GlassEdgeHot", "GlassRowOdd", "GlassRowEven",
     ];
 
     private static readonly string[] Shadows =
     [
-        "GlassShadow", "GlassShadowLg", "GlassSheen", "GlassSheenStrong",
+        "GlassShadow", "GlassShadowLg", "GlassSheen", "GlassSheenStrong", "GlassSheenHot",
         "GlassElevItem", "GlassElevMenu",
     ];
 
@@ -113,6 +113,27 @@ public sealed class GlassTokensTests
         {
             var edge = Resolve("GlassEdge", variant);
             edge.R.ShouldBeGreaterThan(edge.B, $"l'arête doit rester cuivrée en {variant}");
+        }
+    }
+
+    /// <summary>
+    /// Les trois crans d'arête sont ordonnés, dans les deux variantes : filet au repos, arête
+    /// marquée sur un contrôle survolé, contour franc sur une surface qui doit CRIER qu'elle est
+    /// cliquable. Le défaut que ce test empêche est celui qui a été remonté : un survol trop
+    /// discret pour être vu, donc une carte d'accueil que personne ne pense à cliquer.
+    /// </summary>
+    [AvaloniaFact]
+    public void LesTroisCransDArete_SontOrdonnesDansLesDeuxVariantes()
+    {
+        foreach (var variant in new[] { ThemeVariant.Dark, ThemeVariant.Light })
+        {
+            var edge = Resolve("GlassEdge", variant);
+            var strong = Resolve("GlassEdgeStrong", variant);
+            var hot = Resolve("GlassEdgeHot", variant);
+
+            strong.A.ShouldBeGreaterThan(edge.A, $"GlassEdgeStrong doit dépasser GlassEdge en {variant}");
+            hot.A.ShouldBeGreaterThan(strong.A, $"GlassEdgeHot doit dépasser GlassEdgeStrong en {variant}");
+            hot.R.ShouldBeGreaterThan(hot.B, $"l'arête chaude reste cuivrée en {variant}");
         }
     }
 

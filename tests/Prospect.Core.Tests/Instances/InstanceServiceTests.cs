@@ -472,7 +472,7 @@ public class InstanceServiceTests
         var created = await service.CreateAsync("Homestead", SampleVersion, CancellationToken.None);
         fileSystem.AddFile(fileSystem.Path.Combine(repository.GetDataDirectory(created.Slug), "Saves", "world.vcdbs"), new MockFileData("save"));
 
-        await service.DeleteAsync(created.Slug, CancellationToken.None);
+        await service.DeleteAsync(created.Slug, progress: null, CancellationToken.None);
 
         fileSystem.Directory.Exists(repository.GetInstanceDirectory(created.Slug)).ShouldBeFalse();
     }
@@ -482,6 +482,6 @@ public class InstanceServiceTests
     {
         var (service, _, _, _) = CreateService();
 
-        await Should.ThrowAsync<InstanceNotFoundException>(() => service.DeleteAsync("ghost", CancellationToken.None));
+        await Should.ThrowAsync<InstanceNotFoundException>(() => service.DeleteAsync("ghost", progress: null, CancellationToken.None));
     }
 }

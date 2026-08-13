@@ -8,9 +8,12 @@ namespace Prospect.Core.Http;
 public interface IDownloadManager
 {
     /// <summary>
-    /// Téléchargements en cours, en attente, ou terminés en échec. Un téléchargement réussi sort
-    /// de la file de lui-même ; un échec y reste jusqu'à ce que l'utilisateur l'écarte, pour qu'il
-    /// ait le temps d'en lire la raison.
+    /// Téléchargements en cours, en attente, et terminés — réussis, échoués ou annulés. Rien ne
+    /// sort de la file tout seul tant qu'une opération est vivante ; une opération terminée y reste
+    /// jusqu'à ce que l'utilisateur l'écarte ou qu'une plus récente la pousse dehors
+    /// (<see cref="DownloadOptions.HistoryLimit"/>).
+    ///
+    /// L'historique est de SESSION : rien n'est écrit sur disque, et fermer Prospect l'efface.
     /// </summary>
     IReadOnlyList<DownloadOperation> Operations { get; }
 
@@ -29,6 +32,12 @@ public interface IDownloadManager
     /// <exception cref="DownloadFailedException">Tous les miroirs ont échoué.</exception>
     Task<string> DownloadAsync(DownloadRequest request, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default);
 
-    /// <summary>Retire de la file une opération terminée (échec ou annulation).</summary>
+    /// <summary>Retire de la file une opération, terminée ou non.</summary>
     void Dismiss(DownloadOperation operation);
+
+    /// <summary>
+    /// Vide l'historique : retire toutes les opérations terminées et laisse les vivantes. C'est le
+    /// « Tout effacer » du popover, qui ne doit jamais emporter un téléchargement en cours.
+    /// </summary>
+    void DismissFinished();
 }

@@ -124,6 +124,9 @@ internal sealed class EnglishDialogsText : DialogsText
 
     internal override string DeleteInProgress => "Deleting… This can take a while on an instance with large worlds.";
 
+    internal override string DeleteProgress(int deletedFiles, int totalFiles)
+        => totalFiles == 0 ? DeleteInProgress : $"Deleting files ({deletedFiles}/{totalFiles})";
+
     internal override string DeletePartialFailure(string directory)
         => $"The deletion could not finish: files are left in “{directory}”. Close the game if it is still running, then try again.";
 
@@ -187,6 +190,12 @@ internal sealed class EnglishDownloadsText : DownloadsText
         (0, _) => $"{queued} queued",
         _ => $"{running} running · {queued} queued",
     };
+
+    internal override string OutcomeCompleted => "done";
+
+    internal override string OutcomeFailed => "failed";
+
+    internal override string OutcomeCanceled => "canceled";
 }
 
 internal sealed class EnglishVersionsText : VersionsText
@@ -226,6 +235,12 @@ internal sealed class EnglishVersionsText : VersionsText
     internal override string InstallDetail(int percent)
         => $"extracting · {percent.ToString(CultureInfo.InvariantCulture)}%";
 
+    internal override string InstallEstimateDetail(int percent)
+        => $"installing · ~{percent.ToString(CultureInfo.InvariantCulture)}%";
+
+    internal override string InstallerPromptNotice
+        => "The game's own installer may open a window offering to uninstall an older version. Answer no: Prospect installs into its own folder and leaves your existing game alone.";
+
     internal override string BrokenReason(GameInstallBrokenReason reason) => reason switch
     {
         GameInstallBrokenReason.MissingCompletionMarker => "install cut short, needs reinstalling",
@@ -237,6 +252,14 @@ internal sealed class EnglishVersionsText : VersionsText
 
     internal override string UninstallMessage(string version)
         => $"The files of version {version} will be removed from the shared folder. You can install it again from the catalog.";
+
+    internal override string UninstallInProgress => "Uninstalling…";
+
+    internal override string UninstallProgress(int deletedFiles, int totalFiles)
+        => totalFiles == 0 ? UninstallInProgress : $"Deleting files ({deletedFiles}/{totalFiles})";
+
+    internal override string UninstallPartialFailure(string directory)
+        => $"The uninstall could not finish: files are left in “{directory}”. Close the game if it is still running, then try again.";
 
     internal override string UninstallDependents(IReadOnlyList<string> instanceNames)
     {
@@ -303,6 +326,10 @@ internal sealed class EnglishDoctorText(ModsText mods) : DoctorText(mods)
     internal override string ReinstallAction => "Reinstall";
 
     internal override string OpenModsAction => "See the mods";
+
+    internal override string InstallDependencyAction(string modIdString) => $"Install “{modIdString}”…";
+
+    internal override string UpdateDependencyAction(string modIdString) => $"Update “{modIdString}”…";
 
     internal override string AllClearTitle => "All clear";
 
@@ -419,6 +446,13 @@ internal sealed class EnglishModsText : ModsText
     internal override string PickInstanceTitle => "Choose an instance";
 
     internal override string PickInstanceMessage => "Pick the instance to install into before you add a mod.";
+
+    internal override string InstallAction => "Install";
+
+    internal override string ManageAction => "Manage";
+
+    internal override string InstalledBadge(string? version)
+        => string.IsNullOrWhiteSpace(version) ? "Installed" : $"Installed · {version}";
 
     internal override string StaleCatalog
         => "The index could not be refreshed. The mods shown come from the last reading.";
@@ -899,6 +933,12 @@ internal sealed class EnglishTimeText : TimeText
     internal override string PlayedUnderAnHour => "played < 1 h";
 
     internal override string DaysAgo(int days) => $"{days} days ago";
+
+    internal override string JustNow => "just now";
+
+    internal override string MinutesAgo(int minutes) => minutes <= 1 ? "1 minute ago" : $"{minutes} minutes ago";
+
+    internal override string HoursAgo(int hours) => hours <= 1 ? "1 hour ago" : $"{hours} hours ago";
 
     internal override string AbsoluteDate(DateTime utcValue) => utcValue.ToString("MMMM d, yyyy", English);
 

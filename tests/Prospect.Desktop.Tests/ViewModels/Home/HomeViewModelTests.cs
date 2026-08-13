@@ -126,7 +126,7 @@ public class HomeViewModelTests
         var catalog = new FakeGameVersionCatalog { Catalog = FakeGameVersionCatalog.Build("1.21.3") };
         var installService = new GameInstallService(catalog, new FakeDownloadManager(), versions, new FakeGameInstallStrategy(fileSystem), fileSystem, NullAppLog.Instance);
 
-        return () => new WizardViewModel(service, overlay, catalog, versions, installService, new ImmediateUiDispatcher());
+        return () => new WizardViewModel(service, overlay, catalog, versions, installService, new ImmediateUiDispatcher(), new FakeAppEnvironment());
     }
 
     // Même principe que WizardFactory : l'import compose autant de services que le domaine

@@ -39,12 +39,61 @@
 
   <Style Selector="Border.card.interactive">
     <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="{StaticResource DurFast}" Easing="{StaticResource EaseStandard}" />
+        <BrushTransition Property="BorderBrush" Duration="{StaticResource DurFast}" Easing="{StaticResource EaseStandard}" />
+      </Transitions>
+    </Setter>
   </Style>
-  <!-- Sur le verre, l'ombre DISPARAÎT au survol au lieu de grandir : la vitre monte à la
-       rencontre du curseur, et seule la paire spéculaire lui garde son épaisseur. -->
+  <!--
+    Sur le verre, l'ombre DISPARAÎT au survol au lieu de grandir : la vitre monte à la
+    rencontre du curseur, et seule la paire spéculaire lui garde son épaisseur.
+
+    Le survol est FRANC, et il l'est devenu après coup. La première version se contentait de
+    GlassEdgeStrong et de GlassSheenStrong, hérités du survol d'un champ : sur une carte
+    d'accueil, personne ne voyait qu'il y avait quelque chose à cliquer, au point qu'un
+    testeur a cherché comment ouvrir une instance. Trois signaux jouent donc ensemble, tous
+    en lumière et en profondeur, jamais en géométrie (aucun scale, aucune translation, la
+    carte ne bouge pas d'un point) :
+
+      · la vitre monte d'un cran de profondeur, d'ITEM (50 %) à MENU (72 %) ;
+      · l'arête passe à GlassEdgeHot, un contour cuivré franc au lieu d'un filet ;
+      · le sheen passe à GlassSheenHot.
+
+    Et la carte porte en plus un indice explicite, l'étiquette « Ouvrir » ci-dessous : le
+    contraste seul dit « ceci réagit », il ne dit pas ce que le clic va faire.
+  -->
   <Style Selector="Border.card.interactive:pointerover">
-    <Setter Property="BorderBrush" Value="{DynamicResource GlassEdgeStrong}" />
-    <Setter Property="BoxShadow" Value="{DynamicResource GlassSheenStrong}" />
+    <Setter Property="Background" Value="{DynamicResource GlassMenu}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassEdgeHot}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource GlassSheenHot}" />
+  </Style>
+
+  <!--
+    Indice d'ouverture : une pastille de verre posée sur la carte, invisible au repos et
+    révélée par le survol de la carte ENTIÈRE (le sélecteur descendant part de la carte, pas de
+    la pastille — sinon il faudrait survoler la pastille pour la faire apparaître).
+
+    Elle ne prend jamais le clic (IsHitTestVisible=False) : le pixel sous elle appartient au
+    bouton pleine surface de la carte, et c'est lui qui doit répondre.
+  -->
+  <Style Selector="Border.card.interactive Border.openHint">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="Background" Value="{DynamicResource GlassMenu}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassEdgeHot}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
+    <Setter Property="Padding" Value="10,3" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="{StaticResource DurFast}" Easing="{StaticResource EaseStandard}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Border.card.interactive:pointerover Border.openHint">
+    <Setter Property="Opacity" Value="1" />
   </Style>
 
   <Style Selector="Border.card.selected">

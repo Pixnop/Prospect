@@ -4,6 +4,8 @@ using Avalonia.VisualTree;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Prospect.Core.GameVersions;
+using Prospect.Core.Storage;
 using Prospect.Desktop.ViewModels.Dialogs;
 using Prospect.Desktop.ViewModels.Instance;
 using Prospect.Desktop.ViewModels.Shell;
@@ -213,6 +215,64 @@ public class VersionsHeadlessTests
         // franchement plus large que lui, et plafonnée par le MaxWidth du design.
         bar.Bounds.Width.ShouldBeGreaterThan(200d);
         bar.Bounds.Width.ShouldBeLessThanOrEqualTo(420d);
+
+        window.Close();
+    }
+
+    /// <summary>
+    /// La notice de la boîte Inno. L'installeur du jeu porte son PROPRE script, qui détecte en
+    /// registre une installation classique de Vintage Story et demande s'il faut la désinstaller ;
+    /// le bouton par défaut de cette question est « Oui ». Prospect prévient donc AVANT, à l'entrée
+    /// de la phase d'installation, et nulle part ailleurs.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task VersionRow_InstallingOnWindows_WarnsAboutTheGameInstallerOwnPrompt()
+    {
+        using var provider = TestServiceProviderFactory.Create(out _, out _, AppOperatingSystem.Windows);
+        var window = provider.GetRequiredService<MainWindow>();
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var versions = provider.GetRequiredService<VersionsViewModel>();
+
+        window.Show();
+        shell.LibraryNavItems.First(item => item.Label == "Versions").SelectCommand.Execute(null);
+        await versions.RefreshCommand.ExecuteAsync(null);
+        window.Settle();
+
+        var row = versions.Available.First();
+        row.IsWorking = true;
+        row.ShowInstallerPromptNotice.ShouldBeFalse();
+
+        row.Report(GameInstallProgress.ForPhase(GameInstallPhase.Installing));
+        window.Settle();
+
+        row.ShowInstallerPromptNotice.ShouldBeTrue();
+        var view = window.GetVisualDescendants().OfType<VersionsView>().Single();
+        view.GetVisualDescendants()
+            .OfType<TextBlock>()
+            .ShouldContain(text => text.IsEffectivelyVisible && text.Text == row.InstallerPromptNotice);
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task VersionRow_InstallingOnLinux_SaysNothingAboutAnyInstallerPrompt()
+    {
+        using var provider = TestServiceProviderFactory.Create(out _, out _, AppOperatingSystem.Linux);
+        var window = provider.GetRequiredService<MainWindow>();
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var versions = provider.GetRequiredService<VersionsViewModel>();
+
+        window.Show();
+        shell.LibraryNavItems.First(item => item.Label == "Versions").SelectCommand.Execute(null);
+        await versions.RefreshCommand.ExecuteAsync(null);
+        window.Settle();
+
+        var row = versions.Available.First();
+        row.IsWorking = true;
+        row.Report(GameInstallProgress.ForPhase(GameInstallPhase.Installing));
+        window.Settle();
+
+        row.ShowInstallerPromptNotice.ShouldBeFalse();
 
         window.Close();
     }

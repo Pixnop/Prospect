@@ -36,7 +36,7 @@ public sealed class ModCardViewModelTests
     {
         var cache = new FakeModLogoCache();
 
-        using var card = new ModCardViewModel(CreateSummary(), ModCompatibilityBadge.None, NoOp, NoOp, cache);
+        using var card = new ModCardViewModel(CreateSummary(), ModCompatibilityBadge.None, installed: null, NoOp, NoOp, cache);
 
         card.HasLogo.ShouldBeFalse();
         card.LogoBitmap.ShouldBeNull();
@@ -48,7 +48,7 @@ public sealed class ModCardViewModelTests
     {
         var cache = new FakeModLogoCache();
 
-        using var card = new ModCardViewModel(CreateSummary(logoUrl: LogoUrl), ModCompatibilityBadge.None, NoOp, NoOp, cache);
+        using var card = new ModCardViewModel(CreateSummary(logoUrl: LogoUrl), ModCompatibilityBadge.None, installed: null, NoOp, NoOp, cache);
 
         cache.CallCount.ShouldBe(1);
         cache.LastUrl.ShouldBe(LogoUrl);
@@ -60,7 +60,7 @@ public sealed class ModCardViewModelTests
         using var bitmap = new Bitmap(new MemoryStream(TinyPng.Create()));
         var cache = new FakeModLogoCache(result: bitmap);
 
-        using var card = new ModCardViewModel(CreateSummary(logoUrl: LogoUrl), ModCompatibilityBadge.None, NoOp, NoOp, cache);
+        using var card = new ModCardViewModel(CreateSummary(logoUrl: LogoUrl), ModCompatibilityBadge.None, installed: null, NoOp, NoOp, cache);
         await card.LogoLoadCompletion;
 
         card.HasLogo.ShouldBeTrue();
@@ -70,7 +70,7 @@ public sealed class ModCardViewModelTests
     [Fact]
     public void Constructor_EmptySummary_HasDescriptionIsFalse()
     {
-        using var card = new ModCardViewModel(CreateSummary(), ModCompatibilityBadge.None, NoOp, NoOp, new FakeModLogoCache());
+        using var card = new ModCardViewModel(CreateSummary(), ModCompatibilityBadge.None, installed: null, NoOp, NoOp, new FakeModLogoCache());
 
         card.HasDescription.ShouldBeFalse();
         card.Description.ShouldBe(string.Empty);
@@ -79,7 +79,7 @@ public sealed class ModCardViewModelTests
     [Fact]
     public void Constructor_SummaryWithHtmlEntities_ExposesItDecodedAndHasDescriptionIsTrue()
     {
-        using var card = new ModCardViewModel(CreateSummary(summary: "Cook &amp; Craft"), ModCompatibilityBadge.None, NoOp, NoOp, new FakeModLogoCache());
+        using var card = new ModCardViewModel(CreateSummary(summary: "Cook &amp; Craft"), ModCompatibilityBadge.None, installed: null, NoOp, NoOp, new FakeModLogoCache());
 
         card.HasDescription.ShouldBeTrue();
         card.Description.ShouldBe("Cook & Craft");
@@ -89,7 +89,7 @@ public sealed class ModCardViewModelTests
     public void Dispose_LogoStillLoading_CancelsTheTokenPassedToTheCache()
     {
         var cache = new FakeModLogoCache(hangUntilCanceled: true);
-        var card = new ModCardViewModel(CreateSummary(logoUrl: LogoUrl), ModCompatibilityBadge.None, NoOp, NoOp, cache);
+        var card = new ModCardViewModel(CreateSummary(logoUrl: LogoUrl), ModCompatibilityBadge.None, installed: null, NoOp, NoOp, cache);
 
         card.Dispose();
 
@@ -102,9 +102,9 @@ public sealed class ModCardViewModelTests
         var summary = CreateSummary();
         var cache = new FakeModLogoCache();
 
-        Should.Throw<ArgumentNullException>(() => new ModCardViewModel(null!, ModCompatibilityBadge.None, NoOp, NoOp, cache));
-        Should.Throw<ArgumentNullException>(() => new ModCardViewModel(summary, ModCompatibilityBadge.None, null!, NoOp, cache));
-        Should.Throw<ArgumentNullException>(() => new ModCardViewModel(summary, ModCompatibilityBadge.None, NoOp, null!, cache));
-        Should.Throw<ArgumentNullException>(() => new ModCardViewModel(summary, ModCompatibilityBadge.None, NoOp, NoOp, null!));
+        Should.Throw<ArgumentNullException>(() => new ModCardViewModel(null!, ModCompatibilityBadge.None, installed: null, NoOp, NoOp, cache));
+        Should.Throw<ArgumentNullException>(() => new ModCardViewModel(summary, ModCompatibilityBadge.None, installed: null, null!, NoOp, cache));
+        Should.Throw<ArgumentNullException>(() => new ModCardViewModel(summary, ModCompatibilityBadge.None, installed: null, NoOp, null!, cache));
+        Should.Throw<ArgumentNullException>(() => new ModCardViewModel(summary, ModCompatibilityBadge.None, installed: null, NoOp, NoOp, null!));
     }
 }

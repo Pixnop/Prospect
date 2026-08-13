@@ -36,14 +36,29 @@ internal sealed class FakeProcessRunner : IProcessRunner
     /// </summary>
     public Func<ProcessStartRequest, IRunningProcess> NextProcessFactory { get; set; } = _ => new FakeRunningProcess();
 
-    public Task<ProcessRunResult> RunAsync(ProcessRunRequest request, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Corps ASYNCHRONE du processus, pour les tests qui ont besoin qu'il dure : c'est ce qui
+    /// permet d'observer ce qui se passe PENDANT une installation, par exemple l'estimation
+    /// d'avancement déduite de la croissance du dossier cible.
+    /// </summary>
+    public Func<ProcessRunRequest, CancellationToken, Task>? OnRunAsync { get; set; }
+
+    public async Task<ProcessRunResult> RunAsync(ProcessRunRequest request, CancellationToken cancellationToken = default)
     {
         Requests.Add(request);
         OnRun?.Invoke(request);
 
-        return Failure is null
-            ? Task.FromResult(new ProcessRunResult(ExitCode, StandardOutput, StandardError))
-            : Task.FromException<ProcessRunResult>(Failure);
+        if (OnRunAsync is { } body)
+        {
+            await body(request, cancellationToken);
+        }
+
+        if (Failure is not null)
+        {
+            throw Failure;
+        }
+
+        return new ProcessRunResult(ExitCode, StandardOutput, StandardError);
     }
 
     public IRunningProcess Start(ProcessStartRequest request)

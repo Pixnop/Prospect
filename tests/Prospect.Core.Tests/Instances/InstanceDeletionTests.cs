@@ -77,7 +77,7 @@ public sealed class InstanceDeletionTests : IDisposable
         var record = await service.CreateAsync("Homestead", SampleVersion, CancellationToken.None);
         var callerThreadId = Environment.CurrentManagedThreadId;
 
-        var deletion = service.DeleteAsync(record.Slug, CancellationToken.None);
+        var deletion = service.DeleteAsync(record.Slug, progress: null, CancellationToken.None);
 
         _entered.Wait(TimeSpan.FromSeconds(5)).ShouldBeTrue("la suppression n'a jamais démarré");
         deletion.IsCompleted.ShouldBeFalse();
@@ -103,7 +103,7 @@ public sealed class InstanceDeletionTests : IDisposable
         var (service, _, _) = CreateGatedService();
         var record = await service.CreateAsync("Homestead", SampleVersion, CancellationToken.None);
 
-        var deletion = service.DeleteAsync(record.Slug, CancellationToken.None);
+        var deletion = service.DeleteAsync(record.Slug, progress: null, CancellationToken.None);
         _entered.Wait(TimeSpan.FromSeconds(5)).ShouldBeTrue();
 
         service.IsDeleting(record.Slug).ShouldBeTrue();
@@ -125,7 +125,7 @@ public sealed class InstanceDeletionTests : IDisposable
         var first = await service.CreateAsync("Homestead", SampleVersion, CancellationToken.None);
 
         _gate.Set();
-        await service.DeleteAsync(first.Slug, CancellationToken.None);
+        await service.DeleteAsync(first.Slug, progress: null, CancellationToken.None);
         var second = await service.CreateAsync("Homestead", SampleVersion, CancellationToken.None);
 
         second.Slug.ShouldBe(first.Slug);
@@ -149,7 +149,7 @@ public sealed class InstanceDeletionTests : IDisposable
         };
 
         _gate.Set();
-        await service.DeleteAsync(record.Slug, CancellationToken.None);
+        await service.DeleteAsync(record.Slug, progress: null, CancellationToken.None);
 
         announced.ShouldBe([record.Slug]);
         stillDeletingWhenAnnounced.ShouldBeFalse();
@@ -179,7 +179,7 @@ public sealed class InstanceDeletionTests : IDisposable
         service.Deleted += (_, _) => announced++;
 
         var failure = await Should.ThrowAsync<InstanceDeleteFailedException>(
-            () => service.DeleteAsync(record.Slug, CancellationToken.None));
+            () => service.DeleteAsync(record.Slug, progress: null, CancellationToken.None));
 
         failure.Slug.ShouldBe(record.Slug);
         failure.Directory.ShouldBe(repository.GetInstanceDirectory(record.Slug));
@@ -195,6 +195,6 @@ public sealed class InstanceDeletionTests : IDisposable
     {
         var (service, _, _) = CreateGatedService();
 
-        await Should.ThrowAsync<InstanceNotFoundException>(() => service.DeleteAsync("fantome", CancellationToken.None));
+        await Should.ThrowAsync<InstanceNotFoundException>(() => service.DeleteAsync("fantome", progress: null, CancellationToken.None));
     }
 }

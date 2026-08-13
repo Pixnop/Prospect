@@ -123,6 +123,9 @@ internal abstract class DialogsText
     /// <summary>Affiché pendant la suppression, qui prend des dizaines de secondes sur un gros dossier de mondes.</summary>
     internal abstract string DeleteInProgress { get; }
 
+    /// <summary>Avancement chiffré de la suppression, une fois le décompte des fichiers connu.</summary>
+    internal abstract string DeleteProgress(int deletedFiles, int totalFiles);
+
     /// <summary>La suppression n'est pas allée jusqu'au bout : le dossier restant est nommé.</summary>
     internal abstract string DeletePartialFailure(string directory);
 
@@ -193,6 +196,13 @@ internal abstract class DownloadsText
     internal abstract string GenericFailure { get; }
 
     internal abstract string Summary(int running, int queued);
+
+    /// <summary>Verdicts d'une ligne d'historique.</summary>
+    internal abstract string OutcomeCompleted { get; }
+
+    internal abstract string OutcomeFailed { get; }
+
+    internal abstract string OutcomeCanceled { get; }
 }
 
 /// <summary>Textes de l'écran Versions du jeu.</summary>
@@ -215,6 +225,21 @@ internal abstract class VersionsText
     /// </summary>
     internal abstract string InstallDetail(int percent);
 
+    /// <summary>
+    /// Même détail, mais pour un avancement ESTIMÉ et non mesuré : l'installeur Windows ne publie
+    /// rien, son avancement est déduit de la croissance du dossier cible. Le tilde est là pour que
+    /// personne ne prenne ce chiffre pour un décompte exact.
+    /// </summary>
+    internal abstract string InstallEstimateDetail(int percent);
+
+    /// <summary>
+    /// Avertissement affiché pendant l'installation sous Windows. L'installeur du jeu porte son
+    /// PROPRE script, qui détecte en registre une installation classique de Vintage Story et demande
+    /// s'il faut la désinstaller — question dont le bouton par défaut est « Oui ». Le message dit
+    /// donc quoi répondre AVANT que la boîte n'apparaisse. Voir docs/architecture.md.
+    /// </summary>
+    internal abstract string InstallerPromptNotice { get; }
+
     internal abstract string BrokenReason(GameInstallBrokenReason reason);
 
     /// <summary>
@@ -229,6 +254,15 @@ internal abstract class VersionsText
     internal abstract string UninstallMessage(string version);
 
     internal abstract string UninstallDependents(IReadOnlyList<string> instanceNames);
+
+    /// <summary>Phrase d'attente avant le premier relevé de fichiers.</summary>
+    internal abstract string UninstallInProgress { get; }
+
+    /// <summary>Avancement chiffré de la désinstallation.</summary>
+    internal abstract string UninstallProgress(int deletedFiles, int totalFiles);
+
+    /// <summary>Il reste des fichiers dans le dossier de la version.</summary>
+    internal abstract string UninstallPartialFailure(string directory);
 
     /// <summary>Deux valeurs machine séparées par un point médian : aucun mot à traduire.</summary>
     [SuppressMessage(
@@ -304,6 +338,15 @@ internal abstract class DoctorText(ModsText mods)
     internal abstract string ReinstallAction { get; }
 
     internal abstract string OpenModsAction { get; }
+
+    /// <summary>
+    /// Action d'une ligne de dépendance MANQUANTE : elle nomme le mod et se termine par des points
+    /// de suspension, parce qu'elle ouvre un plan à confirmer, jamais une installation directe.
+    /// </summary>
+    internal abstract string InstallDependencyAction(string modIdString);
+
+    /// <summary>Même action pour une dépendance présente mais trop ancienne.</summary>
+    internal abstract string UpdateDependencyAction(string modIdString);
 
     internal abstract string AllClearTitle { get; }
 
@@ -419,6 +462,14 @@ internal abstract class ModsText
     internal abstract string PickInstanceTitle { get; }
 
     internal abstract string PickInstanceMessage { get; }
+
+    /// <summary>Verbe du bouton d'une carte : installer, ou gérer ce qui est déjà là.</summary>
+    internal abstract string InstallAction { get; }
+
+    internal abstract string ManageAction { get; }
+
+    /// <summary>Pastille « Installé · 1.2.0 » d'une carte, version omise quand elle est illisible.</summary>
+    internal abstract string InstalledBadge(string? version);
 
     internal abstract string StaleCatalog { get; }
 
@@ -734,6 +785,13 @@ internal abstract class TimeText
     internal abstract string PlayedUnderAnHour { get; }
 
     internal abstract string DaysAgo(int days);
+
+    /// <summary>Moins d'une minute : le compte à la minute serait faux avant d'être affiché.</summary>
+    internal abstract string JustNow { get; }
+
+    internal abstract string MinutesAgo(int minutes);
+
+    internal abstract string HoursAgo(int hours);
 
     /// <summary>Date absolue, au-delà de la fenêtre où le relatif reste lisible.</summary>
     internal abstract string AbsoluteDate(DateTime utcValue);

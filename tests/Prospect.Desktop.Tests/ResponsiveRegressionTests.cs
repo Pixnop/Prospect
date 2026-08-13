@@ -314,7 +314,7 @@ public sealed class ResponsiveRegressionTests
             [],
             new ModCompatibilityDoctorResult(0, 0, 0, 0),
             new DiskSpaceDoctorResult(100L * 1024 * 1024 * 1024, InstanceDoctor.LowDiskSpaceThresholdBytes));
-        shell.Overlay.Show(new InstanceDoctorDialogViewModel(report, () => { }, () => { }, shell.Overlay));
+        shell.Overlay.Show(new InstanceDoctorDialogViewModel(report, () => { }, () => { }, _ => Task.CompletedTask, shell.Overlay));
         window.Settle();
 
         window.ShouldHoldLayoutInvariantsAtEverySize("Dialogue du docteur d'instance, tout va bien");
@@ -387,6 +387,32 @@ public sealed class ResponsiveRegressionTests
         shell.ModBrowser.Results.ShouldNotBeEmpty();
 
         window.ShouldHoldLayoutInvariantsAtEverySize("Navigateur de mods, recherche active");
+
+        window.Close();
+    }
+
+    /// <summary>
+    /// Une carte qui porte les TROIS badges — compatibilité, côté, « Installé · 1.11.1 » — plus son
+    /// bouton d'action, sur une carte de 320 points de large au plancher de la fenêtre. C'est le cas
+    /// où la rangée du bas déborde si personne ne la tient.
+    /// </summary>
+    [AvaloniaTheory]
+    [InlineData("Dark")]
+    [InlineData("Light")]
+    public async Task ModBrowser_ACardAlreadyInstalled_HoldsItsBoxes(string variant)
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        var window = ResponsiveScenario.ShowWindow(provider, variant == "Light" ? ThemeVariant.Light : ThemeVariant.Dark);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var slug = await provider.SeedTargetInstanceAsync(ResponsiveScenario.LongInstanceName);
+        ResponsiveScenario.SeedInstalledMod(provider, fileSystem, slug);
+
+        shell.ShowModBrowser(slug);
+        await shell.ModBrowser.InitializeCommand.ExecuteAsync(null);
+        window.Settle();
+        shell.ModBrowser.Results.ShouldContain(card => card.IsInstalled);
+
+        window.ShouldHoldLayoutInvariantsAtEverySize($"Navigateur de mods, carte déjà installée ({variant})");
 
         window.Close();
     }
@@ -532,6 +558,15 @@ public sealed class ResponsiveRegressionTests
             light
                 ? "Dialogue d'installation, version incompatible dévoilée, thème clair"
                 : "Dialogue d'installation, version incompatible dévoilée");
+
+        // Les deux volets tiennent réellement côte à côte au PLANCHER de la fenêtre : c'est le cas
+        // dur du dialogue, et une garde d'invariants passerait tout aussi bien sur une pile.
+        window.Width = ResponsiveWindowSizes.Floor.Width;
+        window.Height = ResponsiveWindowSizes.Floor.Height;
+        window.Settle();
+
+        var panes = window.GetVisualDescendants().OfType<SidePanePanel>().Single();
+        panes.IsSideBySide.ShouldBeTrue();
 
         Application.Current!.RequestedThemeVariant = ThemeVariant.Dark;
         window.Close();

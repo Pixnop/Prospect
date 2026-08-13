@@ -157,18 +157,43 @@
                   <!-- Même dispositif que la carte d'instance : un bouton sans chrome couvre la
                        zone d'ouverture de la fiche, la rangée d'actions reste en dehors pour que
                        « Installer » ne soit jamais avalé par le clic d'ouverture. -->
-                  <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,12,0,0">
-                    <ContentControl Grid.Column="0" Classes="badge" Content="{Binding CompatibilityText}" IsVisible="{Binding ShowCompatibility}"
-                                    VerticalAlignment="Center"
-                                    Classes.stable="{Binding CompatibilityTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=stable}"
-                                    Classes.incompatible="{Binding CompatibilityTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=incompatible}" />
-                    <ContentControl Grid.Column="1" Classes="badge" Margin="6,0,0,0" Content="{Binding SideText}" IsVisible="{Binding HasSide}"
-                                    VerticalAlignment="Center" />
-                    <Button Grid.Column="3" Classes="sm secondary" Command="{Binding InstallCommand}">
+                  <!-- La rangée de badges défile horizontalement plutôt que de pousser le bouton
+                       hors de la carte : compatibilité, côté et « Installé · 1.2.0 » peuvent
+                       coexister sur une carte étroite avec un nom long.
+
+                       L'ORDRE est donc une décision, pas une mise en page : la rangée n'a de place
+                       visible que pour deux pastilles (une carte de la grille fluide donne entre
+                       200 et 300 points au défileur, les trois en demandent 330), et son défilement
+                       n'affiche aucune barre. Ce qui est en dernier n'est jamais vu. « Installé »
+                       passe donc en tête — c'est le fait que l'utilisateur venait chercher, celui
+                       qui explique que le bouton dise « Gérer » — et c'est le côté client/serveur
+                       qui sort du champ sur une carte déjà installée, là où l'onglet Mods de
+                       l'instance le donne de toute façon. -->
+                  <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" Margin="0,12,0,0">
+                    <ScrollViewer Grid.Column="0" Classes="flush" VerticalScrollBarVisibility="Disabled"
+                                  HorizontalScrollBarVisibility="Hidden" VerticalAlignment="Center">
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <!-- Ce que l'instance ciblée contient déjà. Ton accent plutôt que stable :
+                             ce n'est pas un verdict de compatibilité, c'est un fait. -->
+                        <ContentControl Classes="badge accent" Content="{Binding InstalledText}" IsVisible="{Binding IsInstalled}"
+                                        VerticalAlignment="Center" />
+                        <ContentControl Classes="badge" Content="{Binding CompatibilityText}" IsVisible="{Binding ShowCompatibility}"
+                                        VerticalAlignment="Center"
+                                        Classes.stable="{Binding CompatibilityTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=stable}"
+                                        Classes.incompatible="{Binding CompatibilityTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=incompatible}" />
+                        <ContentControl Classes="badge" Content="{Binding SideText}" IsVisible="{Binding HasSide}"
+                                        VerticalAlignment="Center" />
+                      </StackPanel>
+                    </ScrollViewer>
+                    <Button Grid.Column="1" Classes="sm secondary" Margin="8,0,0,0" Command="{Binding InstallCommand}">
                       <StackPanel Orientation="Horizontal" Spacing="6">
                         <Path Width="13" Height="13" Stretch="Uniform" Data="{StaticResource Icon.download}"
-                              Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
-                        <TextBlock Text="{StaticResource Mods_Install}" />
+                              Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round"
+                              IsVisible="{Binding !IsInstalled}" />
+                        <Path Width="13" Height="13" Stretch="Uniform" Data="{StaticResource Icon.settings}"
+                              Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round"
+                              IsVisible="{Binding IsInstalled}" />
+                        <TextBlock Text="{Binding ActionLabel}" />
                       </StackPanel>
                     </Button>
                   </Grid>

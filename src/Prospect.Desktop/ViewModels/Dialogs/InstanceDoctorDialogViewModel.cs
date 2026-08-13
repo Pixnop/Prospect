@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Prospect.Core.Diagnostics;
+using Prospect.Core.ModDb;
 using Prospect.Desktop.Formatting;
 using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
@@ -67,18 +68,29 @@ public sealed partial class InstanceDoctorDialogViewModel : ObservableObject
     /// <param name="report">Rapport produit par <see cref="InstanceDoctor.DiagnoseAsync"/>.</param>
     /// <param name="navigateToVersions">Ferme ce dialogue et navigue vers l'écran Versions (action Installer/Réinstaller).</param>
     /// <param name="openModsTab">Ferme ce dialogue et sélectionne l'onglet Mods de la page de détail.</param>
+    /// <param name="installMod">
+    /// Ferme ce dialogue et ouvre le plan d'installation du mod dont on donne le <c>modid</c>.
+    /// C'est ici, et seulement ici, que le réseau entre en jeu : le rapport lui-même a été produit
+    /// hors ligne par <see cref="InstanceDoctor"/>, qui n'a aucun moyen d'appeler quoi que ce soit.
+    /// </param>
     /// <param name="overlay">Panneau modal, pour se refermer (bouton Fermer).</param>
-    public InstanceDoctorDialogViewModel(InstanceDoctorReport report, Action navigateToVersions, Action openModsTab, IOverlayService overlay)
+    public InstanceDoctorDialogViewModel(
+        InstanceDoctorReport report,
+        Action navigateToVersions,
+        Action openModsTab,
+        Func<string, Task> installMod,
+        IOverlayService overlay)
     {
         ArgumentNullException.ThrowIfNull(report);
         ArgumentNullException.ThrowIfNull(navigateToVersions);
         ArgumentNullException.ThrowIfNull(openModsTab);
+        ArgumentNullException.ThrowIfNull(installMod);
         ArgumentNullException.ThrowIfNull(overlay);
 
         _overlay = overlay;
 
         IsAllClear = report.IsAllClear;
-        Groups = BuildGroups(report, new RelayCommand(navigateToVersions), new RelayCommand(openModsTab));
+        Groups = BuildGroups(report, new RelayCommand(navigateToVersions), new RelayCommand(openModsTab), installMod);
     }
 
     /// <summary>Vrai si les cinq vérifications sont saines : l'état gratifiant (mais sobre) du dialogue.</summary>
@@ -93,13 +105,14 @@ public sealed partial class InstanceDoctorDialogViewModel : ObservableObject
     private static List<InstanceDoctorGroupViewModel> BuildGroups(
         InstanceDoctorReport report,
         IRelayCommand navigateToVersions,
-        IRelayCommand openModsTab)
+        IRelayCommand openModsTab,
+        Func<string, Task> installMod)
     {
         var rows = new List<InstanceDoctorRowViewModel>();
 
         AddGameVersionRow(rows, report.GameVersion, navigateToVersions);
         AddRuntimeRow(rows, report);
-        AddModIssueRows(rows, report.ModIssues, openModsTab);
+        AddModIssueRows(rows, report.ModIssues, openModsTab, installMod);
         AddCompatibilityRow(rows, report.ModCompatibility, report.GameVersion.Version.ToString(), openModsTab);
         AddDiskSpaceRow(rows, report.DiskSpace);
 
@@ -153,16 +166,51 @@ public sealed partial class InstanceDoctorDialogViewModel : ObservableObject
         rows.Add(new InstanceDoctorRowViewModel(severity, UiText.Instance.Doctor.RuntimeMessage(report.Runtime)));
     }
 
-    private static void AddModIssueRows(List<InstanceDoctorRowViewModel> rows, IReadOnlyList<ModDoctorIssue> issues, IRelayCommand openModsTab)
+    /// <summary>
+    /// Une ligne par constat, avec l'action qui répond VRAIMENT au constat.
+    /// </summary>
+    /// <remarks>
+    /// « Voir les mods » sur une dépendance manquante renvoyait l'utilisateur regarder une liste où
+    /// le mod manquant, par définition, n'est pas. Les deux cas où l'on peut agir tout de suite
+    /// mènent donc au plan d'installation : la dépendance absente s'installe, celle qui est trop
+    /// vieille se met à jour (même plan, la fiche remplace le fichier existant). Le cas
+    /// « désactivée » garde « Voir les mods », qui est exactement l'endroit où la réactiver.
+    /// </remarks>
+    private static void AddModIssueRows(
+        List<InstanceDoctorRowViewModel> rows,
+        IReadOnlyList<ModDoctorIssue> issues,
+        IRelayCommand openModsTab,
+        Func<string, Task> installMod)
     {
         foreach (var issue in issues)
         {
-            rows.Add(new InstanceDoctorRowViewModel(
-                issue.Severity,
-                UiText.Instance.Doctor.ModIssueMessage(issue),
-                UiText.Instance.Doctor.OpenModsAction,
-                openModsTab));
+            var (label, command) = ResolveModIssueAction(issue, openModsTab, installMod);
+            rows.Add(new InstanceDoctorRowViewModel(issue.Severity, UiText.Instance.Doctor.ModIssueMessage(issue), label, command));
         }
+    }
+
+    private static (string Label, IRelayCommand Command) ResolveModIssueAction(
+        ModDoctorIssue issue,
+        IRelayCommand openModsTab,
+        Func<string, Task> installMod)
+    {
+        if (issue.Dependency is not { } dependency)
+        {
+            return (UiText.Instance.Doctor.OpenModsAction, openModsTab);
+        }
+
+        return dependency.Status switch
+        {
+            ModDependencyStatus.Missing => (
+                UiText.Instance.Doctor.InstallDependencyAction(dependency.ModIdString),
+                new AsyncRelayCommand(() => installMod(dependency.ModIdString))),
+
+            ModDependencyStatus.TooOld => (
+                UiText.Instance.Doctor.UpdateDependencyAction(dependency.ModIdString),
+                new AsyncRelayCommand(() => installMod(dependency.ModIdString))),
+
+            _ => (UiText.Instance.Doctor.OpenModsAction, openModsTab),
+        };
     }
 
     private static void AddCompatibilityRow(

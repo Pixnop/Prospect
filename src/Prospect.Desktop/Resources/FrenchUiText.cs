@@ -122,6 +122,9 @@ internal sealed class FrenchDialogsText : DialogsText
 
     internal override string DeleteInProgress => "Suppression en cours… Ça peut prendre un moment sur une instance avec de gros mondes.";
 
+    internal override string DeleteProgress(int deletedFiles, int totalFiles)
+        => totalFiles == 0 ? DeleteInProgress : $"Suppression des fichiers ({deletedFiles}/{totalFiles})";
+
     internal override string DeletePartialFailure(string directory)
         => $"La suppression n'a pas pu aller jusqu'au bout : il reste des fichiers dans « {directory} ». Ferme le jeu s'il tourne encore, puis réessaie.";
 
@@ -185,6 +188,12 @@ internal sealed class FrenchDownloadsText : DownloadsText
         (0, _) => $"{queued} en attente",
         _ => $"{running} en cours · {queued} en attente",
     };
+
+    internal override string OutcomeCompleted => "terminé";
+
+    internal override string OutcomeFailed => "échec";
+
+    internal override string OutcomeCanceled => "annulé";
 }
 
 internal sealed class FrenchVersionsText : VersionsText
@@ -222,6 +231,12 @@ internal sealed class FrenchVersionsText : VersionsText
     internal override string InstallDetail(int percent)
         => $"extraction · {percent.ToString(CultureInfo.InvariantCulture)} %";
 
+    internal override string InstallEstimateDetail(int percent)
+        => $"installation · ~{percent.ToString(CultureInfo.InvariantCulture)} %";
+
+    internal override string InstallerPromptNotice
+        => "L'installeur du jeu peut ouvrir sa propre fenêtre et proposer de désinstaller une ancienne version. Réponds non : Prospect installe dans son propre dossier et ne touche pas à ton jeu existant.";
+
     internal override string BrokenReason(GameInstallBrokenReason reason) => reason switch
     {
         GameInstallBrokenReason.MissingCompletionMarker => "installation interrompue, à réinstaller",
@@ -233,6 +248,14 @@ internal sealed class FrenchVersionsText : VersionsText
 
     internal override string UninstallMessage(string version)
         => $"Les fichiers de la version {version} seront supprimés du dossier partagé. Tu pourras la réinstaller depuis le catalogue.";
+
+    internal override string UninstallInProgress => "Désinstallation en cours…";
+
+    internal override string UninstallProgress(int deletedFiles, int totalFiles)
+        => totalFiles == 0 ? UninstallInProgress : $"Suppression des fichiers ({deletedFiles}/{totalFiles})";
+
+    internal override string UninstallPartialFailure(string directory)
+        => $"La désinstallation n'a pas pu aller jusqu'au bout : il reste des fichiers dans « {directory} ». Ferme le jeu s'il tourne encore, puis réessaie.";
 
     internal override string UninstallDependents(IReadOnlyList<string> instanceNames)
     {
@@ -299,6 +322,10 @@ internal sealed class FrenchDoctorText(ModsText mods) : DoctorText(mods)
     internal override string ReinstallAction => "Réinstaller";
 
     internal override string OpenModsAction => "Voir les mods";
+
+    internal override string InstallDependencyAction(string modIdString) => $"Installer « {modIdString} »…";
+
+    internal override string UpdateDependencyAction(string modIdString) => $"Mettre à jour « {modIdString} »…";
 
     internal override string AllClearTitle => "Tout est en ordre";
 
@@ -415,6 +442,13 @@ internal sealed class FrenchModsText : ModsText
     internal override string PickInstanceTitle => "Choisis une instance";
 
     internal override string PickInstanceMessage => "Sélectionne l'instance de destination avant d'installer un mod.";
+
+    internal override string InstallAction => "Installer";
+
+    internal override string ManageAction => "Gérer";
+
+    internal override string InstalledBadge(string? version)
+        => string.IsNullOrWhiteSpace(version) ? "Installé" : $"Installé · {version}";
 
     internal override string StaleCatalog
         => "L'index n'a pas pu être actualisé. Les mods affichés viennent du dernier relevé connu.";
@@ -876,6 +910,13 @@ internal sealed class FrenchTimeText : TimeText
     internal override string PlayedUnderAnHour => "joué < 1 h";
 
     internal override string DaysAgo(int days) => $"il y a {days} jours";
+
+    internal override string JustNow => "à l'instant";
+
+    // Le singulier compte : « il y a 1 minutes » se remarque tout de suite.
+    internal override string MinutesAgo(int minutes) => minutes <= 1 ? "il y a 1 minute" : $"il y a {minutes} minutes";
+
+    internal override string HoursAgo(int hours) => hours <= 1 ? "il y a 1 heure" : $"il y a {hours} heures";
 
     internal override string AbsoluteDate(DateTime utcValue) => utcValue.ToString("d MMMM yyyy", French);
 

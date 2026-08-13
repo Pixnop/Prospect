@@ -7,6 +7,7 @@ using Prospect.Core.Common;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Http;
 using Prospect.Core.Instances;
+using Prospect.Core.Storage;
 using Prospect.Desktop.Formatting;
 using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
@@ -48,6 +49,7 @@ public sealed partial class WizardViewModel : ObservableObject, IProgress<GameIn
     private readonly IInstalledGameVersionRepository _versions;
     private readonly GameInstallService _installService;
     private readonly IUiDispatcher _dispatcher;
+    private readonly AppOperatingSystem _operatingSystem;
 
     private readonly List<GameVersionChoiceViewModel> _allChoices = [];
 
@@ -59,7 +61,8 @@ public sealed partial class WizardViewModel : ObservableObject, IProgress<GameIn
         IGameVersionCatalog catalog,
         IInstalledGameVersionRepository versions,
         GameInstallService installService,
-        IUiDispatcher dispatcher)
+        IUiDispatcher dispatcher,
+        IAppEnvironment appEnvironment)
     {
         ArgumentNullException.ThrowIfNull(instanceService);
         ArgumentNullException.ThrowIfNull(overlay);
@@ -67,6 +70,7 @@ public sealed partial class WizardViewModel : ObservableObject, IProgress<GameIn
         ArgumentNullException.ThrowIfNull(versions);
         ArgumentNullException.ThrowIfNull(installService);
         ArgumentNullException.ThrowIfNull(dispatcher);
+        ArgumentNullException.ThrowIfNull(appEnvironment);
 
         _instanceService = instanceService;
         _overlay = overlay;
@@ -74,6 +78,7 @@ public sealed partial class WizardViewModel : ObservableObject, IProgress<GameIn
         _versions = versions;
         _installService = installService;
         _dispatcher = dispatcher;
+        _operatingSystem = appEnvironment.CurrentOperatingSystem;
         _selectedIconKey = IconCatalog[0].Key;
 
         RecomputeSteps();
@@ -146,6 +151,17 @@ public sealed partial class WizardViewModel : ObservableObject, IProgress<GameIn
 
     [ObservableProperty]
     private bool _isInstallIndeterminate;
+
+    /// <summary>
+    /// Vrai pendant la phase d'installation sous Windows, comme sur l'écran Versions : c'est le
+    /// wizard qui installe la version du jeu la toute première fois, donc l'endroit où la boîte de
+    /// l'installeur surprend le plus.
+    /// </summary>
+    [ObservableProperty]
+    private bool _showInstallerPromptNotice;
+
+    /// <summary>Texte de cette notice.</summary>
+    public string InstallerPromptNotice { get; } = UiText.Versions.InstallerPromptNotice;
 
     [ObservableProperty]
     private string? _createError;
@@ -241,6 +257,7 @@ public sealed partial class WizardViewModel : ObservableObject, IProgress<GameIn
             IsInstallIndeterminate = value.Ratio is null;
             InstallProgressPercent = (value.Ratio ?? 0d) * 100d;
             InstallDetailText = GameInstallProgressPresenter.DetailText(value);
+            ShowInstallerPromptNotice = GameInstallProgressPresenter.ShowsInstallerPromptNotice(value, _operatingSystem);
         });
     }
 

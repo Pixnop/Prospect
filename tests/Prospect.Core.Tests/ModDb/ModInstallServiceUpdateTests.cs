@@ -610,5 +610,7 @@ public sealed class ModInstallServiceUpdateTests
         }
 
         public void Dismiss(DownloadOperation operation) => _inner.Dismiss(operation);
+
+        public void DismissFinished() => _inner.DismissFinished();
     }
 }

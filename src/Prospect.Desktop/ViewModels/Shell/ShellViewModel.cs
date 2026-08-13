@@ -137,7 +137,17 @@ public sealed partial class ShellViewModel : ObservableObject
     private bool _isDownloadsPopoverOpen;
 
     [RelayCommand]
-    private void ToggleDownloadsPopover() => IsDownloadsPopoverOpen = !IsDownloadsPopoverOpen;
+    private void ToggleDownloadsPopover()
+    {
+        IsDownloadsPopoverOpen = !IsDownloadsPopoverOpen;
+        if (IsDownloadsPopoverOpen)
+        {
+            // Les « il y a 3 minutes » de l'historique se reprennent à l'ouverture. Aucun minuteur
+            // ne tourne pour un panneau fermé, et personne ne regarde un compteur vieillir dans un
+            // panneau ouvert : un rafraîchissement par ouverture est exactement ce qu'il faut.
+            Downloads.RefreshElapsed();
+        }
+    }
 
     [RelayCommand]
     private void CloseDownloadsPopover() => IsDownloadsPopoverOpen = false;
