@@ -47,6 +47,14 @@ bld/
 [Ll]og/
 [Ll]ogs/
 
+# ...sauf nos dossiers de SOURCES qui s'appellent Logs/. La règle ci-dessus vient du .gitignore
+# Visual Studio standard et vise les journaux de build ; elle avalait silencieusement le domaine
+# « Journaux » de l'application, `git add` compris. La négation porte sur le DOSSIER : git ne sait
+# pas réinclure un fichier dont un dossier parent est exclu.
+!src/Prospect.Desktop/ViewModels/Logs/
+!src/Prospect.Desktop/Views/Logs/
+!tests/Prospect.Desktop.Tests/ViewModels/Logs/
+
 # Build results on 'Bin' directories
 **/[Bb]in/*
 # Uncomment if you have tasks that rely on *.refresh files to move binaries

@@ -7,9 +7,11 @@ using Prospect.Desktop.Services;
 using Prospect.Desktop.ViewModels.Downloads;
 using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Instance;
+using Prospect.Desktop.ViewModels.Logs;
 using Prospect.Desktop.ViewModels.Mods;
 using Prospect.Desktop.ViewModels.Settings;
 using Prospect.Desktop.ViewModels.Versions;
+using Prospect.Desktop.Windowing;
 
 namespace Prospect.Desktop.ViewModels.Shell;
 
@@ -29,6 +31,7 @@ public sealed partial class ShellViewModel : ObservableObject
         VersionsViewModel versions,
         ModBrowserViewModel modBrowser,
         DownloadsViewModel downloads,
+        LogsViewModel logs,
         SettingsViewModel settings,
         Func<string, InstanceDetailViewModel> instanceDetailFactory,
         IOverlayService overlay,
@@ -40,6 +43,7 @@ public sealed partial class ShellViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(versions);
         ArgumentNullException.ThrowIfNull(modBrowser);
         ArgumentNullException.ThrowIfNull(downloads);
+        ArgumentNullException.ThrowIfNull(logs);
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(instanceDetailFactory);
         ArgumentNullException.ThrowIfNull(overlay);
@@ -51,12 +55,13 @@ public sealed partial class ShellViewModel : ObservableObject
         Versions = versions;
         ModBrowser = modBrowser;
         Downloads = downloads;
+        Logs = logs;
         Settings = settings;
         _instanceDetailFactory = instanceDetailFactory;
         Overlay = overlay;
         Toasts = toasts;
         Backdrop = backdrop;
-        UseCustomTitlebar = ResolveUseCustomTitlebar(appEnvironment.CurrentOperatingSystem);
+        WindowChrome = WindowChromeSettings.For(appEnvironment.CurrentOperatingSystem);
         Home.InstanceOpenRequested += (_, slug) => ShowInstanceDetail(slug);
         Settings.FirstRun.NavigateToVersionsRequested += (_, _) => ShowVersions();
         Settings.FirstRun.NavigateToAccountSettingsRequested += (_, _) => ShowAccountSettings();
@@ -65,10 +70,12 @@ public sealed partial class ShellViewModel : ObservableObject
         var homeNavItem = new NavItemViewModel("layers", UiText.Shell.NavHome, home, Navigate);
         var modsNavItem = new NavItemViewModel("package", UiText.Shell.NavMods, modBrowser, ShowModBrowser);
         var versionsNavItem = new NavItemViewModel("hard-drive", UiText.Shell.NavVersions, versions, ShowVersions);
+        LogsNavItem = new NavItemViewModel("list", UiText.Shell.NavLogs, logs, ShowLogs);
         SettingsNavItem = new NavItemViewModel("settings", UiText.Shell.NavSettings, settings, ShowSettings);
 
         LibraryNavItems = [homeNavItem, modsNavItem, versionsNavItem];
         _allNavItems.AddRange(LibraryNavItems);
+        _allNavItems.Add(LogsNavItem);
         _allNavItems.Add(SettingsNavItem);
 
         _currentPage = null!;
@@ -103,6 +110,9 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>Contenu du popover Téléchargements : une vue sur la file du DownloadManager.</summary>
     public DownloadsViewModel Downloads { get; }
 
+    /// <summary>Page « Journaux ».</summary>
+    public LogsViewModel Logs { get; }
+
     /// <summary>Panneau modal partagé (wizard, dialogues de carte) : la vue résout son contenu via le <see cref="Prospect.Desktop.ViewLocator"/>.</summary>
     public IOverlayService Overlay { get; }
 
@@ -119,16 +129,29 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>Section « Bibliothèque » de la sidebar : Accueil, Mods, Versions.</summary>
     public IReadOnlyList<NavItemViewModel> LibraryNavItems { get; }
 
+    /// <summary>Entrée « Journaux » de la zone basse de la sidebar.</summary>
+    public NavItemViewModel LogsNavItem { get; }
+
     /// <summary>Entrée « Réglages » de la zone basse de la sidebar (avec Téléchargements, géré à part car il ouvre un popover et non une page).</summary>
     public NavItemViewModel SettingsNavItem { get; }
 
     /// <summary>
-    /// Unique point de bascule vers les décorations natives (docs/architecture.md) : vrai sur les
-    /// trois OS aujourd'hui. La fenêtre applicative l'applique à ses propres propriétés de
-    /// décoration et masque sa <c>TitlebarView</c> quand il est faux ; à rebasculer ici pour Linux
-    /// si Wayland pose un problème réel, sans toucher au reste du shell.
+    /// Décorations de fenêtre du système courant, décidées une fois par
+    /// <see cref="WindowChromeSettings.For"/>. La fenêtre applicative les applique telles quelles,
+    /// et le shell en tire ce qui le concerne : la visibilité de sa <c>TitlebarView</c> et
+    /// l'affichage de ses poignées de redimensionnement.
     /// </summary>
-    public bool UseCustomTitlebar { get; }
+    public WindowChromeSettings WindowChrome { get; }
+
+    /// <summary>Vrai quand notre <c>TitlebarView</c> est visible plutôt que la barre du système.</summary>
+    public bool UseCustomTitlebar => WindowChrome.UseCustomTitlebar;
+
+    /// <summary>
+    /// Vrai quand la fenêtre doit poser ses propres poignées de bord : Linux uniquement, où la
+    /// décoration serveur est retirée (voir <see cref="WindowChromeSettings"/>) et où plus rien
+    /// n'offrirait le redimensionnement autrement.
+    /// </summary>
+    public bool ShowsResizeGrips => WindowChrome.NeedsCustomResizeGrips;
 
     [ObservableProperty]
     private object _currentPage;
@@ -226,6 +249,15 @@ public sealed partial class ShellViewModel : ObservableObject
         _ = ModBrowser.InitializeCommand.ExecuteAsync(null);
     }
 
+    // Même construction, pour la même raison : un journal lu une fois pour toutes à la construction
+    // du conteneur serait déjà périmé à la première ouverture de la page. C'est la relecture à
+    // l'entrée qui rend le bouton Rafraîchir un confort et non une obligation.
+    private void ShowLogs(object page)
+    {
+        Navigate(page);
+        Logs.RefreshCommand.Execute(null);
+    }
+
     // Même construction que ShowModBrowser : la détection VS Launcher doit être relancée à chaque
     // entrée sur la page, pas seulement à la construction du conteneur (l'utilisateur a pu
     // installer VS Launcher, ou changer de dossier, entre deux visites des Réglages).
@@ -281,17 +313,4 @@ public sealed partial class ShellViewModel : ObservableObject
         }
     }
 
-    // Table plutôt qu'un switch/if : les trois OS valent aujourd'hui vrai (voir la docstring
-    // d'UseCustomTitlebar), et une table de correspondance par OS rend ça lisible comme un
-    // réglage plutôt que comme une branche conditionnelle qui semble avoir oublié de différencier
-    // ses cas.
-    private static readonly IReadOnlyDictionary<AppOperatingSystem, bool> CustomTitlebarByOperatingSystem = new Dictionary<AppOperatingSystem, bool>
-    {
-        [AppOperatingSystem.Windows] = true,
-        [AppOperatingSystem.MacOs] = true,
-        [AppOperatingSystem.Linux] = true, // à rebasculer sur false si Wayland pose problème, voir docs/architecture.md
-    };
-
-    private static bool ResolveUseCustomTitlebar(AppOperatingSystem operatingSystem)
-        => CustomTitlebarByOperatingSystem.GetValueOrDefault(operatingSystem, true);
 }

@@ -6,11 +6,16 @@ using Avalonia.VisualTree;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Prospect.Core.Common;
 using Prospect.Core.Http;
+using Prospect.Core.Storage;
+using Prospect.Desktop.Tests.Support;
+using Prospect.Desktop.ViewModels.Logs;
 using Prospect.Desktop.ViewModels.Mods;
 using Prospect.Desktop.ViewModels.Settings;
 using Prospect.Desktop.ViewModels.Shell;
 using Prospect.Desktop.Views.Home;
+using Prospect.Desktop.Views.Logs;
 using Prospect.Desktop.Views.Mods;
 
 using Shouldly;
@@ -82,6 +87,35 @@ public class ShellHeadlessTests
         shellViewModel.LibraryNavItems[0].IsActive.ShouldBeTrue();
         shellViewModel.SettingsNavItem.IsActive.ShouldBeFalse();
         window.GetVisualDescendants().OfType<HomeView>().ShouldNotBeEmpty();
+
+        window.Close();
+    }
+
+    /// <summary>
+    /// L'entrée « Journaux » vit dans la zone basse de la sidebar, avec Téléchargements et
+    /// Réglages, et ouvre une VRAIE page (contrairement à Téléchargements, qui ouvre un popover).
+    /// Entrer sur la page relit le fichier : sans ça, la page afficherait ce que le conteneur avait
+    /// lu à sa construction, c'est-à-dire rien.
+    /// </summary>
+    [AvaloniaFact]
+    public void SelectingLogsNavItem_ShowsTheLogsPageAndRereadsTheFile()
+    {
+        using var provider = TestServiceProviderFactory.Create(out _);
+        var window = provider.GetRequiredService<MainWindow>();
+        var shellViewModel = provider.GetRequiredService<ShellViewModel>();
+        window.Show();
+        window.Settle();
+
+        provider.GetRequiredService<IAppLog>().Write(AppLogLevel.Error, "Version 1.22.6 : aucun exécutable attendu.");
+
+        shellViewModel.LogsNavItem.SelectCommand.Execute(null);
+        window.Settle();
+
+        shellViewModel.CurrentPage.ShouldBeOfType<LogsViewModel>();
+        shellViewModel.LogsNavItem.IsActive.ShouldBeTrue();
+        shellViewModel.SettingsNavItem.IsActive.ShouldBeFalse();
+        shellViewModel.Logs.Lines.ShouldHaveSingleItem().Tone.ShouldBe("error");
+        window.GetVisualDescendants().OfType<LogsView>().ShouldNotBeEmpty();
 
         window.Close();
     }
@@ -169,25 +203,79 @@ public class ShellHeadlessTests
     /// nôtre. Aucun test headless ne peut voir le rendu Windows : ce test fige les propriétés, la
     /// vérification visuelle reste humaine.
     /// </remarks>
-    [AvaloniaFact]
-    public void MainWindow_OnTheCustomTitlebarPath_AsksThePlatformForNoChromeOfItsOwn()
+    [AvaloniaTheory]
+    [InlineData(AppOperatingSystem.Windows, SystemDecorations.Full, false)]
+    [InlineData(AppOperatingSystem.MacOs, SystemDecorations.Full, false)]
+    [InlineData(AppOperatingSystem.Linux, SystemDecorations.None, true)]
+    public void MainWindow_AppliesTheChromeSettingsOfItsOperatingSystem(
+        AppOperatingSystem operatingSystem,
+        SystemDecorations expectedDecorations,
+        bool expectedGrips)
     {
-        using var provider = TestServiceProviderFactory.Create(out _);
+        using var provider = TestServiceProviderFactory.Create(out _, out _, operatingSystem);
         var window = provider.GetRequiredService<MainWindow>();
         var shellViewModel = provider.GetRequiredService<ShellViewModel>();
 
-        // Les trois OS sont sur le chemin « barre de titre maison » aujourd'hui (ShellViewModel) :
-        // si cette bascule change un jour, ce test doit être relu, pas contourné.
+        // Les trois OS sont sur le chemin « barre de titre maison » aujourd'hui : si cette bascule
+        // change un jour, ce test doit être relu, pas contourné.
         shellViewModel.UseCustomTitlebar.ShouldBeTrue();
 
         window.ExtendClientAreaToDecorationsHint.ShouldBeTrue();
         window.ExtendClientAreaChromeHints.ShouldBe(ExtendClientAreaChromeHints.NoChrome);
         window.ExtendClientAreaTitleBarHeightHint.ShouldBe(MainWindow.CustomTitleBarHeight);
 
-        // BorderOnly privait la fenêtre du cadre non client de Windows (ombre, poignées de
-        // redimensionnement, accrochage) sans rien masquer du chrome : ce n'était pas lui le
-        // remède.
-        window.SystemDecorations.ShouldBe(SystemDecorations.Full);
+        // Windows : BorderOnly privait la fenêtre du cadre non client (ombre, poignées de
+        // redimensionnement, accrochage) sans rien masquer du chrome, ce n'était pas lui le remède.
+        // Linux : la valeur inverse, parce que KWin dessine sa décoration serveur tant qu'il y a
+        // un cadre à décorer, quoi qu'on demande au hint de chrome.
+        window.SystemDecorations.ShouldBe(expectedDecorations);
+        shellViewModel.ShowsResizeGrips.ShouldBe(expectedGrips);
+    }
+
+    /// <summary>
+    /// Les huit poignées de bord existent et ne sont visibles que là où le cadre serveur a été
+    /// retiré. Leur EFFET (attraper un bord, tirer) ne se vérifie que sur un vrai gestionnaire de
+    /// fenêtres ; ce test fige leur présence et leur conditionnement.
+    /// </summary>
+    [AvaloniaFact]
+    public void MainWindow_OnLinux_CarriesItsOwnEightResizeGrips()
+    {
+        using var provider = TestServiceProviderFactory.Create(out _, out _, AppOperatingSystem.Linux);
+        var window = provider.GetRequiredService<MainWindow>();
+        window.Show();
+        window.Settle();
+
+        var grips = window.GetVisualDescendants().OfType<Grid>().Single(candidate => candidate.Name == "ResizeGrips");
+        grips.IsVisible.ShouldBeTrue();
+        grips.Children.OfType<Border>().Select(border => border.Tag).ShouldBe(
+            [
+                WindowEdge.NorthWest.ToString(),
+                WindowEdge.North.ToString(),
+                WindowEdge.NorthEast.ToString(),
+                WindowEdge.West.ToString(),
+                WindowEdge.East.ToString(),
+                WindowEdge.SouthWest.ToString(),
+                WindowEdge.South.ToString(),
+                WindowEdge.SouthEast.ToString(),
+            ],
+            ignoreOrder: true);
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_OnWindows_LeavesTheResizeGripsToThePlatform()
+    {
+        using var provider = TestServiceProviderFactory.Create(out _, out _, AppOperatingSystem.Windows);
+        var window = provider.GetRequiredService<MainWindow>();
+        window.Show();
+        window.Settle();
+
+        window.GetVisualDescendants().OfType<Grid>()
+            .Single(candidate => candidate.Name == "ResizeGrips")
+            .IsVisible.ShouldBeFalse();
+
+        window.Close();
     }
 
     /// <summary>

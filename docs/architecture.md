@@ -595,11 +595,30 @@ et non deux :
 | `ExtendClientAreaChromeHints` | `NoChrome` | **La plus importante.** Sa valeur par défaut est `Default`, qui est un alias de `PreferSystemChrome` (métadonnées d'Avalonia 11.3.20 : propriété enregistrée avec la valeur 2). Ne pas l'écrire revient à demander au système de dessiner SA barre de titre par-dessus la nôtre — c'est exactement le défaut de double barre observé sur Windows. |
 | `ExtendClientAreaTitleBarHeightHint` | `38` | La bande que le système considère comme légende (déplacement, accrochage) doit coïncider avec notre `TitlebarView`, dimensionnée par le jeton `TitlebarH`. |
 
-`SystemDecorations` reste à `Full` : `BorderOnly` ne masque aucun chrome, il retire
+La quatrième propriété, `SystemDecorations`, est la seule qui DIVERGE par système, et
+c'est le seul point où la recette n'est pas la même partout.
+
+Sous Windows et macOS elle vaut `Full`. `BorderOnly` ne masque aucun chrome, il retire
 seulement le cadre non client sur lequel Windows appuie l'ombre, les poignées de
-redimensionnement et l'accrochage. Les propriétés sont figées par un test headless
-(`ShellHeadlessTests`), qui vérifie aussi que la constante C# et le jeton XAML de hauteur
-ne divergent pas ; le rendu lui-même n'est vérifiable qu'à l'œil, sur Windows.
+redimensionnement et l'accrochage : ce n'était pas lui le remède au double chrome.
+
+Sous Linux elle vaut `None`, et pour la raison exactement inverse. Le hint de chrome n'est
+qu'un souhait adressé au gestionnaire de fenêtres : KWin continue de dessiner sa décoration
+serveur tant qu'il reste un cadre à décorer, d'où les DEUX barres de titre rapportées sur
+Manjaro/KDE avec la recette calibrée pour Windows. `None` retire cette décoration, et impose
+sa contrepartie : sans bord serveur, plus rien n'offre le redimensionnement, donc la fenêtre
+pose ses propres poignées (huit zones de 6 points, bords et coins, qui appellent
+`Window.BeginResizeDrag`). Les deux vont ensemble et un test le vérifie comme un invariant :
+retirer le cadre sans poser les poignées donnerait une fenêtre qu'on ne peut plus
+redimensionner. Les poignées sont plus étroites que la gouttière posée sur les `ScrollViewer`,
+donc elles ne rejouent pas le vol de la poignée de défilement corrigé côté Windows.
+
+La règle vit dans `Desktop/Windowing/WindowChromeSettings.cs`, une décision pure que la
+fenêtre se contente d'appliquer : c'est ce qui la rend vérifiable sur les trois systèmes
+depuis une seule machine (`WindowChromeSettingsTests`, plus `ShellHeadlessTests` pour
+l'application effective et pour la non-divergence entre la constante C# et le jeton XAML de
+hauteur). Le rendu lui-même n'est vérifiable qu'à l'œil, sur chaque bureau : aucun test
+headless n'a de gestionnaire de fenêtres à interroger.
 
 ### Rendu paresseux du navigateur de mods
 

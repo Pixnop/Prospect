@@ -357,7 +357,7 @@ public sealed partial class WizardViewModel : ObservableObject, IProgress<GameIn
         }
         catch (GameInstallIncompleteException exception)
         {
-            CreateError = UiText.Versions.InstallLandedElsewhere(exception.TargetDirectory);
+            CreateError = GameInstallFailurePresenter.IncompleteInstallMessage(_operatingSystem, exception.TargetDirectory);
         }
         catch (Exception exception) when (exception is GameVersionNotAvailableException or GameInstallFailedException or DownloadFailedException)
         {

@@ -27,8 +27,44 @@ public sealed class GameInstallStrategyTests
         return fileSystem;
     }
 
+    /// <summary>
+    /// Le VRAI layout de l'archive client Linux, relevé le 2026-08-13 sur la 1.22.6 : tout est sous
+    /// un dossier racine <c>vintagestory/</c>. C'est cette fixture-là qui manquait, et c'est
+    /// pourquoi le défaut a traversé toute la suite sans être vu.
+    /// </summary>
+    private static byte[] RealLinuxArchive() => TarGzSamples.Create(
+        ("vintagestory/", null),
+        ("vintagestory/Mods/", null),
+        ("vintagestory/Vintagestory", TarGzSamples.Text("#!/bin/sh")),
+        ("vintagestory/Vintagestory.dll", TarGzSamples.Text("IL")),
+        ("vintagestory/assets/game/lang/fr.json", TarGzSamples.Text("{}")));
+
     [Fact]
-    public async Task LinuxStrategy_RealTarGz_ExtractsEveryFileWithItsContent()
+    public async Task LinuxStrategy_RealTarGz_FlattensTheRootFolderTheArchiveCarries()
+    {
+        var fileSystem = WithArchive(RealLinuxArchive());
+        var strategy = new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions());
+
+        await strategy.InstallAsync(ArchivePath, TargetDirectory, cancellationToken: CancellationToken.None);
+
+        // Le jeu à la racine du dossier de version, exactement là où le lancement et la
+        // vérification post-installation le cherchent.
+        fileSystem.File.ReadAllText(fileSystem.Path.Combine(TargetDirectory, "Vintagestory")).ShouldBe("#!/bin/sh");
+        fileSystem.File.ReadAllText(fileSystem.Path.Combine(TargetDirectory, "assets", "game", "lang", "fr.json")).ShouldBe("{}");
+        fileSystem.Directory.Exists(fileSystem.Path.Combine(TargetDirectory, "Mods")).ShouldBeTrue();
+
+        // Et surtout : plus de « versions/1.22.6/vintagestory/ », le dossier qui faisait échouer
+        // toute installation Linux.
+        fileSystem.Directory.Exists(fileSystem.Path.Combine(TargetDirectory, "vintagestory")).ShouldBeFalse();
+        fileSystem.Directory.GetDirectories(TargetDirectory).Length.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// L'aplatissement est CONDITIONNEL : une archive déjà à plat n'est pas touchée. C'est la forme
+    /// que les fixtures modélisaient avant le 2026-08-13, et elle doit continuer de marcher.
+    /// </summary>
+    [Fact]
+    public async Task LinuxStrategy_ArchiveWithoutARootFolder_IsExtractedAsIs()
     {
         var archive = TarGzSamples.Create(
             ("Vintagestory", TarGzSamples.Text("#!/bin/sh")),
@@ -40,6 +76,62 @@ public sealed class GameInstallStrategyTests
 
         fileSystem.File.ReadAllText(fileSystem.Path.Combine(TargetDirectory, "Vintagestory")).ShouldBe("#!/bin/sh");
         fileSystem.File.ReadAllText(fileSystem.Path.Combine(TargetDirectory, "assets", "game", "lang", "fr.json")).ShouldBe("{}");
+    }
+
+    /// <summary>
+    /// Le cas pathologique : DEUX dossiers de premier niveau. Rien n'est aplati, sans quoi on
+    /// perdrait la moitié de l'archive.
+    /// </summary>
+    [Fact]
+    public async Task LinuxStrategy_ArchiveWithTwoRootFolders_KeepsThemBoth()
+    {
+        var archive = TarGzSamples.Create(
+            ("vintagestory/Vintagestory", TarGzSamples.Text("jeu")),
+            ("outils/patch.sh", TarGzSamples.Text("outil")));
+        var fileSystem = WithArchive(archive);
+        var strategy = new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions());
+
+        await strategy.InstallAsync(ArchivePath, TargetDirectory, cancellationToken: CancellationToken.None);
+
+        fileSystem.File.ReadAllText(fileSystem.Path.Combine(TargetDirectory, "vintagestory", "Vintagestory")).ShouldBe("jeu");
+        fileSystem.File.ReadAllText(fileSystem.Path.Combine(TargetDirectory, "outils", "patch.sh")).ShouldBe("outil");
+    }
+
+    /// <summary>
+    /// Une archive réduite à un fichier unique n'a pas de dossier racine à retirer : le nom de
+    /// premier niveau est bien unique, mais il ne contient rien.
+    /// </summary>
+    [Fact]
+    public async Task LinuxStrategy_ArchiveOfASingleFile_IsNotFlattened()
+    {
+        var fileSystem = WithArchive(TarGzSamples.Create(("Vintagestory", TarGzSamples.Text("seul"))));
+        var strategy = new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions());
+
+        await strategy.InstallAsync(ArchivePath, TargetDirectory, cancellationToken: CancellationToken.None);
+
+        fileSystem.File.ReadAllText(fileSystem.Path.Combine(TargetDirectory, "Vintagestory")).ShouldBe("seul");
+    }
+
+    /// <summary>
+    /// Le piège de l'aplatissement, et c'est exactement la forme de l'archive réelle : le dossier
+    /// racine <c>vintagestory</c> contient un fichier <c>Vintagestory</c>, dont le nom ne se
+    /// distingue du sien que par une majuscule. Sur un système de fichiers insensible à la casse,
+    /// remonter l'enfant l'écraserait contre son propre parent.
+    /// </summary>
+    [Fact]
+    public async Task LinuxStrategy_ChildNamedLikeItsRootFolder_SurvivesTheFlattening()
+    {
+        var archive = TarGzSamples.Create(
+            ("vintagestory/", null),
+            ("vintagestory/vintagestory", TarGzSamples.Text("homonyme")),
+            ("vintagestory/Lib/protobuf.dll", TarGzSamples.Text("lib")));
+        var fileSystem = WithArchive(archive);
+        var strategy = new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions());
+
+        await strategy.InstallAsync(ArchivePath, TargetDirectory, cancellationToken: CancellationToken.None);
+
+        fileSystem.File.ReadAllText(fileSystem.Path.Combine(TargetDirectory, "vintagestory")).ShouldBe("homonyme");
+        fileSystem.File.ReadAllText(fileSystem.Path.Combine(TargetDirectory, "Lib", "protobuf.dll")).ShouldBe("lib");
     }
 
     [Fact]
@@ -57,10 +149,7 @@ public sealed class GameInstallStrategyTests
     [Fact]
     public async Task LinuxStrategy_AfterExtraction_PutsTheExecutableBitsBackOnEverything()
     {
-        var archive = TarGzSamples.Create(
-            ("Vintagestory", TarGzSamples.Text("#!/bin/sh")),
-            ("assets/game/lang/fr.json", TarGzSamples.Text("{}")));
-        var fileSystem = WithArchive(archive);
+        var fileSystem = WithArchive(RealLinuxArchive());
         var permissions = new RecordingUnixFilePermissions();
         var strategy = new LinuxGameInstallStrategy(fileSystem, permissions);
 
@@ -68,11 +157,13 @@ public sealed class GameInstallStrategyTests
 
         // Les chemins posés sont ceux de la cible normalisée : sur Windows, « /data/... » devient
         // « C:\data\... », d'où la comparaison à partir de GetFullPath plutôt que du chemin brut.
+        // Ils sont aussi ceux d'APRÈS l'aplatissement : le dossier de transit ne doit rien laisser.
         var root = fileSystem.Path.GetFullPath(TargetDirectory);
         permissions.Modes.Values.ShouldAllBe(mode => mode == Mode755);
         permissions.Modes.Keys.ShouldContain(root);
         permissions.Modes.Keys.ShouldContain(fileSystem.Path.Combine(root, "Vintagestory"));
         permissions.Modes.Keys.ShouldContain(fileSystem.Path.Combine(root, "assets"));
+        permissions.Modes.Keys.ShouldAllBe(path => !path.Contains(".prospect-flatten-", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -88,6 +179,26 @@ public sealed class GameInstallStrategyTests
 
         fileSystem.File.Exists("/data/prospect/versions/piege.sh").ShouldBeFalse();
         fileSystem.File.Exists(fileSystem.Path.Combine(TargetDirectory, "Vintagestory")).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// L'entrée rejetée par le garde-fou de traversée ne compte pas dans la topologie : ce qui
+    /// décide de l'aplatissement, c'est ce qui a été ÉCRIT. Une archive au vrai layout à laquelle
+    /// on aurait greffé un piège reste donc aplatie, et le piège reste dehors.
+    /// </summary>
+    [Fact]
+    public async Task LinuxStrategy_EscapingEntryAlongsideARootFolder_DoesNotBlockTheFlattening()
+    {
+        var archive = TarGzSamples.Create(
+            ("../piege.sh", TarGzSamples.Text("rm -rf")),
+            ("vintagestory/Vintagestory", TarGzSamples.Text("ok")));
+        var fileSystem = WithArchive(archive);
+        var strategy = new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions());
+
+        await strategy.InstallAsync(ArchivePath, TargetDirectory, cancellationToken: CancellationToken.None);
+
+        fileSystem.File.Exists("/data/prospect/versions/piege.sh").ShouldBeFalse();
+        fileSystem.File.ReadAllText(fileSystem.Path.Combine(TargetDirectory, "Vintagestory")).ShouldBe("ok");
     }
 
     [Fact]
@@ -112,16 +223,29 @@ public sealed class GameInstallStrategyTests
         => new MacOsGameInstallStrategy(new MockFileSystem(), new RecordingUnixFilePermissions())
             .PlatformKeys.ShouldBe([GamePlatforms.MacArm64, GamePlatforms.MacX64]);
 
+    /// <summary>
+    /// Le VRAI layout de l'archive mac, relevé le 2026-08-13 sur les 1.22.6 <c>osx-x64</c> et
+    /// <c>osx-arm64</c> : un unique dossier racine <c>Vintage Story.app</c> (avec une espace) qui
+    /// porte directement le binaire, pas de <c>Contents/MacOS/</c> pour le jeu. Aplati comme celui
+    /// de Linux, il pose le binaire à la racine du dossier de version.
+    /// </summary>
     [Fact]
-    public async Task MacStrategy_UsesTheSameExtractionAsLinux()
+    public async Task MacStrategy_RealTarGz_FlattensTheBundleFolderJustLikeLinux()
     {
-        var archive = TarGzSamples.Create(("Vintagestory.app/Contents/MacOS/Vintagestory", TarGzSamples.Text("mach-o")));
+        var archive = TarGzSamples.Create(
+            ("Vintage Story.app/", null),
+            ("Vintage Story.app/Info.plist", TarGzSamples.Text("<plist/>")),
+            ("Vintage Story.app/Vintagestory", TarGzSamples.Text("mach-o")),
+            ("Vintage Story.app/assets/game/lang/fr.json", TarGzSamples.Text("{}")));
         var fileSystem = WithArchive(archive);
         var permissions = new RecordingUnixFilePermissions();
 
         await new MacOsGameInstallStrategy(fileSystem, permissions).InstallAsync(ArchivePath, TargetDirectory, cancellationToken: CancellationToken.None);
 
-        fileSystem.File.Exists(fileSystem.Path.Combine(TargetDirectory, "Vintagestory.app", "Contents", "MacOS", "Vintagestory")).ShouldBeTrue();
+        fileSystem.File.ReadAllText(fileSystem.Path.Combine(TargetDirectory, "Vintagestory")).ShouldBe("mach-o");
+        fileSystem.File.Exists(fileSystem.Path.Combine(TargetDirectory, "Info.plist")).ShouldBeTrue();
+        fileSystem.File.Exists(fileSystem.Path.Combine(TargetDirectory, "assets", "game", "lang", "fr.json")).ShouldBeTrue();
+        fileSystem.Directory.Exists(fileSystem.Path.Combine(TargetDirectory, "Vintage Story.app")).ShouldBeFalse();
         permissions.Modes.Values.ShouldAllBe(mode => mode == Mode755);
     }
 
@@ -233,9 +357,10 @@ public sealed class GameInstallStrategyTests
             .Select(location => location.ToString())
             .ShouldBe(["Vintagestory.exe"]);
 
+        // Layout mac relevé le 2026-08-13 : le binaire nu, une fois le dossier racine aplati.
         new MacOsGameInstallStrategy(fileSystem, permissions).ExpectedExecutables
             .Select(location => location.ToString())
-            .ShouldBe(["Vintagestory.app/Contents/MacOS/Vintagestory", "Vintagestory"]);
+            .ShouldBe(["Vintagestory", "Vintage Story.app/Vintagestory"]);
     }
 
     /// <summary>Le chemin est assemblé par le système de fichiers, donc jamais de séparateur en dur.</summary>

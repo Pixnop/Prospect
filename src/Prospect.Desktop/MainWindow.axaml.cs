@@ -1,7 +1,8 @@
 using Avalonia.Controls;
-using Avalonia.Platform;
+using Avalonia.Input;
 
 using Prospect.Desktop.ViewModels.Shell;
+using Prospect.Desktop.Windowing;
 
 namespace Prospect.Desktop;
 
@@ -13,7 +14,7 @@ public partial class MainWindow : Window
     /// (ShellHeadlessTests), parce qu'une divergence entre les deux ne se verrait qu'à
     /// l'exécution, sur la seule plateforme où la zone de légende native compte.
     /// </summary>
-    public const double CustomTitleBarHeight = 38;
+    public const double CustomTitleBarHeight = WindowChromeSettings.CustomTitleBarHeight;
 
     public MainWindow(ShellViewModel shellViewModel)
     {
@@ -22,41 +23,46 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = shellViewModel;
 
-        // Unique point de bascule vers les décorations natives (docs/architecture.md), déjà
-        // résolu par ShellViewModel à partir de l'OS courant (voir sa propriété UseCustomTitlebar) :
-        // cette fenêtre se contente d'appliquer les propriétés de décoration qui en découlent.
-        if (shellViewModel.UseCustomTitlebar)
+        // Toute la décision de décoration vit dans WindowChromeSettings, résolue par le shell à
+        // partir de l'OS courant : cette fenêtre ne fait que l'appliquer. C'est ce qui rend la
+        // règle par système testable (WindowChromeSettingsTests), là où un enchaînement de « if »
+        // ici ne serait vérifiable que sur trois machines.
+        var chrome = shellViewModel.WindowChrome;
+        ExtendClientAreaToDecorationsHint = chrome.ExtendClientAreaToDecorations;
+        ExtendClientAreaChromeHints = chrome.ChromeHints;
+        ExtendClientAreaTitleBarHeightHint = chrome.TitleBarHeightHint;
+        SystemDecorations = chrome.SystemDecorations;
+    }
+
+    /// <summary>
+    /// Démarre le redimensionnement depuis une poignée de bord. Le bord vient du <c>Tag</c> du
+    /// contrôle pressé, posé en XAML : les huit zones se distinguent par leur position, pas par
+    /// huit gestionnaires recopiés.
+    /// </summary>
+    /// <remarks>
+    /// Même dérogation documentée que <c>TitlebarView</c> à la règle « zéro code-behind » :
+    /// <see cref="Window.BeginResizeDrag"/> est une primitive native que rien ne rend liable à une
+    /// commande, et cette méthode ne décide de rien qu'un ViewModel pourrait porter. Ces poignées
+    /// n'existent que sous Linux, où <see cref="SystemDecorations.None"/> retire le cadre serveur
+    /// qui les offrait (voir <see cref="WindowChromeSettings"/>).
+    /// </remarks>
+    private void OnResizeGripPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control { Tag: string edgeName }
+            || !Enum.TryParse<WindowEdge>(edgeName, out var edge)
+            || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
-            // Les trois propriétés vont ensemble, et c'est l'oubli de la troisième qui donnait DEUX
-            // barres de titre superposées sur Windows.
-            //
-            // ExtendClientAreaChromeHints vaut Default à la construction, et Default est un alias de
-            // PreferSystemChrome (vérifié dans les métadonnées d'Avalonia 11.3.20 : la propriété est
-            // enregistrée avec la valeur 2, et ExtendClientAreaChromeHints.PreferSystemChrome vaut
-            // 2). Autrement dit, étendre la zone client sans rien dire du chrome revient à demander
-            // au système de continuer à dessiner le sien PAR-DESSUS notre TitlebarView. NoChrome est
-            // la seule valeur qui dit « je dessine la barre de titre moi-même ».
-            //
-            // SystemDecorations repasse à Full : BorderOnly retire le cadre non client sur lequel
-            // s'appuient l'ombre, les poignées de redimensionnement et l'accrochage de fenêtre de
-            // Windows. Ce n'est pas lui qui masque le chrome (c'est le rôle du hint ci-dessus), il
-            // ne faisait que nous priver de ces comportements natifs.
-            //
-            // Enfin, la hauteur de légende est alignée sur notre propre barre plutôt que laissée à
-            // -1 (« hauteur par défaut de la plateforme ») : c'est cette bande que le système
-            // considère comme la zone de légende pour le déplacement et l'accrochage, et elle doit
-            // donc coïncider avec ce que l'utilisateur voit.
-            ExtendClientAreaToDecorationsHint = true;
-            ExtendClientAreaChromeHints = ExtendClientAreaChromeHints.NoChrome;
-            ExtendClientAreaTitleBarHeightHint = CustomTitleBarHeight;
-            SystemDecorations = SystemDecorations.Full;
+            return;
         }
-        else
+
+        // Une fenêtre maximisée n'a pas de bord à tirer : la laisser démarrer un redimensionnement
+        // la ferait sortir de son état maximisé d'un simple frôlement.
+        if (WindowState != WindowState.Normal)
         {
-            ExtendClientAreaToDecorationsHint = false;
-            ExtendClientAreaChromeHints = ExtendClientAreaChromeHints.Default;
-            ExtendClientAreaTitleBarHeightHint = -1;
-            SystemDecorations = SystemDecorations.Full;
+            return;
         }
+
+        BeginResizeDrag(edge, e);
+        e.Handled = true;
     }
 }

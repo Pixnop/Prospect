@@ -30,7 +30,7 @@ public class DownloadsViewModelTests
             Paths,
             clock ?? new FakeClock(Noon),
             new RetryPolicy(RetryOptions.NoDelay, (_, _) => Task.CompletedTask),
-            DownloadOptions.Default with { BufferSize = 64, ProgressStepBytes = 64, HistoryLimit = historyLimit });
+            DownloadOptions.Default with { BufferSize = 64, ProgressInterval = TimeSpan.Zero, HistoryLimit = historyLimit });
 
     private static DownloadsViewModel CreateViewModel(IDownloadManager manager, FakeClock? clock = null)
         => new(manager, new ImmediateUiDispatcher(), clock ?? new FakeClock(Noon));

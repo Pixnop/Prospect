@@ -35,6 +35,15 @@
   <x:String x:Key="Downloads_Cancel">Cancel</x:String>
   <x:String x:Key="Downloads_ClearAll">Clear all</x:String>
 
+  <!-- ── Journaux ────────────────────────────────────────────────────────────────── -->
+  <x:String x:Key="Logs_Title">Logs</x:String>
+  <x:String x:Key="Logs_Refresh">Refresh</x:String>
+  <x:String x:Key="Logs_Export">Export logs…</x:String>
+  <x:String x:Key="Logs_SnapshotNotice">Snapshot: refresh to read the file again.</x:String>
+  <x:String x:Key="Logs_PathLabel">File</x:String>
+  <x:String x:Key="Logs_EmptyTitle">No log yet</x:String>
+  <x:String x:Key="Logs_EmptyDescription">Prospect has not written anything to its log yet. Install a version or launch an instance, then come back.</x:String>
+
   <!-- ── Accueil ─────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Home_Title">Instances</x:String>
   <x:String x:Key="Home_SearchPlaceholder">Filter instances…</x:String>
