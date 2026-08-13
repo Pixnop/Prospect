@@ -60,6 +60,12 @@
 
       <SolidColorBrush x:Key="GlassEdge" Color="#1AD5A275" />
       <SolidColorBrush x:Key="GlassEdgeStrong" Color="#38D5A275" />
+      <!-- Troisième cran, réservé aux surfaces qui doivent DIRE qu'on peut cliquer dessus (voir
+           Border.card.interactive:pointerover). GlassEdgeStrong, pensé pour un champ survolé,
+           passait inaperçu sur une carte : un testeur a cherché comment ouvrir une instance sans
+           deviner que la vignette entière répondait. À 60 % d'opacité, l'arête cuivrée devient un
+           contour franc, ce qui reste de la LUMIÈRE — jamais de géométrie qui bouge. -->
+      <SolidColorBrush x:Key="GlassEdgeHot" Color="#99D5A275" />
 
       <!-- Bandes de rangées : une liste translucide alterne ses lignes au lieu de tirer des
            séparateurs. Posées PAR-DESSUS la vitre qui les porte, elles s'y composent. -->
@@ -72,6 +78,11 @@
       <!-- Paire haute/basse : la lumière tombe d'en haut, le bas de la vitre passe dans
            l'ombre. C'est ce couple qui donne son épaisseur au panneau. -->
       <BoxShadows x:Key="GlassSheenStrong">inset 0 1 0 #1FFFFFFF, inset 0 -1 0 #38000000</BoxShadows>
+      <!-- Même paire, poussée : la vitre survolée d'une carte cliquable doit se lire d'un coup
+           d'œil et non se deviner. Une seule ressource pour les deux variantes, comme
+           GlassSheenStrong : le couple blanc en haut / noir en bas rend le même service sur fond
+           sombre et sur fond pâle. -->
+      <BoxShadows x:Key="GlassSheenHot">inset 0 1 0 #3DFFFFFF, inset 0 -1 0 #4F000000</BoxShadows>
 
       <BoxShadows x:Key="GlassElevItem">0 1 3 #80090808, inset 0 1 0 #12FFFFFF</BoxShadows>
       <BoxShadows x:Key="GlassElevMenu">0 8 32 #8C090808, inset 0 1 0 #12FFFFFF</BoxShadows>
@@ -104,6 +115,7 @@
 
       <SolidColorBrush x:Key="GlassEdge" Color="#247E5230" />
       <SolidColorBrush x:Key="GlassEdgeStrong" Color="#477E5230" />
+      <SolidColorBrush x:Key="GlassEdgeHot" Color="#A87E5230" />
 
       <SolidColorBrush x:Key="GlassRowOdd" Color="#52FFFFFF" />
       <SolidColorBrush x:Key="GlassRowEven" Color="#3DF7F2EB" />
@@ -115,6 +127,7 @@
            claire hérite donc de la paire de :root. Port littéral, et le résultat tient —
            blanc léger en haut, noir léger en bas donnent la même épaisseur sur fond pâle. -->
       <BoxShadows x:Key="GlassSheenStrong">inset 0 1 0 #1FFFFFFF, inset 0 -1 0 #38000000</BoxShadows>
+      <BoxShadows x:Key="GlassSheenHot">inset 0 1 0 #3DFFFFFF, inset 0 -1 0 #4F000000</BoxShadows>
 
       <BoxShadows x:Key="GlassElevItem">0 1 3 #24382A1E, inset 0 1 0 #BFFFFFFF</BoxShadows>
       <BoxShadows x:Key="GlassElevMenu">0 8 32 #2E382A1E, inset 0 1 0 #BFFFFFFF</BoxShadows>

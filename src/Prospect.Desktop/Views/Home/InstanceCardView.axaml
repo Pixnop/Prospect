@@ -23,9 +23,17 @@
     (Jouer/Arrêter + menu) reste un Grid ordinaire, frère du bouton plutôt qu'imbriqué dedans : un
     bouton dans un bouton capte correctement son propre clic sans le laisser remonter, mais autant
     ne pas en dépendre quand une structure plus simple donne la même garantie.
+
+    DÉCOUVRABILITÉ. Le clic marchait, et personne ne le trouvait : un testeur a cherché comment
+    ouvrir une instance sans imaginer que la vignette entière était le bouton. Le mécanisme n'a
+    donc pas changé, c'est ce qu'il dit de lui-même qui a changé. La carte prend la classe
+    `interactive` (curseur main, survol franc : voir Card.axaml) et porte un indice EXPLICITE, la
+    pastille « Ouvrir » posée en coin de la bande d'art, invisible au repos et révélée au survol.
+    Le contraste seul annonce qu'une surface réagit ; il n'annonce pas ce qu'elle fait. La même
+    action ouvre le menu « … », en première entrée, pour qui n'essaie jamais de survoler.
   -->
 
-  <Border Classes="card" Width="212" Margin="0,0,20,20">
+  <Border Classes="card interactive" Width="212" Margin="0,0,20,20">
     <StackPanel>
       <Button Classes="cardHit" Command="{Binding OpenCommand}">
         <StackPanel>
@@ -51,6 +59,16 @@
                             Classes.stable="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=stable}"
                             Classes.unstable="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=unstable}"
                             Classes.pre="{Binding ChannelBadgeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=pre}" />
+            <!-- Indice d'ouverture. Coin opposé au badge de version, donc sans concurrence même
+                 avec un numéro de version long. Le chevauchement déclaré est celui du filet de
+                 bande, qui occupe toute la surface du Panel par construction (voir plus haut) :
+                 AllowsOverlap l'autorise pour cette pastille comme il l'autorise pour le badge. -->
+            <Border Classes="openHint" layout:LayoutContract.AllowsOverlap="True"
+                    HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8,8,0,0">
+              <TextBlock Text="{StaticResource Card_Open}"
+                         FontSize="{StaticResource FsCaption}" FontWeight="{StaticResource FwMedium}"
+                         Foreground="{DynamicResource Text1}" />
+            </Border>
           </Panel>
 
           <StackPanel Margin="16,16,16,0">
@@ -94,6 +112,9 @@
                 Stroke="{DynamicResource Text2}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
           <Button.Flyout>
             <MenuFlyout Placement="Bottom">
+              <!-- « Ouvrir » d'abord : c'est l'action principale de la carte, et le seul chemin
+                   vers la page de détail pour qui n'a pas découvert la vignette cliquable. -->
+              <MenuItem Header="{StaticResource Card_Open}" Command="{Binding OpenCommand}" />
               <MenuItem Header="{StaticResource Card_Rename}" Command="{Binding RenameCommand}" />
               <MenuItem Header="{StaticResource Card_Duplicate}" Command="{Binding DuplicateCommand}" />
               <MenuItem Header="{StaticResource Card_Delete}" Command="{Binding DeleteCommand}" />

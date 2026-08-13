@@ -53,6 +53,7 @@
   <x:String x:Key="Card_Launching">Starting…</x:String>
   <x:String x:Key="Card_Playing">Running</x:String>
   <x:String x:Key="Card_Actions">Actions</x:String>
+  <x:String x:Key="Card_Open">Open</x:String>
   <x:String x:Key="Card_Rename">Rename</x:String>
   <x:String x:Key="Card_Duplicate">Duplicate</x:String>
   <x:String x:Key="Card_Delete">Delete</x:String>
