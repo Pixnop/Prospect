@@ -109,6 +109,18 @@ Les erreurs attendues du domaine sont des exceptions typées du projet (jamais
 d'`Exception` nue), et les cas « absence normale » (fichier pas encore créé) sont des
 retours nullables, pas des exceptions.
 
+**Journal de diagnostic transverse.** `IAppLog` (`Common/`) traverse presque tous les services :
+un défaut rapporté depuis une machine d'utilisateur ne se diagnostique que sur pièce, et ce qui s'y
+écrit sont les FAITS d'une session — catalogue relu, téléchargement commencé et fini avec sa taille,
+version installée ou retirée, instance créée, dupliquée ou supprimée, lancement avec son pid et
+sortie avec son code, mod posé, remplacé, activé ou retiré, vérification de mises à jour avec son
+verdict compté, et toute erreur montrée à l'utilisateur. Jamais un secret, et jamais une ligne à la
+fréquence d'une boucle : un téléchargement journalise ses deux bouts, pas ses mille rapports
+d'avancement. C'est le SEUL port du projet à s'injecter par un paramètre de constructeur optionnel,
+en dernière position, avec `NullAppLog.Instance` pour repli ; l'exception est argumentée sur
+l'interface elle-même et gardée par `AppLogWiringTests`, qui vérifie que le conteneur livre bien un
+vrai `FileAppLog` à chacun de ces services.
+
 Une seule exception à « jamais d'état statique muable » est admise, et elle est nommée ici
 pour qu'elle reste unique : `Prospect.Desktop.Resources.UiText`, la table de textes de la
 langue choisie, fixée une fois au démarrage avec une garde qui refuse toute deuxième
@@ -743,6 +755,35 @@ tutoiement, casse de phrase, boutons à l'infinitif, valeurs machine en monospac
 jamais d'emoji. Deux dérogations documentées à la première règle : `TitlebarView`
 (primitives natives de `Window`) et `ModBrowserView` (position de défilement, un fait de
 vue que rien ne gagnerait à traverser un ViewModel).
+
+Elles restent DEUX, et le troisième cas qui s'est présenté explique la frontière. Traduire la
+molette verticale en défilement horizontal sur la rangée de catégories est aussi un fait de vue,
+mais contrairement aux deux précédents il ne porte aucune décision propre à SA vue : c'est une
+règle d'entrée générique, vraie de n'importe quelle rangée horizontale. Elle vit donc en
+comportement attaché (`Controls/WheelScroll.cs`, `AvaloniaProperty.RegisterAttached`), se déclare
+dans l'AXAML là où elle s'applique, et ne laisse pas une ligne de C# derrière elle. La règle qui
+en sort : un code-behind pour ce qui est propre à une vue, un comportement attaché pour ce qui est
+vrai de n'importe laquelle.
+
+### Pages vivantes
+
+Le shell n'avait pas de notion de « page devenue visible » : chaque `ShowXxx` appelait à la main la
+commande de chargement de sa page, et la sortie n'était traitée que pour les pages jetables, via
+`IDisposable`. `ViewModels/ILivePage.cs` nomme le cas des pages qui entretiennent un travail de fond
+TANT QU'ELLES SONT AFFICHÉES : `ShellViewModel.Navigate` démarre l'entrante et arrête la sortante,
+en un seul endroit.
+
+Le point à ne pas réessayer est que `IDisposable` seul ne pouvait pas tenir ce rôle. Les pages du
+shell sont des singletons du conteneur, donc la même instance revient à chaque visite : il faut un
+verbe pour REPRENDRE, que la fin de vie d'un objet n'a pas. Une page vivante peut être jetable en
+plus (`LogsViewModel` l'est, elle possède un jeton d'annulation), à la condition que sa disposition
+ne fasse rien de plus que l'arrêt et la laisse redémarrable.
+
+Aujourd'hui une seule page l'implémente : les Journaux, qui relisent `logs/prospect.log` toutes les
+deux secondes tant qu'on les regarde. Le battement passe par un délai INJECTÉ
+(`Func<TimeSpan, CancellationToken, Task>`, défaut `Task.Delay`), même idiome que `RetryPolicy` et
+`WindowsGameInstallStrategy` : `IClock` ne rend que l'heure, pas un battement, et un test qui
+attendrait de vraies secondes ne serait pas un test.
 
 ## Qualité et CI
 
