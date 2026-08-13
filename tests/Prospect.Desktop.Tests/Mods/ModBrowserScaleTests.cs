@@ -4,6 +4,7 @@ using Avalonia.VisualTree;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.Tests.Support;
 using Prospect.Desktop.Tests.TestDoubles;
@@ -191,6 +192,83 @@ public sealed class ModBrowserScaleTests
         window.Settle();
 
         window.ShouldHoldLayoutInvariantsAtEverySize("navigateur de mods, catalogue complet, fenêtre étendue");
+    }
+
+    /// <summary>
+    /// Le défilement ne peut pas matérialiser le catalogue entier une tranche à la fois. C'est la
+    /// borne qui manquait : l'extension par tranches bornait le rendu INITIAL et rien d'autre, si
+    /// bien qu'un défilement assez long rendait les 8 026 cartes, exactement ce que la fenêtre était
+    /// censée éviter. Mesuré avant correction sur un catalogue de 800 fiches : 800 cartes rendues
+    /// coûtaient 392 Mio de mémoire gérée (l'arbre de contrôles, environ 490 Kio par carte) et
+    /// portaient le jeu de travail de 177 à 644 Mio.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task ScrollingFarBeyondTheWindow_StopsAtTheRenderCeilingAndSaysSo()
+    {
+        var (provider, window, shell, _) = CreateAtScale();
+        using var _provider = provider;
+        window.Show();
+        shell.ShowModBrowser();
+        await shell.ModBrowser.InitializeCommand.ExecuteAsync(null);
+
+        // Bien plus de tranches qu'il n'en faut pour atteindre le plafond : un défilement obstiné.
+        for (var slice = 0; slice < 40; slice++)
+        {
+            shell.ModBrowser.ShowMoreCommand.Execute(null);
+        }
+
+        window.Settle();
+
+        shell.ModBrowser.Results.Count.ShouldBe(ModBrowserViewModel.MaxRenderedResults);
+        CountCards(window).ShouldBeLessThanOrEqualTo(ModBrowserViewModel.MaxRenderedResults);
+
+        // Les DONNÉES restent complètes, et l'écran ne fait pas semblant : plus de bouton
+        // « Afficher plus », et un compteur qui dit par quoi remplacer le défilement.
+        shell.ModBrowser.MatchCount.ShouldBe(CatalogSize);
+        shell.ModBrowser.HasMoreResults.ShouldBeFalse();
+        shell.ModBrowser.IsRenderCapped.ShouldBeTrue();
+        shell.ModBrowser.ShownCountText.ShouldBe(
+            UiText.Mods.ShownCountCapped(ModBrowserViewModel.MaxRenderedResults, CatalogSize));
+    }
+
+    /// <summary>
+    /// Le plafond de rendu ne bride que le rendu : changer de recherche repart d'une tranche, et
+    /// une recherche qui tient sous le plafond n'affiche aucun message de repli.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task RenderCeiling_LiftsAgainAsSoonAsTheSearchFitsUnderIt()
+    {
+        var (provider, window, shell, _) = CreateAtScale();
+        using var _provider = provider;
+        window.Show();
+        shell.ShowModBrowser();
+        await shell.ModBrowser.InitializeCommand.ExecuteAsync(null);
+        for (var slice = 0; slice < 40; slice++)
+        {
+            shell.ModBrowser.ShowMoreCommand.Execute(null);
+        }
+
+        window.Settle();
+        shell.ModBrowser.IsRenderCapped.ShouldBeTrue();
+
+        // Une recherche qui ramène moins que le plafond : tout redevient atteignable.
+        shell.ModBrowser.SearchText = "Mod de test 42";
+        window.Settle();
+        shell.ModBrowser.MatchCount.ShouldBeLessThan(ModBrowserViewModel.MaxRenderedResults);
+        shell.ModBrowser.IsRenderCapped.ShouldBeFalse();
+
+        for (var slice = 0; slice < 40; slice++)
+        {
+            shell.ModBrowser.ShowMoreCommand.Execute(null);
+        }
+
+        window.Settle();
+
+        shell.ModBrowser.Results.Count.ShouldBe(shell.ModBrowser.MatchCount);
+        shell.ModBrowser.HasMoreResults.ShouldBeFalse();
+        shell.ModBrowser.IsRenderCapped.ShouldBeFalse();
+        shell.ModBrowser.ShownCountText.ShouldBe(
+            UiText.Mods.ShownCount(shell.ModBrowser.MatchCount, shell.ModBrowser.MatchCount));
     }
 
     /// <summary>

@@ -20,9 +20,20 @@ namespace Prospect.Desktop.Services;
 ///    résolution faisait monter le jeu de travail à près de 8 Gio pour 5 333 logos, c'est-à-dire une
 ///    mort par épuisement mémoire sur une machine ordinaire. Une image déjà plus petite n'est jamais
 ///    agrandie : la réduction est un plafond, pas une normalisation.
-/// 3. Le cache est BORNÉ (<see cref="MaxCachedBitmaps"/>). Au-delà, un logo est toujours servi mais
-///    n'est plus mémorisé : un plafond franc vaut mieux qu'une éviction, qui reviendrait à libérer
-///    un bitmap peut-être encore accroché à un <c>Image</c> de l'arbre visuel (voir point 4).
+/// 3. Le cache est BORNÉ, et il l'est en OCTETS DE PIXELS (<see cref="MaxCachedThumbnailBytes"/>,
+///    <see cref="MaxCachedIllustrationBytes"/>) autant qu'en nombre d'entrées
+///    (<see cref="MaxCachedBitmaps"/>). Au-delà, une image est toujours servie mais n'est plus
+///    mémorisée : un plafond franc vaut mieux qu'une éviction, qui reviendrait à libérer un bitmap
+///    peut-être encore accroché à un <c>Image</c> de l'arbre visuel (voir point 4).
+///    Le plafond d'ENTRÉES seul ne bornait rien de réel, et c'est le défaut que ce chantier corrige :
+///    il avait été taillé quand ce cache ne servait que des vignettes de cartes (128 px, environ
+///    43 Kio de pixels chacune, donc 22 Mio au pire), puis la surcharge par largeur d'usage y a fait
+///    entrer les illustrations de fiches (640 px, jusqu'à un mégaoctet chacune) SANS toucher au
+///    plafond. Mesuré par le harnais de charge de ce chantier : cent fiches ouvertes puis refermées
+///    portaient le cache à ses 512 entrées, mais 459 Mio de pixels, et le jeu de travail de 214 à
+///    735 Mio. Deux strates aux coûts vingt fois différents ne peuvent pas se borner au même
+///    compteur, et un budget commun laisserait les illustrations affamer les vignettes : d'où un
+///    budget par strate, chacun franc.
 /// 4. <see cref="Dispose"/> ne libère PAS les bitmaps distribués. Ils appartiennent de fait aux
 ///    contrôles qui les affichent : un <c>Image.Source</c> qui pointe vers un <see cref="Bitmap"/>
 ///    libéré fait lever une <see cref="NullReferenceException"/> à la passe de mise en page
@@ -46,16 +57,42 @@ public sealed class ModLogoCache : IModLogoCache, IDisposable
     public const int MaxLogoWidth = 128;
 
     /// <summary>
-    /// Nombre maximal de vignettes mémorisées. Volontairement bien au-dessus de ce qu'une session
-    /// de navigation réaliste atteint (la grille ne rend qu'une fenêtre de cartes à la fois, voir
-    /// <c>ModBrowserViewModel</c>), et assez bas pour que le pire cas reste de l'ordre de quelques
-    /// dizaines de mégaoctets plutôt que de plusieurs gigaoctets.
+    /// Nombre maximal d'entrées mémorisées, toutes strates confondues. Ne borne PAS la mémoire (une
+    /// entrée pèse ce que pèsent ses pixels, voir les deux budgets ci-dessous) : ce plafond-ci borne
+    /// la table elle-même, pour qu'un catalogue de plusieurs milliers de vignettes minuscules ne la
+    /// fasse pas enfler indéfiniment. Volontairement bien au-dessus de ce qu'une session de
+    /// navigation réaliste atteint.
     /// </summary>
     public const int MaxCachedBitmaps = 512;
+
+    /// <summary>
+    /// Budget de pixels mémorisés pour la strate VIGNETTE (largeur d'usage jusqu'à
+    /// <see cref="MaxLogoWidth"/>) : les logos de cartes et les logos d'en-tête de fiche, ceux que
+    /// le défilement et les frappes de recherche redemandent sans arrêt, donc ceux qu'il faut
+    /// vraiment mémoriser. Vingt-quatre mégaoctets couvrent plus de cinq cents vignettes de
+    /// 128 × 85 : au-delà de ce que le plafond d'entrées laisse entrer, donc jamais le facteur
+    /// limitant pour une vignette de forme ordinaire — ce budget est là pour les formes extrêmes
+    /// (une bannière très haute réduite à 128 de large pèse encore un mégaoctet).
+    /// </summary>
+    public const long MaxCachedThumbnailBytes = 24L * 1024 * 1024;
+
+    /// <summary>
+    /// Budget de pixels mémorisés pour la strate ILLUSTRATION (largeur d'usage au-delà de
+    /// <see cref="MaxLogoWidth"/>) : les images d'une description de fiche. Beaucoup plus petit, et
+    /// c'est délibéré. Une illustration coûte jusqu'à vingt fois une vignette, et sa valeur en cache
+    /// est bien moindre : <c>RichTextDocumentViewModel</c> dédoublonne déjà les images d'UN MÊME
+    /// document, donc ce budget ne sert qu'à la réouverture d'une fiche déjà consultée. Huit
+    /// mégaoctets valent une poignée de fiches récentes, ce qui est exactement l'usage.
+    /// </summary>
+    public const long MaxCachedIllustrationBytes = 8L * 1024 * 1024;
 
     private readonly HttpClient _httpClient;
     private readonly ConcurrentDictionary<string, Bitmap> _cache = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _slots = new(MaxConcurrentFetches, MaxConcurrentFetches);
+    private readonly Lock _budget = new();
+
+    private long _thumbnailBytes;
+    private long _illustrationBytes;
 
     /// <summary>Construit le cache.</summary>
     /// <param name="httpClient">
@@ -71,6 +108,35 @@ public sealed class ModLogoCache : IModLogoCache, IDisposable
 
     /// <summary>Nombre de vignettes actuellement mémorisées. Exposé pour que les tests vérifient la borne.</summary>
     public int CachedCount => _cache.Count;
+
+    /// <summary>
+    /// Octets de pixels actuellement mémorisés par la strate vignette. C'est la mesure qui compte
+    /// vraiment : ces octets vivent dans la mémoire NATIVE du moteur de rendu, invisible de
+    /// <see cref="GC.GetTotalMemory(bool)"/>, ce qui est précisément pourquoi la croissance qu'ils
+    /// causaient ne se voyait pas là où on la cherchait. Exposé pour les tests de borne.
+    /// </summary>
+    public long CachedThumbnailBytes
+    {
+        get
+        {
+            lock (_budget)
+            {
+                return _thumbnailBytes;
+            }
+        }
+    }
+
+    /// <summary>Octets de pixels actuellement mémorisés par la strate illustration.</summary>
+    public long CachedIllustrationBytes
+    {
+        get
+        {
+            lock (_budget)
+            {
+                return _illustrationBytes;
+            }
+        }
+    }
 
     /// <inheritdoc />
     public Task<Bitmap?> GetAsync(Uri logoUrl, CancellationToken cancellationToken = default)
@@ -126,6 +192,12 @@ public sealed class ModLogoCache : IModLogoCache, IDisposable
     public void Dispose()
     {
         _cache.Clear();
+        lock (_budget)
+        {
+            _thumbnailBytes = 0;
+            _illustrationBytes = 0;
+        }
+
         _slots.Dispose();
     }
 
@@ -137,17 +209,52 @@ public sealed class ModLogoCache : IModLogoCache, IDisposable
         {
             using var stream = new MemoryStream(bytes);
             var bitmap = Shrink(new Bitmap(stream), maxWidth);
-
-            if (_cache.Count < MaxCachedBitmaps)
-            {
-                _cache[key] = bitmap;
-            }
+            Memorize(key, bitmap, maxWidth);
 
             return bitmap;
         }
         catch (Exception)
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Mémorise l'entrée si les deux plafonds de sa strate le permettent, sans jamais rien évincer.
+    /// Le décompte d'octets et l'insertion se font sous le même verrou : sans ça, deux décodages
+    /// concurrents pourraient franchir le budget ensemble, chacun l'ayant trouvé libre.
+    /// </summary>
+    private void Memorize(string key, Bitmap bitmap, int maxWidth)
+    {
+        var size = bitmap.PixelSize;
+
+        // Quatre octets par point : c'est le format de surface du moteur de rendu, quelle que soit
+        // la compression du fichier d'origine — c'est bien la taille DÉCODÉE qui pèse en mémoire.
+        var cost = (long)size.Width * size.Height * 4;
+        var isThumbnail = maxWidth <= MaxLogoWidth;
+
+        lock (_budget)
+        {
+            if (_cache.Count >= MaxCachedBitmaps)
+            {
+                return;
+            }
+
+            var used = isThumbnail ? _thumbnailBytes : _illustrationBytes;
+            var budget = isThumbnail ? MaxCachedThumbnailBytes : MaxCachedIllustrationBytes;
+            if (used + cost > budget || !_cache.TryAdd(key, bitmap))
+            {
+                return;
+            }
+
+            if (isThumbnail)
+            {
+                _thumbnailBytes += cost;
+            }
+            else
+            {
+                _illustrationBytes += cost;
+            }
         }
     }
 

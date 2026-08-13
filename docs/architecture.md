@@ -667,10 +667,47 @@ construits, donc les milliers de téléchargements et de décodages de logos qu'
 déclenchent aussi. C'est ce coût-là, pas celui des contrôles, qui tuait le processus.
 
 Le cache de logos (`ModLogoCache`) complète le dispositif : il réduit chaque vignette à
-sa taille d'affichage plutôt que de garder la résolution du CDN, borne le nombre
-d'entrées mémorisées, et ne libère jamais un bitmap déjà distribué — un `Image.Source`
-pointant vers un `Bitmap` libéré fait lever une `NullReferenceException` dans la passe de
-mise en page suivante.
+sa taille d'affichage plutôt que de garder la résolution du CDN, borne ce qu'il mémorise,
+et ne libère jamais un bitmap déjà distribué (un `Image.Source` pointant vers un `Bitmap`
+libéré fait lever une `NullReferenceException` dans la passe de mise en page suivante).
+
+#### Ce qui est borné, et par quoi
+
+Le fenêtrage ci-dessus bornait le rendu INITIAL et rien d'autre : l'extension par tranches
+n'avait pas de fin, donc défiler assez longtemps rendait le catalogue entier une tranche à
+la fois, et retombait exactement dans le cas que le fenêtrage devait éviter. Instrumenté
+sur une fenêtre laissée libre, 800 cartes rendues d'affilée coûtaient 392 Mio de mémoire
+gérée (l'arbre de contrôles, environ 490 Kio par carte) et portaient le jeu de travail de
+177 à 644 Mio. Le même angle mort existait dans le cache : son plafond comptait des
+ENTRÉES, taillé quand il ne servait que des vignettes de 128 px, alors que la surcharge par
+largeur d'usage y a fait entrer ensuite les illustrations de fiches, jusqu'à vingt fois plus
+lourdes. Cent fiches ouvertes puis refermées le portaient à ses 512 entrées, soit 459 Mio de
+pixels, et le jeu de travail de 214 à 735 Mio.
+
+Ces pixels-là vivent dans la mémoire NATIVE du moteur de rendu. `GC.GetTotalMemory` ne les
+voit pas, et c'est pourquoi cette croissance ne se voyait pas là où on la cherchait : la
+mémoire gérée restait plate pendant que le processus grossissait d'un demi-gigaoctet.
+
+Chaque borne est un plafond FRANC : au-delà, on cesse d'ajouter, on n'évince jamais et on
+ne libère jamais un bitmap déjà distribué.
+
+| Ce qui grossit | Borne | Valeur |
+| --- | --- | --- |
+| Cartes rendues par le navigateur de mods | `ModBrowserViewModel.MaxRenderedResults` | 150 cartes, soit environ 96 Mio d'arbre visuel, rendus dès qu'on quitte la page. Au-delà, le compteur sous la grille invite à affiner la recherche plutôt que de laisser croire que le défilement continue. |
+| Vignettes mémorisées (largeur jusqu'à `MaxLogoWidth`) | `ModLogoCache.MaxCachedThumbnailBytes` | 24 Mio de pixels |
+| Illustrations de fiches mémorisées (largeur au-delà) | `ModLogoCache.MaxCachedIllustrationBytes` | 8 Mio de pixels. Budget séparé, sinon les illustrations affameraient la strate que le défilement redemande sans arrêt. |
+| Entrées du cache d'images, toutes strates | `ModLogoCache.MaxCachedBitmaps` | 512 entrées. Borne la TABLE, pas la mémoire : les deux budgets ci-dessus s'en chargent. |
+| Vignettes du sélecteur de fond | catalogue fermé | 11 fonds, décodés à `BackdropService.ThumbnailDecodeWidth`, plus une seule image pleine taille vivante à la fois |
+| Historique de téléchargements | `DownloadOptions.HistoryLimit` | 20 lignes terminées ; les opérations vivantes ne sont jamais évincées |
+| Lignes de la page Journaux | `AppLogService.DefaultTailLines` | 500 lignes, relues sans reconstruire la liste quand le contenu n'a pas changé |
+| Toasts | `ToastService` | disparition automatique après 5 s |
+
+Le reste ne grossit pas et a été vérifié comme tel plutôt que supposé : les allers-retours
+entre pages, les changements de thème et de fond, les rafraîchissements de l'Accueil et les
+ouvertures répétées de fiches laissent la mémoire gérée et le nombre d'abonnés aux
+évènements des services singletons strictement plats. C'est le rôle des `Dispose` de
+`ModCardViewModel`, `InstanceCardViewModel`, `InstanceDetailViewModel` et
+`DownloadItemViewModel`, et de `ShellViewModel.Navigate` qui dispose la page sortante.
 
 ### Fond de fenêtre
 

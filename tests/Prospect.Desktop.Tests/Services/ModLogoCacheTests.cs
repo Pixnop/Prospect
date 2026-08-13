@@ -63,6 +63,51 @@ public sealed class ModLogoCacheTests
     }
 
     /// <summary>
+    /// Les ILLUSTRATIONS de fiches (largeur d'usage bien au-delà d'une vignette) ne peuvent plus
+    /// remplir le cache jusqu'à son plafond d'ENTRÉES. C'est la borne qui manquait : ce plafond
+    /// avait été taillé pour des vignettes de 128 px (43 Kio de pixels chacune), et la surcharge par
+    /// largeur d'usage y a ensuite fait entrer des images jusqu'à vingt fois plus lourdes sans
+    /// changer le compteur. Mesuré avant correction : cent fiches ouvertes puis refermées portaient
+    /// le cache à ses 512 entrées, soit 459 Mio de pixels, et le jeu de travail de 214 à 735 Mio.
+    /// </summary>
+    /// <remarks>
+    /// Deux propriétés vérifiées d'un coup, parce qu'elles ne valent qu'ensemble : le budget des
+    /// illustrations est tenu, ET une vignette reste mémorisable après lui — un budget COMMUN
+    /// aurait tenu la première et perdu la seconde, en laissant les illustrations affamer la strate
+    /// que le défilement redemande sans arrêt.
+    /// </remarks>
+    [AvaloniaFact]
+    public async Task GetAsync_ManyIllustrations_StopMemorizingOnceTheirBudgetIsSpentWithoutStarvingThumbnails()
+    {
+        // 480x480 en RGBA : 900 Kio de pixels par illustration, la taille que sert réellement le CDN.
+        var handler = CreateSuccessHandler(TinyPng.Create(size: 480));
+        using var cache = new ModLogoCache(new HttpClient(handler));
+
+        const int illustrations = 60;
+        for (var index = 0; index < illustrations; index++)
+        {
+            var uri = new Uri(FormattableString.Invariant($"https://moddbcdn.vintagestory.at/shot-{index}.png"));
+
+            // Toujours SERVIE, même au-delà du budget : le plafond ne prive personne de son image,
+            // il arrête seulement de la mémoriser.
+            (await cache.GetAsync(uri, maxWidth: 640)).ShouldNotBeNull();
+        }
+
+        cache.CachedIllustrationBytes.ShouldBeLessThanOrEqualTo(ModLogoCache.MaxCachedIllustrationBytes);
+        cache.CachedCount.ShouldBeLessThan(illustrations);
+
+        // Et la strate vignette a gardé son propre budget : un logo demandé après coup est bien
+        // mémorisé, donc servi sans deuxième requête.
+        var logoUrl = new Uri("https://moddbcdn.vintagestory.at/logo-after.png");
+        var requestsBefore = handler.RequestCount;
+        var logo = await cache.GetAsync(logoUrl);
+
+        (await cache.GetAsync(logoUrl)).ShouldBeSameAs(logo);
+        handler.RequestCount.ShouldBe(requestsBefore + 1);
+        cache.CachedThumbnailBytes.ShouldBeLessThanOrEqualTo(ModLogoCache.MaxCachedThumbnailBytes);
+    }
+
+    /// <summary>
     /// Régression exacte du plantage : un <c>Image</c> de l'arbre visuel garde une référence vers
     /// le bitmap que le cache lui a rendu. Si le cache le libérait à sa propre fermeture — ce que
     /// fait <c>App</c> en libérant le conteneur sur <c>ShutdownRequested</c>, alors que la fenêtre
