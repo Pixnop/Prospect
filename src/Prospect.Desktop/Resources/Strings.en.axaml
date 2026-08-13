@@ -218,7 +218,7 @@
   <x:String x:Key="Mods_Offline_Title">ModDB unreachable</x:String>
   <x:String x:Key="Mods_Offline_Description">The connection to the official repository failed. Mods you already installed still work offline.</x:String>
   <x:String x:Key="Mods_ShowMore">Show more</x:String>
-  <x:String x:Key="Mods_Tags_ScrollHint">Scroll the row to see every category.</x:String>
+  <x:String x:Key="Mods_Tags_ScrollHint">Wheel or bar to scroll the row and see every category.</x:String>
 
   <!-- ── Fiche d'un mod ──────────────────────────────────────────────────────────── -->
   <x:String x:Key="Mods_Detail_Versions">Versions</x:String>

@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Prospect.Desktop.ViewModels.Mods"
              xmlns:conv="using:Prospect.Desktop.Converters"
+             xmlns:controls="using:Prospect.Desktop.Controls"
              xmlns:layout="using:Prospect.Desktop.Layout"
              mc:Ignorable="d" d:DesignWidth="944" d:DesignHeight="760"
              x:Class="Prospect.Desktop.Views.Mods.ModBrowserView"
@@ -82,9 +83,33 @@
            utiles sont en tête parce que le ViewModel les classe par nombre de mods réellement
            étiquetés (voir ModBrowserViewModel.OrderByUsefulness). Le comportement de filtre, lui,
            ne change pas. -->
-      <ScrollViewer Margin="0,12,0,0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+      <!--
+        Deux corrections tenues ensemble, parce qu'elles répondent au même défaut : une rangée qui
+        défile sans qu'on puisse la défiler.
+
+        `flush` retire la gouttière de 12 points (Styles/Controls/ScrollViewer.axaml) et `Padding`
+        RÉSERVE la bande de la barre sous le contenu. Sans ça, la barre se peignait PAR-DESSUS les
+        pastilles : dans le gabarit Fluent, les barres flottent au-dessus du présentateur, et la
+        gouttière ne fait que les décaler vers le haut, c'est-à-dire plus loin dans le contenu. La
+        gouttière existe pour les barres collées au bord de la fenêtre, où le cadre vole la poignée ;
+        celle-ci est au milieu de la page, donc elle n'en a pas besoin — et c'est exactement le cas
+        que la classe `flush` documente.
+
+        `WheelScroll.Horizontal` traduit la molette en défilement latéral. Une souris n'a qu'une
+        molette, verticale, et un ScrollViewer sans défilement vertical n'en faisait rien : les deux
+        cents catégories au-delà du premier écran n'étaient atteignables qu'en attrapant la barre.
+      -->
+      <ScrollViewer Margin="0,12,0,0" Classes="flush"
+                    HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                    controls:WheelScroll.Horizontal="True"
                     ToolTip.Tip="{StaticResource Mods_Tags_ScrollHint}">
-        <ItemsControl ItemsSource="{Binding Tags}">
+        <!--
+          La bande de la barre est réservée ICI, par une marge basse du CONTENU, et non par un
+          Padding sur le ScrollViewer : son gabarit Fluent ne transmet pas le Padding à son
+          présentateur, donc l'écrire là n'aurait rien décalé du tout (mesuré). Ancré en haut pour
+          que la marge s'ajoute bien SOUS les pastilles au lieu de se répartir autour d'elles.
+        -->
+        <ItemsControl ItemsSource="{Binding Tags}" VerticalAlignment="Top" Margin="0,0,0,14">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
               <StackPanel Orientation="Horizontal" />
