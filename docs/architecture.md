@@ -328,6 +328,61 @@ d'installation par OS :
   reprend le pattern éprouvé de VS Launcher : exécution silencieuse avec
   `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CURRENTUSER /NOICONS /DIR=<versions/X.Y.Z>`.
 
+#### La boîte « ancienne version détectée » : ce qu'on ne peut pas empêcher
+
+Une installation Windows silencieuse ouvre quand même une fenêtre, et il faut le dire une
+fois pour toutes : la question « une ancienne version a été détectée, la désinstaller
+d'abord ? » ne vient pas de Setup, elle vient du SCRIPT propre à l'installeur de Vintage
+Story, qui lit le registre pour détecter une installation classique du jeu. Or
+`/SUPPRESSMSGBOXES` ne couvre que les messages de Setup lui-même et la fonction
+`SuppressibleMsgBox` du langage de script ; un `MsgBox` nu appelé depuis `InitializeSetup`
+s'affiche quel que soit le drapeau (documentation Inno Setup, « Setup Command Line
+Parameters » et « Pascal Scripting: SuppressibleMsgBox »). Aucun argument ne la couvre, et
+il n'y a rien à corriger de notre côté.
+
+Deux conséquences, toutes deux contre-intuitives et toutes deux vérifiées.
+
+Cette boîte apparaîtra à CHAQUE installation tant qu'un Vintage Story classique est
+enregistré sur la machine. Ce n'est pas le signe d'une désinstallation ratée ni d'une
+installation précédente restée à moitié : c'est une détection en registre qui refait son
+travail, et elle le refera à chaque fois.
+
+Et son bouton par défaut est « Oui », c'est-à-dire DÉSINSTALLER le jeu de l'utilisateur.
+Une touche Entrée réflexe emporte une installation qui n'a rien demandé. C'est pour ça que
+Prospect prévient AVANT plutôt que d'expliquer après : sous Windows uniquement, dès l'entrée
+dans la phase d'installation, l'écran Versions et le wizard affichent une notice qui dit quoi
+répondre (`UiText.Versions.InstallerPromptNotice`, la règle d'affichage étant dans
+`GameInstallProgressPresenter.ShowsInstallerPromptNotice`). Pas de case « ne plus afficher » :
+la question est dangereuse à chaque fois, donc l'avertissement l'accompagne à chaque fois.
+
+Le garde-fou qui reste est celui du RÉSULTAT : `GameInstallService` vérifie qu'un exécutable
+attendu se trouve bien dans le dossier de la version avant d'écrire la sentinelle de
+complétude. Voir cette boîte n'est donc pas une preuve que les arguments ne sont pas arrivés,
+et une installation détournée ailleurs ne peut pas se faire passer pour réussie.
+
+#### Progression de l'installeur silencieux : une estimation assumée
+
+`/VERYSILENT` ne publie aucun avancement et le processus ne rend la main qu'à la fin, donc
+il n'y a rien à lire. Ce qu'il fait en revanche, c'est écrire ses fichiers PROGRESSIVEMENT
+dans le dossier passé à `/DIR`, et cette taille cumulée est observable :
+`InstallDirectoryGrowthReporter` l'échantillonne à la seconde à travers `IFileSystem` et
+publie un ratio contre une taille attendue.
+
+La taille attendue est déduite du seul chiffre exact dont on dispose, la taille de l'exécutable
+téléchargé, multipliée par un facteur d'expansion de 1,8 (l'installeur est une archive LZMA,
+le contenu déposé pèse plus lourd). Le facteur est choisi du côté prudent : le surestimer fait
+terminer la barre un peu court avant qu'elle ne saute à 100 %, le sous-estimer la collerait au
+plafond pendant la moitié de l'installation. Il se recale d'une mesure réelle sous Windows, en
+comparant le dossier de version au `.exe` correspondant dans `cache/downloads/`.
+
+Trois garde-fous rendent l'estimation honnête même avec un dénominateur faux : la progression
+est MONOTONE (un échantillon plus bas ne fait jamais reculer la barre), elle est PLAFONNÉE à
+99 % tant que le processus n'a pas rendu 0, et elle est ÉTIQUETÉE comme estimation dans le
+libellé (« installation · ~42 % » contre « extraction · 42 % » pour la mesure exacte de
+Linux et macOS, qui elle ne change pas). Faute de taille d'installeur lisible, il n'y a pas
+d'estimation du tout et la phase reste franchement indéterminée : inventer un dénominateur
+serait inventer un pourcentage.
+
 macOS est traité comme une cible réelle dès le modèle (téléchargement et extraction des
 builds `mac-arm64`/`mac-x64` fonctionnels), même si le bouton « Jouer » mac attendra une
 vraie machine de test : VS Launcher a laissé ses utilisateurs mac des années avec un

@@ -222,6 +222,21 @@ internal abstract class VersionsText
     /// </summary>
     internal abstract string InstallDetail(int percent);
 
+    /// <summary>
+    /// Même détail, mais pour un avancement ESTIMÉ et non mesuré : l'installeur Windows ne publie
+    /// rien, son avancement est déduit de la croissance du dossier cible. Le tilde est là pour que
+    /// personne ne prenne ce chiffre pour un décompte exact.
+    /// </summary>
+    internal abstract string InstallEstimateDetail(int percent);
+
+    /// <summary>
+    /// Avertissement affiché pendant l'installation sous Windows. L'installeur du jeu porte son
+    /// PROPRE script, qui détecte en registre une installation classique de Vintage Story et demande
+    /// s'il faut la désinstaller — question dont le bouton par défaut est « Oui ». Le message dit
+    /// donc quoi répondre AVANT que la boîte n'apparaisse. Voir docs/architecture.md.
+    /// </summary>
+    internal abstract string InstallerPromptNotice { get; }
+
     internal abstract string BrokenReason(GameInstallBrokenReason reason);
 
     /// <summary>

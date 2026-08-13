@@ -232,6 +232,12 @@ internal sealed class EnglishVersionsText : VersionsText
     internal override string InstallDetail(int percent)
         => $"extracting · {percent.ToString(CultureInfo.InvariantCulture)}%";
 
+    internal override string InstallEstimateDetail(int percent)
+        => $"installing · ~{percent.ToString(CultureInfo.InvariantCulture)}%";
+
+    internal override string InstallerPromptNotice
+        => "The game's own installer may open a window offering to uninstall an older version. Answer no: Prospect installs into its own folder and leaves your existing game alone.";
+
     internal override string BrokenReason(GameInstallBrokenReason reason) => reason switch
     {
         GameInstallBrokenReason.MissingCompletionMarker => "install cut short, needs reinstalling",

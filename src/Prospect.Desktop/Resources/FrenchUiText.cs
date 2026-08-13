@@ -228,6 +228,12 @@ internal sealed class FrenchVersionsText : VersionsText
     internal override string InstallDetail(int percent)
         => $"extraction · {percent.ToString(CultureInfo.InvariantCulture)} %";
 
+    internal override string InstallEstimateDetail(int percent)
+        => $"installation · ~{percent.ToString(CultureInfo.InvariantCulture)} %";
+
+    internal override string InstallerPromptNotice
+        => "L'installeur du jeu peut ouvrir sa propre fenêtre et proposer de désinstaller une ancienne version. Réponds non : Prospect installe dans son propre dossier et ne touche pas à ton jeu existant.";
+
     internal override string BrokenReason(GameInstallBrokenReason reason) => reason switch
     {
         GameInstallBrokenReason.MissingCompletionMarker => "installation interrompue, à réinstaller",

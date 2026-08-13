@@ -75,6 +75,14 @@
               </Grid>
             </StackPanel>
 
+            <!-- Notice de la boîte Inno, Windows uniquement et pendant la seule phase où elle peut
+                 s'ouvrir. Elle paraît AVANT la question, parce que le bouton par défaut de cette
+                 question est « Oui » et qu'il désinstallerait le Vintage Story de l'utilisateur. -->
+            <Border Classes="alert warning" Margin="0,6,0,0" MaxWidth="420" HorizontalAlignment="Left"
+                    IsVisible="{Binding ShowInstallerPromptNotice}">
+              <TextBlock Text="{Binding InstallerPromptNotice}" TextWrapping="Wrap" />
+            </Border>
+
             <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Margin="0,4,0,0"
                        FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource DangerText}"
                        IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />

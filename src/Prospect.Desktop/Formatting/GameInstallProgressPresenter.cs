@@ -1,4 +1,5 @@
 using Prospect.Core.GameVersions;
+using Prospect.Core.Storage;
 using Prospect.Desktop.Resources;
 
 namespace Prospect.Desktop.Formatting;
@@ -27,12 +28,30 @@ internal static class GameInstallProgressPresenter
                 ByteSizeFormatter.FormatProgress(progress.ReceivedBytes, progress.TotalBytes),
                 ByteSizeFormatter.FormatSpeed(progress.BytesPerSecond)),
 
-            // Rien à dire tant que la stratégie ne sait pas se mesurer : l'installeur Inno
-            // silencieux ne publie aucun avancement, et la barre indéterminée porte alors seule le
-            // message « ça travaille ».
-            GameInstallPhase.Installing when progress.Ratio is { } ratio => UiText.Versions.InstallDetail((int)(ratio * 100d)),
+            // Une estimation le DIT. L'extraction d'un tar.gz connaît sa position exacte dans
+            // l'archive ; l'installeur Windows, lui, ne publie rien et son avancement se déduit de
+            // la croissance du dossier cible. Un tilde suffit à faire la différence entre les deux,
+            // et il n'y a aucune raison de la cacher.
+            GameInstallPhase.Installing when progress.Ratio is { } ratio => progress.IsEstimated
+                ? UiText.Versions.InstallEstimateDetail((int)(ratio * 100d))
+                : UiText.Versions.InstallDetail((int)(ratio * 100d)),
 
+            // Rien à dire tant que la stratégie ne sait rien publier du tout : la barre
+            // indéterminée porte alors seule le message « ça travaille ».
             _ => string.Empty,
         };
+    }
+
+    /// <summary>
+    /// Vrai quand il faut prévenir l'utilisateur AVANT que l'installeur du jeu n'ouvre sa propre
+    /// fenêtre. Windows uniquement, et seulement pendant la phase d'installation : c'est le moment
+    /// exact où la boîte peut apparaître, et où le bouton par défaut « Oui » désinstallerait le jeu
+    /// installé par ailleurs sur la machine. Voir docs/architecture.md, section installation.
+    /// </summary>
+    public static bool ShowsInstallerPromptNotice(GameInstallProgress progress, AppOperatingSystem operatingSystem)
+    {
+        ArgumentNullException.ThrowIfNull(progress);
+
+        return operatingSystem == AppOperatingSystem.Windows && progress.Phase == GameInstallPhase.Installing;
     }
 }

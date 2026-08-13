@@ -41,6 +41,7 @@ public sealed partial class VersionsViewModel : ObservableObject
     private readonly IOverlayService _overlay;
     private readonly IToastService _toasts;
     private readonly IUiDispatcher _dispatcher;
+    private readonly AppOperatingSystem _operatingSystem;
 
     private IReadOnlyList<InstalledGameVersion> _installedVersions = [];
     private IReadOnlyList<GameVersionCatalogEntry> _catalogVersions = [];
@@ -63,7 +64,8 @@ public sealed partial class VersionsViewModel : ObservableObject
         AppPaths appPaths,
         IOverlayService overlay,
         IToastService toasts,
-        IUiDispatcher dispatcher)
+        IUiDispatcher dispatcher,
+        IAppEnvironment appEnvironment)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(repository);
@@ -73,6 +75,7 @@ public sealed partial class VersionsViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(toasts);
         ArgumentNullException.ThrowIfNull(dispatcher);
+        ArgumentNullException.ThrowIfNull(appEnvironment);
 
         _catalog = catalog;
         _repository = repository;
@@ -81,6 +84,7 @@ public sealed partial class VersionsViewModel : ObservableObject
         _overlay = overlay;
         _toasts = toasts;
         _dispatcher = dispatcher;
+        _operatingSystem = appEnvironment.CurrentOperatingSystem;
         VersionsDirectoryText = appPaths.VersionsDirectory;
     }
 
@@ -254,6 +258,7 @@ public sealed partial class VersionsViewModel : ObservableObject
             isInstalled: true,
             _installService,
             _dispatcher,
+            _operatingSystem,
             OnInstalledAsync,
             RequestUninstallAsync);
 
@@ -265,6 +270,7 @@ public sealed partial class VersionsViewModel : ObservableObject
             isInstalled: false,
             _installService,
             _dispatcher,
+            _operatingSystem,
             OnInstalledAsync,
             RequestUninstallAsync);
 

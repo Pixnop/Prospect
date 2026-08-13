@@ -64,7 +64,8 @@ public class VersionsViewModelTests
             Paths,
             overlay,
             toasts,
-            new ImmediateUiDispatcher());
+            new ImmediateUiDispatcher(),
+            new FakeAppEnvironment());
 
         return new Harness(viewModel, fileSystem, catalog, strategy, downloads, versions, instances, overlay, toasts);
     }
@@ -335,13 +336,14 @@ public class VersionsViewModelTests
         var install = new GameInstallService(harness.Catalog, harness.Downloads, versions, harness.Strategy, fileSystem, NullAppLog.Instance);
         var dispatcher = new ImmediateUiDispatcher();
 
-        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(null!, versions, install, instanceRepository, Paths, harness.Overlay, harness.Toasts, dispatcher));
-        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(harness.Catalog, null!, install, instanceRepository, Paths, harness.Overlay, harness.Toasts, dispatcher));
-        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(harness.Catalog, versions, null!, instanceRepository, Paths, harness.Overlay, harness.Toasts, dispatcher));
-        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(harness.Catalog, versions, install, null!, Paths, harness.Overlay, harness.Toasts, dispatcher));
-        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(harness.Catalog, versions, install, instanceRepository, null!, harness.Overlay, harness.Toasts, dispatcher));
-        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(harness.Catalog, versions, install, instanceRepository, Paths, null!, harness.Toasts, dispatcher));
-        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(harness.Catalog, versions, install, instanceRepository, Paths, harness.Overlay, null!, dispatcher));
-        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(harness.Catalog, versions, install, instanceRepository, Paths, harness.Overlay, harness.Toasts, null!));
+        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(null!, versions, install, instanceRepository, Paths, harness.Overlay, harness.Toasts, dispatcher, new FakeAppEnvironment()));
+        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(harness.Catalog, null!, install, instanceRepository, Paths, harness.Overlay, harness.Toasts, dispatcher, new FakeAppEnvironment()));
+        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(harness.Catalog, versions, null!, instanceRepository, Paths, harness.Overlay, harness.Toasts, dispatcher, new FakeAppEnvironment()));
+        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(harness.Catalog, versions, install, null!, Paths, harness.Overlay, harness.Toasts, dispatcher, new FakeAppEnvironment()));
+        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(harness.Catalog, versions, install, instanceRepository, null!, harness.Overlay, harness.Toasts, dispatcher, new FakeAppEnvironment()));
+        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(harness.Catalog, versions, install, instanceRepository, Paths, null!, harness.Toasts, dispatcher, new FakeAppEnvironment()));
+        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(harness.Catalog, versions, install, instanceRepository, Paths, harness.Overlay, null!, dispatcher, new FakeAppEnvironment()));
+        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(harness.Catalog, versions, install, instanceRepository, Paths, harness.Overlay, harness.Toasts, null!, new FakeAppEnvironment()));
+        Should.Throw<ArgumentNullException>(() => new VersionsViewModel(harness.Catalog, versions, install, instanceRepository, Paths, harness.Overlay, harness.Toasts, dispatcher, null!));
     }
 }

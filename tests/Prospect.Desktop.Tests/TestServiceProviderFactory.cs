@@ -24,12 +24,34 @@ internal static class TestServiceProviderFactory
     public static ServiceProvider Create(out MockFileSystem fileSystem)
         => Create(out fileSystem, out _);
 
-    public static ServiceProvider Create(out MockFileSystem fileSystem, out FakeCatalogHandler catalogHandler)
+    /// <param name="operatingSystem">
+    /// Système annoncé par <see cref="IAppEnvironment"/>. Substitué comme le sont le disque et le
+    /// réseau, et pour la même raison : ce qui dépend de l'OS (la notice de la boîte de l'installeur
+    /// Windows, par exemple) doit se tester depuis n'importe quelle machine. Laissé à
+    /// <see langword="null"/>, c'est le vrai système qui répond, ce que veulent les tests dont le
+    /// sujet n'est pas la plateforme.
+    /// </param>
+    public static ServiceProvider Create(
+        out MockFileSystem fileSystem,
+        out FakeCatalogHandler catalogHandler,
+        AppOperatingSystem? operatingSystem = null)
     {
         fileSystem = new MockFileSystem();
         catalogHandler = new FakeCatalogHandler();
         var services = new ServiceCollection();
         CompositionRoot.ConfigureServices(services, fileSystem, catalogHandler);
+
+        if (operatingSystem is { } forced)
+        {
+            var real = new SystemAppEnvironment();
+            services.AddSingleton<IAppEnvironment>(new FakeAppEnvironment
+            {
+                CurrentOperatingSystem = forced,
+                // Les chemins restent ceux de la vraie machine : seul l'OS annoncé est feint, et
+                // AppPaths a déjà été composé sur l'environnement réel.
+                HomeDirectory = real.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            });
+        }
 
         // Troisième substitution, après le système de fichiers et le réseau, et pour exactement la
         // même raison : SystemUnixFilePermissions appelle la BCL directement, donc le VRAI disque,

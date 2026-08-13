@@ -53,7 +53,7 @@ public class WizardViewModelTests
         var downloads = new FakeDownloadManager();
         var strategy = new FakeGameInstallStrategy(fileSystem);
         var installService = new GameInstallService(catalog, downloads, versions, strategy, fileSystem, NullAppLog.Instance);
-        var viewModel = new WizardViewModel(service, overlay, catalog, versions, installService, new ImmediateUiDispatcher());
+        var viewModel = new WizardViewModel(service, overlay, catalog, versions, installService, new ImmediateUiDispatcher(), new FakeAppEnvironment());
 
         return new Harness(viewModel, overlay, catalog, downloads, strategy, versions, fileSystem);
     }

@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Prospect.Core.Common;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Http;
+using Prospect.Core.Storage;
 using Prospect.Desktop.Formatting;
 using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
@@ -20,6 +21,7 @@ public sealed partial class GameVersionRowViewModel : ObservableObject, IProgres
 {
     private readonly GameInstallService _installService;
     private readonly IUiDispatcher _dispatcher;
+    private readonly AppOperatingSystem _operatingSystem;
     private readonly Func<GameVersionRowViewModel, Task> _onInstalled;
     private readonly Func<GameVersionRowViewModel, Task> _onUninstallRequested;
 
@@ -32,6 +34,7 @@ public sealed partial class GameVersionRowViewModel : ObservableObject, IProgres
         bool isInstalled,
         GameInstallService installService,
         IUiDispatcher dispatcher,
+        AppOperatingSystem operatingSystem,
         Func<GameVersionRowViewModel, Task> onInstalled,
         Func<GameVersionRowViewModel, Task> onUninstallRequested)
     {
@@ -48,6 +51,7 @@ public sealed partial class GameVersionRowViewModel : ObservableObject, IProgres
         _isInstalled = isInstalled;
         _installService = installService;
         _dispatcher = dispatcher;
+        _operatingSystem = operatingSystem;
         _onInstalled = onInstalled;
         _onUninstallRequested = onUninstallRequested;
     }
@@ -92,6 +96,17 @@ public sealed partial class GameVersionRowViewModel : ObservableObject, IProgres
 
     [ObservableProperty]
     private string? _errorMessage;
+
+    /// <summary>
+    /// Vrai pendant la phase d'installation sous Windows : l'installeur du jeu peut alors ouvrir sa
+    /// propre fenêtre, et son bouton par défaut désinstallerait le Vintage Story déjà présent sur la
+    /// machine. La notice paraît AVANT la boîte, pas après.
+    /// </summary>
+    [ObservableProperty]
+    private bool _showInstallerPromptNotice;
+
+    /// <summary>Texte de cette notice.</summary>
+    public string InstallerPromptNotice { get; } = UiText.Versions.InstallerPromptNotice;
 
     public bool CanInstall => !IsInstalled && !IsWorking;
 
@@ -138,6 +153,7 @@ public sealed partial class GameVersionRowViewModel : ObservableObject, IProgres
             IsWorking = false;
             PhaseText = string.Empty;
             PhaseDetailText = string.Empty;
+            ShowInstallerPromptNotice = false;
             ProgressPercent = 0d;
             _installCancellation = null;
             cancellation.Dispose();
@@ -156,5 +172,6 @@ public sealed partial class GameVersionRowViewModel : ObservableObject, IProgres
         IsIndeterminate = progress.Ratio is null;
         ProgressPercent = (progress.Ratio ?? 0d) * 100d;
         PhaseDetailText = GameInstallProgressPresenter.DetailText(progress);
+        ShowInstallerPromptNotice = GameInstallProgressPresenter.ShowsInstallerPromptNotice(progress, _operatingSystem);
     }
 }
