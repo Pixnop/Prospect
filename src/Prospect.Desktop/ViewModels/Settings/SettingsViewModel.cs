@@ -16,7 +16,7 @@ namespace Prospect.Desktop.ViewModels.Settings;
 
 /// <summary>
 /// Écran Réglages (design/ui_kits/launcher/screen-settings.jsx) : cinq sections en onglets —
-/// Général (thème, langue, revoir le premier lancement, et l'action d'adoption VS Launcher,
+/// Général (thème, fond, langue, revoir le premier lancement, et l'action d'adoption VS Launcher,
 /// toujours accessible ici), Jeu (emplacement des données), Réseau (téléchargements simultanés),
 /// Comptes (connexion au compte Vintage Story pour le multijoueur) et À propos (version, licence,
 /// dépôt, site officiel). Même flux d'adoption que <see cref="Home.HomeViewModel.FirstRun"/> (même
@@ -42,6 +42,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         HomeViewModel home,
         FirstRunScreenViewModel firstRun,
         SettingsService settings,
+        BackdropService backdrop,
         AppPaths appPaths,
         IExternalUrlOpener urlOpener,
         VsAccountService accounts)
@@ -53,6 +54,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(home);
         ArgumentNullException.ThrowIfNull(firstRun);
         ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(backdrop);
         ArgumentNullException.ThrowIfNull(appPaths);
         ArgumentNullException.ThrowIfNull(urlOpener);
         ArgumentNullException.ThrowIfNull(accounts);
@@ -64,7 +66,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _home = home;
         FirstRun = firstRun;
 
-        General = new SettingsGeneralViewModel(settings);
+        General = new SettingsGeneralViewModel(settings, backdrop);
         Game = new SettingsGameViewModel(appPaths, urlOpener);
         Network = new SettingsNetworkViewModel(settings);
         Accounts = new SettingsAccountsViewModel(accounts, overlay);

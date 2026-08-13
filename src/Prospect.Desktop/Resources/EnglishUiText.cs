@@ -840,6 +840,21 @@ internal sealed class EnglishSettingsText : SettingsText
 
     internal override string ConcurrencyChoiceLabel(int count)
         => count == 1 ? "1 download at a time" : $"{count} downloads at once";
+
+    internal override string BackdropLabel(string backdropKey) => backdropKey switch
+    {
+        "ruins-clearing" => "Ruin clearing",
+        "sunlit-hills" => "Sunlit hills",
+        "village-lane" => "Village lane",
+        "lake-sail" => "Lake sail",
+        "dusk-reeds" => "Reeds at dusk",
+        "misty-yard" => "Misty yard",
+        "reading-room" => "Reading room",
+        "stone-cellar" => "Stone cellar",
+        "overgrown-ruin" => "Overgrown ruin",
+        "crystal-vein" => "Crystal vein",
+        _ => "Turquoise pools",
+    };
 }
 
 internal sealed class EnglishFirstRunText : FirstRunText

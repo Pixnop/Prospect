@@ -9,7 +9,7 @@ namespace Prospect.Core.Settings;
 /// </summary>
 /// <remarks>
 /// Périmètre volontairement minimal (v1) : seuls les champs réellement consommés aujourd'hui —
-/// thème, langue, préférences de téléchargement. Ni chemin racine relocalisé (la relocalisation
+/// thème, fond, langue, préférences de téléchargement. Ni chemin racine relocalisé (la relocalisation
 /// est hors périmètre, voir <c>Prospect.Desktop.ViewModels.Settings.SettingsGameViewModel</c>), ni
 /// session de compte vintagestory.at (post-MVP, docs/architecture.md) : les ajouter maintenant
 /// serait de la spéculation sur un schéma qu'aucun code ne lit encore.
@@ -48,6 +48,15 @@ public sealed record ProspectSettings
     /// </summary>
     public string Language { get; init; } = French;
 
+    /// <summary>
+    /// Clé du fond de fenêtre choisi parmi <see cref="BackdropCatalog.Keys"/>. Appliqué À CHAUD, à
+    /// la différence de <see cref="Language"/> : écrire ce champ change l'image de la fenêtre
+    /// ouverte (voir <c>Prospect.Desktop.Services.BackdropService</c> et docs/architecture.md,
+    /// section « Fond de fenêtre »). Toute valeur inconnue relue du disque retombe sur
+    /// <see cref="BackdropCatalog.Default"/>, voir <see cref="NormalizeBackdrop"/>.
+    /// </summary>
+    public string Backdrop { get; init; } = BackdropCatalog.Default;
+
     /// <summary>Préférences de téléchargement (parallélisme).</summary>
     public DownloadPreferences Downloads { get; init; } = DownloadPreferences.Default;
 
@@ -82,6 +91,20 @@ public sealed record ProspectSettings
         => string.Equals(language?.Trim(), English, StringComparison.OrdinalIgnoreCase) ? English : French;
 
     /// <summary>
+    /// La clé de fond correspondant à <paramref name="backdrop"/>, ou <see cref="BackdropCatalog.Default"/>
+    /// pour toute valeur absente, vide ou inconnue.
+    /// </summary>
+    /// <remarks>
+    /// Même contrat que <see cref="NormalizeLanguage"/>, et pour la même raison : un
+    /// <c>prospect.json</c> modifié à la main, ou écrit par un Prospect plus récent qui
+    /// embarquerait un douzième fond, doit s'ouvrir sur une image qui existe plutôt que refuser de
+    /// démarrer ou afficher une fenêtre nue. Le repli est le fond livré avec le thème verre, celui
+    /// dont l'asset est là depuis le premier jour.
+    /// </remarks>
+    public static string NormalizeBackdrop(string? backdrop)
+        => BackdropCatalog.Find(backdrop) ?? BackdropCatalog.Default;
+
+    /// <summary>
     /// Langue par défaut déduite de la culture d'interface du système (voir
     /// <see cref="Common.IUiCulture"/>) : français si <paramref name="uiCultureName"/> commence par
     /// <c>fr</c> (« fr », « fr-FR », « fr-CA »…), anglais dans tous les autres cas.
@@ -110,17 +133,19 @@ public sealed record ProspectSettings
     /// champ JSON correspondant est absent — y compris via le pipeline de migrations, où un document
     /// migré d'un schéma plus ancien ne porte souvent pas encore les champs ajoutés depuis. Sans ce
     /// filet, un <c>prospect.json</c> partiel (schéma ancien, ou simplement modifié à la main) se
-    /// désérialise avec <see cref="Downloads"/> ou <see cref="Language"/> à <see langword="null"/>
-    /// malgré leur défaut affiché juste au-dessus, un piège général à ce mécanisme de sérialisation
-    /// et non spécifique à ce type. Appelée après toute lecture disque ou mutation
-    /// (<see cref="SettingsService"/>). C'est aussi le seul endroit qui ramène
-    /// <see cref="Language"/> à une valeur que l'interface sait rendre (voir
-    /// <see cref="NormalizeLanguage"/>) : toute évolution de forme des réglages passe par ici, un
-    /// initialiseur de propriété <c>init</c> ne suffit jamais.
+    /// désérialise avec <see cref="Downloads"/>, <see cref="Language"/> ou <see cref="Backdrop"/> à
+    /// <see langword="null"/> malgré leur défaut affiché juste au-dessus, un piège général à ce
+    /// mécanisme de sérialisation et non spécifique à ce type. Appelée après toute lecture disque ou
+    /// mutation (<see cref="SettingsService"/>). C'est aussi le seul endroit qui ramène
+    /// <see cref="Language"/> et <see cref="Backdrop"/> à une valeur que l'interface sait rendre
+    /// (voir <see cref="NormalizeLanguage"/> et <see cref="NormalizeBackdrop"/>) : toute évolution
+    /// de forme des réglages passe par ici, un initialiseur de propriété <c>init</c> ne suffit
+    /// jamais.
     /// </remarks>
     public ProspectSettings Normalized() => this with
     {
         Language = NormalizeLanguage(Language),
+        Backdrop = NormalizeBackdrop(Backdrop),
         Downloads = (Downloads ?? DownloadPreferences.Default).Clamped(),
     };
 }

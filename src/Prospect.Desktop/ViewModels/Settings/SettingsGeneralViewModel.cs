@@ -4,29 +4,46 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Prospect.Core.Settings;
+using Prospect.Desktop.Resources;
+using Prospect.Desktop.Services;
 
 namespace Prospect.Desktop.ViewModels.Settings;
 
 /// <summary>
 /// Section Général de l'écran Réglages : choix du thème (persisté, appliqué à chaud par
-/// <c>Prospect.Desktop.Services.ThemeService</c> qui écoute <see cref="SettingsService.Changed"/>)
-/// et langue de l'UI (persistée, appliquée au PROCHAIN démarrage, voir
-/// <c>Prospect.Desktop.Services.LanguageService</c> et la mention « prend effet au redémarrage »
-/// affichée sous le sélecteur). Ne touche jamais Avalonia directement :
-/// <see cref="SettingsService"/> suffit, ce qui garde ce ViewModel constructible et testable sans
-/// application graphique (docs/architecture.md, MVVM strict).
+/// <c>Prospect.Desktop.Services.ThemeService</c> qui écoute <see cref="SettingsService.Changed"/>),
+/// fond de fenêtre (persisté, appliqué à chaud lui aussi, par
+/// <see cref="BackdropService"/>) et langue de l'UI (persistée, appliquée au PROCHAIN démarrage,
+/// voir <c>Prospect.Desktop.Services.LanguageService</c> et la mention « prend effet au
+/// redémarrage » affichée sous le sélecteur). N'applique jamais rien lui-même :
+/// <see cref="SettingsService"/> suffit dans les trois cas, ce sont les services d'apparence qui
+/// écoutent — ce qui garde ce ViewModel constructible et testable sans application graphique
+/// (docs/architecture.md, MVVM strict).
 /// </summary>
 public sealed partial class SettingsGeneralViewModel : ObservableObject
 {
     private readonly SettingsService _settings;
 
-    public SettingsGeneralViewModel(SettingsService settings)
+    public SettingsGeneralViewModel(SettingsService settings, BackdropService backdrop)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(backdrop);
 
         _settings = settings;
         _themeChoice = settings.Current.Theme;
         _selectedLanguageIndex = IndexOf(settings.Current.Language);
+        _selectedBackdropKey = ProspectSettings.NormalizeBackdrop(settings.Current.Backdrop);
+
+        // La grille se construit une fois pour toutes : seuls les IsSelected basculent ensuite
+        // (voir BackdropChoiceOption). Les vignettes, elles, ne se décodent qu'à l'affichage.
+        BackdropChoices = BackdropCatalog.Keys
+            .Select(key => new BackdropChoiceOption(
+                key,
+                UiText.Settings.BackdropLabel(key),
+                key == _selectedBackdropKey,
+                backdrop.Thumbnail,
+                SelectBackdrop))
+            .ToArray();
     }
 
     /// <summary>Choix de thème courant, reflété par les boutons radio de la vue.</summary>
@@ -49,6 +66,19 @@ public sealed partial class SettingsGeneralViewModel : ObservableObject
 
     /// <summary>Langue actuellement choisie dans le sélecteur, telle qu'elle sera persistée.</summary>
     public string SelectedLanguage => LanguageAt(SelectedLanguageIndex);
+
+    /// <summary>
+    /// Les onze fonds embarqués, dans l'ordre du <see cref="BackdropCatalog"/>, tels que la grille
+    /// de vignettes les affiche.
+    /// </summary>
+    public IReadOnlyList<BackdropChoiceOption> BackdropChoices { get; }
+
+    /// <summary>
+    /// Clé du fond choisi. Contrairement à la langue, l'écrire change l'image de la fenêtre
+    /// ouverte : personne ne l'applique ici, <see cref="BackdropService"/> écoute le réglage.
+    /// </summary>
+    [ObservableProperty]
+    private string _selectedBackdropKey;
 
     /// <summary>
     /// Le sélecteur de langue est modifiable depuis que l'anglais existe. La propriété reste (elle
@@ -85,6 +115,21 @@ public sealed partial class SettingsGeneralViewModel : ObservableObject
     /// </summary>
     [RelayCommand]
     private void SelectTheme(ThemePreference choice) => ThemeChoice = choice;
+
+    // Une vignette cliquée (ou activée au clavier). Passe par la propriété, donc par la
+    // notification ci-dessous : la sélection affichée et le réglage persisté ne peuvent pas
+    // diverger.
+    private void SelectBackdrop(string key) => SelectedBackdropKey = ProspectSettings.NormalizeBackdrop(key);
+
+    partial void OnSelectedBackdropKeyChanged(string value)
+    {
+        foreach (var choice in BackdropChoices)
+        {
+            choice.IsSelected = string.Equals(choice.Key, value, StringComparison.Ordinal);
+        }
+
+        _ = _settings.UpdateAsync(current => current with { Backdrop = value });
+    }
 
     private static int IndexOf(string? language)
         => ProspectSettings.NormalizeLanguage(language) == ProspectSettings.English ? 1 : 0;

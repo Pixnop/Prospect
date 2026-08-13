@@ -177,4 +177,69 @@ public sealed class SettingsHeadlessTests
         Application.Current!.RequestedThemeVariant = ThemeVariant.Dark;
         window.Close();
     }
+
+    [AvaloniaFact]
+    public async Task BackdropCycle_ChangedFromTheSettingsScreen_AppliesLiveAndSurvivesAFreshLoad()
+    {
+        // Le pendant du cycle de thème pour le fond, et la preuve de la décision d'architecture :
+        // choisir une vignette change l'image de la fenêtre DÉJÀ OUVERTE (là où la langue, elle,
+        // attend le prochain démarrage), et le choix est sur le disque au passage.
+        using var provider = TestServiceProviderFactory.Create(out var fileSystem);
+
+        var settingsService = provider.GetRequiredService<SettingsService>();
+        await settingsService.LoadAsync();
+
+        var window = provider.GetRequiredService<MainWindow>();
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        window.Show();
+        NavigateToSettings(shell, window);
+
+        var backdropLayer = window.GetVisualDescendants().OfType<Image>().Single(image => image.Name == "BackdropLayer");
+        var before = backdropLayer.Source.ShouldNotBeNull();
+        shell.Settings.General.SelectedBackdropKey.ShouldBe(BackdropCatalog.Default);
+
+        var saved = new TaskCompletionSource();
+        settingsService.Changed += (_, _) => saved.TrySetResult();
+
+        shell.Settings.General.BackdropChoices.Single(choice => choice.Key == "village-lane").SelectCommand.Execute(null);
+        await saved.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        window.Settle();
+
+        // Aucun redémarrage, aucune reconstruction de fenêtre : la même Image porte une autre source.
+        backdropLayer.Source.ShouldNotBeSameAs(before);
+        backdropLayer.Source.ShouldBeSameAs(provider.GetRequiredService<BackdropService>().Source);
+
+        // « Relecture » : un second SettingsService sur le MÊME fichier factice, comme au
+        // redémarrage réel de l'application.
+        var appPaths = provider.GetRequiredService<AppPaths>();
+        var reloaded = new SettingsService(fileSystem, appPaths, new JsonFileStore(fileSystem), new SettingsMigrationPipeline([]), new FakeUiCulture());
+        await reloaded.LoadAsync();
+
+        reloaded.Current.Backdrop.ShouldBe("village-lane");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void BackdropGrid_ShowsOneThumbnailPerCatalogueEntry()
+    {
+        using var provider = TestServiceProviderFactory.Create(out _);
+        var window = provider.GetRequiredService<MainWindow>();
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        window.Show();
+
+        NavigateToSettings(shell, window);
+
+        // Les vignettes sont bien rendues (donc décodées) et à la taille d'affichage voulue : le
+        // ViewModel pourrait porter onze choix sans qu'aucune image n'atteigne l'écran.
+        var thumbnails = window.GetVisualDescendants().OfType<Image>()
+            .Where(image => image.Name != "BackdropLayer" && image.IsEffectivelyVisible)
+            .ToList();
+
+        thumbnails.Count.ShouldBe(BackdropCatalog.Keys.Count);
+        thumbnails.ShouldAllBe(image => image.Source != null);
+        thumbnails.ShouldAllBe(image => image.Bounds.Height > 80 && image.Bounds.Height < 92);
+
+        window.Close();
+    }
 }

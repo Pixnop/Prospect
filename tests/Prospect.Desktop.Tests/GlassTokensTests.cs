@@ -14,7 +14,9 @@ using Avalonia.VisualTree;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Prospect.Core.Settings;
 using Prospect.Desktop.Layout;
+using Prospect.Desktop.Services;
 
 using Shouldly;
 
@@ -146,20 +148,30 @@ public sealed class GlassTokensTests
     }
 
     [AvaloniaFact]
-    public void LAssetDeFond_EstEmbarqueEtResteLeger()
+    public void LesAssetsDeFond_SontEmbarquesEtRestentLegers()
     {
-        // Le fond est pré-flouté hors ligne (voir MainWindow.axaml pour la commande) : ce test
-        // garde à la fois sa présence — un asset manquant ne se voit qu'à l'exécution, la vue
-        // affichant alors un vide — et son poids, la raison d'être du pré-calcul.
-        var uri = new Uri("avares://Prospect.Desktop/Assets/backdrop.jpg");
-        AssetLoader.Exists(uri).ShouldBeTrue();
+        // Les fonds sont pré-floutés hors ligne (voir MainWindow.axaml pour la commande) : ce test
+        // garde à la fois leur présence — un asset manquant ne se voit qu'à l'exécution, la vue
+        // affichant alors un vide — et leur poids, la raison d'être du pré-calcul. Depuis que le
+        // fond se choisit, la garde porte sur les ONZE : c'est le total qui compte pour la taille
+        // du binaire livré, pas la première image de la liste.
+        var total = 0L;
 
-        using var stream = AssetLoader.Open(uri);
-        stream.Length.ShouldBeLessThan(500 * 1024);
+        foreach (var key in BackdropCatalog.Keys)
+        {
+            var uri = BackdropService.AssetUriFor(key);
+            AssetLoader.Exists(uri).ShouldBeTrue($"le fond « {key} » n'est pas embarqué");
 
-        var bitmap = new Bitmap(AssetLoader.Open(uri));
-        bitmap.PixelSize.Width.ShouldBe(1920);
-        bitmap.PixelSize.Height.ShouldBe(1080);
+            using var stream = AssetLoader.Open(uri);
+            stream.Length.ShouldBeLessThan(500 * 1024, $"le fond « {key} » est trop lourd");
+            total += stream.Length;
+
+            var bitmap = new Bitmap(AssetLoader.Open(uri));
+            bitmap.PixelSize.Width.ShouldBe(1920, $"le fond « {key} » n'est pas au gabarit composé");
+            bitmap.PixelSize.Height.ShouldBe(1080, $"le fond « {key} » n'est pas au gabarit composé");
+        }
+
+        total.ShouldBeLessThan(2 * 1024 * 1024);
 
         AssetLoader.Exists(new Uri("avares://Prospect.Desktop/Assets/grain.png")).ShouldBeTrue();
     }

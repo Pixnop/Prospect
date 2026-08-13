@@ -275,6 +275,67 @@ public class SettingsServiceTests
     }
 
     [Fact]
+    public async Task LoadAsync_ExistingFileWithoutBackdropField_FallsBackToTheDefaultBackdrop()
+    {
+        // Un prospect.json écrit avant que le champ n'existe : le repli de Normalized() s'applique,
+        // et l'utilisateur retrouve exactement le fond qu'il avait (le piège STJ documenté sur
+        // ProspectSettings.Normalized — l'initialiseur `init` n'est jamais rejoué).
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddFile(Paths.SettingsFilePath, new MockFileData("""
+        { "schemaVersion": 1, "theme": "Dark", "language": "fr" }
+        """));
+        var service = Create(fileSystem);
+
+        await service.LoadAsync();
+
+        service.Current.Backdrop.ShouldBe(BackdropCatalog.Default);
+    }
+
+    [Fact]
+    public async Task LoadAsync_ThenUpdateAsync_ThenFreshServiceLoadAsync_RoundTripsTheBackdrop()
+    {
+        var fileSystem = new MockFileSystem();
+        var writer = Create(fileSystem);
+        await writer.LoadAsync();
+
+        await writer.UpdateAsync(current => current with { Backdrop = "crystal-vein" });
+
+        var reader = Create(fileSystem);
+        await reader.LoadAsync();
+
+        reader.Current.Backdrop.ShouldBe("crystal-vein");
+    }
+
+    [Fact]
+    public async Task LoadAsync_UnknownBackdropInTheFile_FallsBackToTheDefaultWithoutThrowing()
+    {
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddFile(Paths.SettingsFilePath, new MockFileData("""
+        { "schemaVersion": 1, "theme": "Dark", "language": "fr", "backdrop": "un-fond-qui-n-existe-pas" }
+        """));
+        var service = Create(fileSystem);
+
+        await service.LoadAsync();
+
+        service.Current.Backdrop.ShouldBe(BackdropCatalog.Default);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UnknownBackdrop_IsRepairedBeforeItReachesTheDisk()
+    {
+        // Normalized() tourne dans UpdateAsync : une clé fantaisiste ne peut donc pas s'écrire dans
+        // prospect.json, même si un appelant la passait.
+        var fileSystem = new MockFileSystem();
+        var service = Create(fileSystem);
+        await service.LoadAsync();
+
+        await service.UpdateAsync(current => current with { Backdrop = "nope" });
+
+        service.Current.Backdrop.ShouldBe(BackdropCatalog.Default);
+        fileSystem.File.ReadAllText(Paths.SettingsFilePath).ShouldNotContain("nope");
+    }
+
+    [Fact]
     public async Task LoadAsync_UnknownLanguageInTheFile_FallsBackToFrenchWithoutThrowing()
     {
         var fileSystem = new MockFileSystem();

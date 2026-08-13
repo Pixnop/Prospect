@@ -252,10 +252,10 @@ dégrade l'expérience (on retombe sur la correspondance par modid), il ne casse
 
 ### prospect.json (réglages globaux, v1 minimale)
 
-Langue de l'UI (`fr` ou `en`, voir « Langue de l'interface » plus bas), chemin racine si
-déplacé, préférences de téléchargement (parallélisme), et la référence de session du
-compte vintagestory.at (jamais le mot de passe, voir plus bas). Tout le reste attendra
-d'exister.
+Langue de l'UI (`fr` ou `en`, voir « Langue de l'interface » plus bas), fond de fenêtre (clé du
+`BackdropCatalog`, voir « Fond de fenêtre »), chemin racine si déplacé, préférences de
+téléchargement (parallélisme), et la référence de session du compte vintagestory.at (jamais le mot
+de passe, voir plus bas). Tout le reste attendra d'exister.
 
 ### Manifest de modpack (prospect-pack.json, v1)
 
@@ -548,6 +548,43 @@ sa taille d'affichage plutôt que de garder la résolution du CDN, borne le nomb
 d'entrées mémorisées, et ne libère jamais un bitmap déjà distribué — un `Image.Source`
 pointant vers un `Bitmap` libéré fait lever une `NullReferenceException` dans la passe de
 mise en page suivante.
+
+### Fond de fenêtre
+
+Le thème verre se compose sur une image de fond pré-floutée hors ligne (voir la section précédente
+et `MainWindow.axaml` pour la commande exacte). Cette image se choisit désormais parmi onze
+captures embarquées, dans Réglages > Général, à côté du thème et de la langue. Le réglage vit dans
+`prospect.json` sous une clé stable (`backdrop`, valeurs `turquoise-pools`, `ruins-clearing`,
+`village-lane`…), le vocabulaire est fermé par `BackdropCatalog` côté Core, et la clé du fond
+d'origine reste le défaut : une installation qui ne touche à rien affiche exactement ce qu'elle
+affichait avant que le sélecteur n'existe.
+
+Le point qui mérite d'être écrit ici est le contraste avec la langue, qui s'applique au démarrage
+alors que le fond, lui, s'applique à chaud. Ce n'est pas une inconséquence, c'est la nature des
+deux valeurs. Un texte statique est un `{StaticResource}` : il se résout à la construction du
+contrôle et ne se relit jamais, donc changer de dictionnaire pendant que la fenêtre est ouverte ne
+retraduit rien. Un fond est une SOURCE D'IMAGE : `Image.Source` est une propriété liable, elle se
+relit dès que la source notifie. Le coût de l'application à chaud est donc, dans un cas, de rendre
+dynamique chaque texte de chaque vue plus renotifier tout ce qu'un ViewModel calcule ; dans
+l'autre, une propriété qui lève `PropertyChanged`. C'est cet écart-là qui tranche, pas une
+préférence.
+
+`BackdropService` est le pendant de `ThemeService` : service Desktop, résolu par la composition
+root, qui écoute `SettingsService.Changed` et traduit la clé réglée en image. Il partage l'invariant
+central de `ThemeService` — le CONSTRUIRE ne fait rien, pas même décoder une image — parce qu'il est
+traversé par le graphe DI de tout test qui résout `MainWindow`. La première image se décode à la
+première lecture de la source, c'est-à-dire quand une fenêtre l'affiche réellement. Les onze
+vignettes du sélecteur (160×90 points) sont décodées en taille réduite et mémorisées pour la
+session. Aucun bitmap n'est jamais libéré, même règle que `ModLogoCache` : un `Image.Source`
+pointant vers un bitmap disposé fait lever dans la passe de rendu suivante.
+
+La grille du sélecteur est un `WrapPanel`, pas le `FluidGridPanel` maison. Ce dernier existe pour
+étirer ses colonnes afin de remplir la largeur, ce qui est juste pour des cartes de mod élastiques
+et faux pour des vignettes dont la taille est FIXE : ici c'est la taille de la vignette qui est le
+choix (le format des captures), et c'est au panneau de passer à la ligne autour d'elle. La
+sélection est marquée aux règles du verre, liseré cuivre et sheen appuyés, sans jamais changer une
+épaisseur ni une taille — une bordure qui passerait de 1 à 2 points ferait sauter la grille d'un
+point à chaque clic.
 
 ### Langue de l'interface
 
