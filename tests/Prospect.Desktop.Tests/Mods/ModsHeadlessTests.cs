@@ -1,11 +1,14 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Styling;
 using Avalonia.VisualTree;
 
 using Microsoft.Extensions.DependencyInjection;
 
 using Prospect.Core.Instances;
 using Prospect.Core.ModDb;
+using Prospect.Desktop.Tests.Support;
 using Prospect.Desktop.Tests.TestDoubles;
 using Prospect.Desktop.ViewModels.Dialogs;
 using Prospect.Desktop.ViewModels.Home;
@@ -374,5 +377,52 @@ public sealed class ModsHeadlessTests
 
         shell.CurrentPage.ShouldBeOfType<ModBrowserViewModel>();
         shell.ModBrowser.SelectedInstance!.Slug.ShouldBe(record.Slug);
+    }
+
+    /// <summary>
+    /// Être dans l'arbre visuel ne suffit pas : la rangée de badges d'une carte défile sans jamais
+    /// montrer de barre, donc une pastille poussée au-delà du champ n'existe pas pour
+    /// l'utilisateur. C'est ce qui arrivait à « Installé · 1.11.1 », dernière d'une rangée de trois
+    /// qui en demande 330 points quand la carte n'en offre que 200 à 300 : la carte disait
+    /// « Gérer » sans jamais dire pourquoi. Le test mesure donc la pastille contre le champ visible
+    /// du défileur, aux trois tailles de la garde.
+    /// </summary>
+    [AvaloniaTheory]
+    [InlineData("Dark")]
+    [InlineData("Light")]
+    public async Task ModBrowser_TheInstalledBadge_StaysInsideTheVisiblePartOfItsRow(string variant)
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        var window = ResponsiveScenario.ShowWindow(provider, variant == "Light" ? ThemeVariant.Light : ThemeVariant.Dark);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var slug = await provider.SeedTargetInstanceAsync(ResponsiveScenario.LongInstanceName);
+        ResponsiveScenario.SeedInstalledMod(provider, fileSystem, slug);
+
+        shell.ShowModBrowser(slug);
+        await shell.ModBrowser.InitializeCommand.ExecuteAsync(null);
+        window.Settle();
+
+        var installedText = shell.ModBrowser.Results.Single(card => card.IsInstalled).InstalledText;
+
+        foreach (var size in ResponsiveWindowSizes.All)
+        {
+            window.Width = size.Width;
+            window.Height = size.Height;
+            window.Settle();
+
+            var badge = window
+                .GetVisualDescendants()
+                .OfType<ContentControl>()
+                .Single(control => Equals(control.Content, installedText) && control.IsVisible);
+            var row = badge.FindAncestorOfType<ScrollViewer>().ShouldNotBeNull();
+            var right = badge.TranslatePoint(new Point(badge.Bounds.Width, 0d), row).ShouldNotBeNull().X;
+
+            badge.Bounds.Width.ShouldBeGreaterThan(0d, $"la pastille « {installedText} » n'est pas mesurée à {size}");
+            right.ShouldBeLessThanOrEqualTo(
+                row.Viewport.Width + 0.5d,
+                $"la pastille « {installedText} » sort du champ visible de sa rangée à {size}");
+        }
+
+        window.Close();
     }
 }
