@@ -788,26 +788,18 @@ public sealed class ModInstallService
     {
         archivePath = string.Empty;
 
-        if (item.PreparedArchivePath is not { Length: > 0 } candidate)
+        if (item.PreparedArchivePath is not { Length: > 0 } candidate || !_fileSystem.File.Exists(candidate))
         {
             return false;
         }
 
-        try
+        if (item.AnnouncedSizeBytes is { } expected && expected > 0 && FileLength(candidate) != expected)
         {
-            if (!_fileSystem.File.Exists(candidate))
-            {
-                return false;
-            }
+            // Le fichier suspect est JETÉ avant de repartir : le gestionnaire de téléchargement n'a
+            // aucune empreinte à comparer, donc il le « réutiliserait » tel quel et l'installation
+            // échouerait sur une archive qu'on savait déjà fausse.
+            DeleteQuietly(candidate);
 
-            if (item.AnnouncedSizeBytes is { } expected && expected > 0 && _fileSystem.FileInfo.New(candidate).Length != expected)
-            {
-                return false;
-            }
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            // Un cache devenu illisible n'est pas une erreur d'installation : on retélécharge.
             return false;
         }
 
@@ -836,12 +828,35 @@ public sealed class ModInstallService
             return;
         }
 
-        var actual = _fileSystem.FileInfo.New(path).Length;
+        var actual = FileLength(path);
         if (actual == expected)
         {
             return;
         }
 
+        DeleteQuietly(path);
+
+        throw ModInstallFailedException.ForSizeMismatch(item.TargetFileName, expected, actual);
+    }
+
+    /// <summary>
+    /// Taille d'un fichier du cache, ou <c>-1</c> quand il est devenu illisible. Jamais d'exception :
+    /// un cache abîmé est une raison de retélécharger, pas d'échouer.
+    /// </summary>
+    private long FileLength(string path)
+    {
+        try
+        {
+            return _fileSystem.FileInfo.New(path).Length;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return -1L;
+        }
+    }
+
+    private void DeleteQuietly(string path)
+    {
         try
         {
             _fileSystem.File.Delete(path);
@@ -851,7 +866,5 @@ public sealed class ModInstallService
             // Le fichier suspect n'a pas pu être effacé : il sera de toute façon retéléchargé et
             // recontrôlé à la prochaine tentative.
         }
-
-        throw ModInstallFailedException.ForSizeMismatch(item.TargetFileName, expected, actual);
     }
 }

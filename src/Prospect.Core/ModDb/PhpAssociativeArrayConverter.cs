@@ -32,30 +32,25 @@ namespace Prospect.Core.ModDb;
 /// franche. La forme n'a jamais été observée et n'est pas produisible par <c>json_encode</c> sur
 /// une map dont les clés sont des <c>modidstr</c>.
 /// </para>
+/// <para>
+/// Le <see langword="null"/> JSON n'est traité NULLE PART ici, et c'est le comportement par défaut
+/// du sérialiseur plutôt qu'un oubli : <c>HandleNull</c> vaut faux pour un type référence, donc un
+/// champ absent ou nul rend <see langword="null"/> sans jamais passer par ce convertisseur. Le
+/// distinguer de la map vide reste utile en aval : l'absence signale une réponse d'une forme qu'on
+/// ne connaît pas, la map vide un lot dont rien n'est en retard.
+/// </para>
 /// </remarks>
 /// <typeparam name="TValue">Type des valeurs de la map.</typeparam>
-internal sealed class PhpAssociativeArrayConverter<TValue> : JsonConverter<Dictionary<string, TValue>?>
+internal sealed class PhpAssociativeArrayConverter<TValue> : JsonConverter<Dictionary<string, TValue>>
 {
     /// <inheritdoc />
-    public override Dictionary<string, TValue>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        ArgumentNullException.ThrowIfNull(options);
-
-        switch (reader.TokenType)
+    public override Dictionary<string, TValue> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        => reader.TokenType switch
         {
-            case JsonTokenType.Null:
-                return null;
-
-            case JsonTokenType.StartArray:
-                return ReadEmptyArray(ref reader);
-
-            case JsonTokenType.StartObject:
-                return ReadObject(ref reader, options);
-
-            default:
-                throw new JsonException($"Une map du ModDB ne peut être qu'un objet ou un tableau vide, pas un {reader.TokenType}.");
-        }
-    }
+            JsonTokenType.StartArray => ReadEmptyArray(ref reader),
+            JsonTokenType.StartObject => ReadObject(ref reader, options),
+            _ => throw new JsonException($"Une map du ModDB ne peut être qu'un objet ou un tableau vide, pas un {reader.TokenType}."),
+        };
 
     /// <inheritdoc />
     /// <remarks>
@@ -63,18 +58,8 @@ internal sealed class PhpAssociativeArrayConverter<TValue> : JsonConverter<Dicti
     /// cache disque, les manifestes) n'ont aucune raison de reproduire l'ambiguïté de PHP, et
     /// <see cref="Read"/> relit un objet vide sans difficulté.
     /// </remarks>
-    public override void Write(Utf8JsonWriter writer, Dictionary<string, TValue>? value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, Dictionary<string, TValue> value, JsonSerializerOptions options)
     {
-        ArgumentNullException.ThrowIfNull(writer);
-        ArgumentNullException.ThrowIfNull(options);
-
-        if (value is null)
-        {
-            writer.WriteNullValue();
-
-            return;
-        }
-
         var typeInfo = ValueTypeInfo(options);
 
         writer.WriteStartObject();
@@ -87,12 +72,13 @@ internal sealed class PhpAssociativeArrayConverter<TValue> : JsonConverter<Dicti
         writer.WriteEndObject();
     }
 
+    // Aucune garde contre un document tronqué ici, et c'est délibéré : le sérialiseur valide le
+    // document AVANT d'appeler un convertisseur, donc un tableau ouvert et jamais fermé lève bien
+    // avant d'arriver jusqu'ici. Les écrire quand même produirait des branches qu'aucun test ne
+    // peut atteindre.
     private static Dictionary<string, TValue> ReadEmptyArray(ref Utf8JsonReader reader)
     {
-        if (!reader.Read())
-        {
-            throw new JsonException("Tableau tronqué là où une map du ModDB était attendue.");
-        }
+        reader.Read();
 
         return reader.TokenType == JsonTokenType.EndArray
             ? []
@@ -104,23 +90,14 @@ internal sealed class PhpAssociativeArrayConverter<TValue> : JsonConverter<Dicti
         var typeInfo = ValueTypeInfo(options);
         var result = new Dictionary<string, TValue>(StringComparer.Ordinal);
 
-        while (reader.Read())
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
-            if (reader.TokenType == JsonTokenType.EndObject)
-            {
-                return result;
-            }
-
-            var key = reader.GetString() ?? throw new JsonException("Clé de map illisible.");
-            if (!reader.Read())
-            {
-                throw new JsonException($"La clé « {key} » n'a pas de valeur.");
-            }
-
+            var key = reader.GetString()!;
+            reader.Read();
             result[key] = JsonSerializer.Deserialize(ref reader, typeInfo)!;
         }
 
-        throw new JsonException("Objet tronqué là où une map du ModDB était attendue.");
+        return result;
     }
 
     // Le type d'info vient du contexte source-gen porté par les options : aucune réflexion, donc

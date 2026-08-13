@@ -729,6 +729,32 @@ public sealed class ModInstallServiceTests
         harness.ArchiveRequests("configlib_1.11.1.zip").ShouldBe(2);
     }
 
+    /// <summary>
+    /// Le fichier préparé est toujours là mais ne fait plus la taille annoncée par le CDN : il est
+    /// jeté et retéléchargé, plutôt que posé tel quel dans l'instance.
+    /// </summary>
+    /// <remarks>
+    /// Le jeter est ce qui compte. Le gestionnaire de téléchargement n'a aucune empreinte à
+    /// comparer sur une archive de mod (le ModDB n'en publie pas) : laissé en place, il aurait
+    /// « réutilisé » le fichier tronqué et l'installation aurait échoué sur une archive qu'on
+    /// savait déjà fausse.
+    /// </remarks>
+    [Fact]
+    public async Task ApplyAsync_ThePreparedFileNoLongerMatchesTheAnnouncedSize_IsThrownAwayAndFetchedAgain()
+    {
+        var harness = Create("1.21.3");
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, cancellationToken: CancellationToken.None);
+
+        var cached = harness.FileSystem.Path.Combine(Paths.DownloadsCacheDirectory, "configlib-1.11.1.zip");
+        harness.FileSystem.File.WriteAllBytes(cached, FakeModDbServer.ConfigLibArchive[..32]);
+
+        var outcome = await harness.Service.ApplyAsync(Slug, plan, cancellationToken: CancellationToken.None);
+
+        outcome.Installed.ShouldHaveSingleItem().FileName.ShouldBe("configlib-1.11.1.zip");
+        harness.ArchiveRequests("configlib_1.11.1.zip").ShouldBe(2);
+        harness.FileSystem.FileInfo.New(cached).Length.ShouldBe(FakeModDbServer.ConfigLibArchive.Length);
+    }
+
     private static async Task InstallDependencyAsync(Harness harness)
     {
         var modsDirectory = harness.Repository.GetModsDirectory(Slug);
