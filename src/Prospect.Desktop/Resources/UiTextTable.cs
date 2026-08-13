@@ -414,6 +414,26 @@ internal abstract class ModsText
 
     internal abstract string UpdateFailedTitle { get; }
 
+    // ── Fiche : liens externes déclarés par l'auteur ─────────────────────────────────────────
+
+    internal abstract string LinkSourceCode { get; }
+
+    internal abstract string LinkIssues { get; }
+
+    internal abstract string LinkWiki { get; }
+
+    internal abstract string LinkHomepage { get; }
+
+    // ── Sélecteur de version du dialogue d'installation ─────────────────────────────────────
+
+    /// <summary>
+    /// Pastille d'une release retenue par élargissement à la série mineure : l'auteur n'a PAS
+    /// coché cette version de jeu, c'est nous qui supposons. À dire, jamais à taire.
+    /// </summary>
+    internal abstract string ApproximateReleaseTag { get; }
+
+    internal abstract string ReleaseChoiceCount(int count);
+
     /// <summary>Culture de mise en forme des grands nombres (séparateur de milliers).</summary>
     protected abstract CultureInfo NumberCulture { get; }
 

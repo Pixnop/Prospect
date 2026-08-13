@@ -73,11 +73,19 @@ public sealed class ModLogoCache : IModLogoCache, IDisposable
     public int CachedCount => _cache.Count;
 
     /// <inheritdoc />
-    public async Task<Bitmap?> GetAsync(Uri logoUrl, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(logoUrl);
+    public Task<Bitmap?> GetAsync(Uri logoUrl, CancellationToken cancellationToken = default)
+        => GetAsync(logoUrl, MaxLogoWidth, cancellationToken);
 
-        var key = logoUrl.AbsoluteUri;
+    /// <inheritdoc />
+    public async Task<Bitmap?> GetAsync(Uri imageUrl, int maxWidth, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(imageUrl);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxWidth);
+
+        // La largeur d'usage fait partie de la CLÉ : la même illustration peut être demandée en
+        // vignette de 128 px par une carte et en 640 px par une fiche, et servir la première à la
+        // seconde donnerait une image floue étirée.
+        var key = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{maxWidth}|{imageUrl.AbsoluteUri}");
         if (_cache.TryGetValue(key, out var cached))
         {
             return cached;
@@ -97,7 +105,7 @@ public sealed class ModLogoCache : IModLogoCache, IDisposable
                 return cached;
             }
 
-            bytes = await _httpClient.GetByteArrayAsync(logoUrl, cancellationToken).ConfigureAwait(false);
+            bytes = await _httpClient.GetByteArrayAsync(imageUrl, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (IsRecoverableFetchFailure(exception, cancellationToken))
         {
@@ -108,7 +116,7 @@ public sealed class ModLogoCache : IModLogoCache, IDisposable
             Release();
         }
 
-        return Decode(key, bytes);
+        return Decode(key, bytes, maxWidth);
     }
 
     /// <summary>
@@ -123,12 +131,12 @@ public sealed class ModLogoCache : IModLogoCache, IDisposable
 
     // Bloc try/catch large exprès : un flux reçu mais illisible comme image ne doit jamais remonter
     // jusqu'à la carte, quelle qu'en soit la raison exacte (format non supporté, contenu tronqué...).
-    private Bitmap? Decode(string key, byte[] bytes)
+    private Bitmap? Decode(string key, byte[] bytes, int maxWidth)
     {
         try
         {
             using var stream = new MemoryStream(bytes);
-            var bitmap = Shrink(new Bitmap(stream));
+            var bitmap = Shrink(new Bitmap(stream), maxWidth);
 
             if (_cache.Count < MaxCachedBitmaps)
             {
@@ -145,18 +153,18 @@ public sealed class ModLogoCache : IModLogoCache, IDisposable
 
     // Réduit une vignette trop large et libère l'originale, qui n'a jamais quitté cette méthode :
     // c'est le seul bitmap que ce cache ait le droit de libérer (voir point 4 de la remarque).
-    private static Bitmap Shrink(Bitmap decoded)
+    private static Bitmap Shrink(Bitmap decoded, int maxWidth)
     {
         var size = decoded.PixelSize;
-        if (size.Width <= MaxLogoWidth)
+        if (size.Width <= maxWidth)
         {
             return decoded;
         }
 
-        var height = Math.Max(1, (int)Math.Round(size.Height * (double)MaxLogoWidth / size.Width));
+        var height = Math.Max(1, (int)Math.Round(size.Height * (double)maxWidth / size.Width));
         try
         {
-            return decoded.CreateScaledBitmap(new PixelSize(MaxLogoWidth, height), BitmapInterpolationMode.HighQuality);
+            return decoded.CreateScaledBitmap(new PixelSize(maxWidth, height), BitmapInterpolationMode.HighQuality);
         }
         finally
         {

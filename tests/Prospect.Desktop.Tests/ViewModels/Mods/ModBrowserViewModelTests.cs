@@ -192,9 +192,19 @@ public sealed class ModBrowserViewModelTests
 
         var dialog = fixture.Overlay.Shown.ShouldHaveSingleItem().ShouldBeOfType<ModDetailDialogViewModel>();
         dialog.Name.ShouldBe("Config lib");
-        // La description ModDB arrive en HTML : elle est affichée nettoyée de son balisage.
-        dialog.Description.ShouldBe("Config lib\nA universal place to configure your mods.");
-        dialog.PageUrlText.ShouldBe("https://mods.vintagestory.at/show/mod/1783");
+
+        // La description ModDB arrive en HTML et elle est RENDUE : le titre reste un titre, le
+        // paragraphe reste un paragraphe. L'aplatir en une chaîne de texte, comme le faisait cette
+        // assertion, était précisément le défaut relevé en test réel.
+        var blocks = dialog.Description.Document.Blocks;
+        blocks.Count.ShouldBe(2);
+        blocks[0].ShouldBeOfType<RichTextHeading>().Level.ShouldBe(2);
+        blocks[1].ShouldBeOfType<RichTextParagraph>().Runs.ShouldHaveSingleItem()
+            .Text.ShouldBe("A universal place to configure your mods.");
+
+        // Config lib n'a pas d'urlalias : la page se construit sur son ASSETID (9551), jamais sur
+        // son modid (1783), qui désigne un tout autre asset sur le site.
+        dialog.PageUrlText.ShouldBe("https://mods.vintagestory.at/show/mod/9551");
     }
 
     [Fact]

@@ -4,15 +4,17 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Prospect.Desktop.ViewModels.Mods"
              xmlns:conv="using:Prospect.Desktop.Converters"
+             xmlns:controls="using:Prospect.Desktop.Controls"
              mc:Ignorable="d" d:DesignWidth="720"
              x:Class="Prospect.Desktop.Views.Mods.ModDetailDialogView"
              x:DataType="vm:ModDetailDialogViewModel">
 
   <!--
-    Fiche d'un mod (design/ui_kits/launcher/screen-mods.jsx, ModDetail). Deux écarts assumés par
-    rapport à la maquette : la description est affichée nettoyée de son HTML plutôt que rendue, et
-    les captures d'écran ne sont pas téléchargées en MVP. Le bouton « Ouvrir sur le ModDB » renvoie
-    à la fiche officielle, qui reste la version complète.
+    Fiche d'un mod (design/ui_kits/launcher/screen-mods.jsx, ModDetail). La description est RENDUE
+    telle que l'auteur l'a publiée : titres, gras, listes imbriquées, code, liens et images, via
+    RichTextPresenter (voir Controls/RichTextPresenter.cs). Un seul écart assumé subsiste par
+    rapport à la maquette : la galerie de captures d'écran n'est pas téléchargée, la description en
+    embarque déjà l'essentiel. Le bouton « Ouvrir sur le ModDB » reste là pour la fiche officielle.
   -->
 
   <Border Width="720" MaxHeight="640" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
@@ -22,10 +24,18 @@
       <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="22,20">
         <Grid ColumnDefinitions="Auto,*,Auto">
           <Border Grid.Column="0" Width="52" Height="52" CornerRadius="{StaticResource RadiusSm}"
-                  Background="{DynamicResource Stone800}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1">
-            <Path Width="22" Height="22" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
-                  Data="{StaticResource Icon.package}" Stroke="{DynamicResource Text4}"
-                  StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                  Background="{DynamicResource Stone800}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1"
+                  ClipToBounds="True">
+            <Panel>
+              <!-- Même dispositif que la carte du navigateur : pictogramme générique dans l'arbre,
+                   masqué dès que le logo est décodé (IModLogoCache). -->
+              <Path Width="22" Height="22" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Data="{StaticResource Icon.package}" Stroke="{DynamicResource Text4}"
+                    StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round"
+                    IsVisible="{Binding !Logo.HasBitmap, FallbackValue=True}" />
+              <Image Width="52" Height="52" Stretch="UniformToFill" Source="{Binding Logo.Bitmap}"
+                     IsVisible="{Binding Logo.HasBitmap, FallbackValue=False}" />
+            </Panel>
           </Border>
           <StackPanel Grid.Column="1" Margin="14,0,14,0" VerticalAlignment="Center">
             <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" FontFamily="{DynamicResource FontDisplay}"
@@ -62,8 +72,37 @@
           <TextBlock Text="{StaticResource Mods_OpenFailed}" TextWrapping="Wrap" IsVisible="{Binding OpenFailed}"
                      FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource DangerText}" />
 
-          <SelectableTextBlock Text="{Binding Description}" TextWrapping="Wrap" LineHeight="22" IsVisible="{Binding HasDescription}"
-                               FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text2}" />
+          <!-- La description telle que l'auteur l'a écrite. RichTextPresenter compose l'arbre de
+               contrôles depuis les blocs analysés côté Core ; son apparence vit dans
+               Styles/Controls/RichText.axaml. -->
+          <controls:RichTextPresenter Document="{Binding Description}" IsVisible="{Binding HasDescription}"
+                                      ImageMaxWidth="640" ImageMaxHeight="420" />
+
+          <!-- Liens déclarés par l'auteur sur sa fiche, ouverts par le même IExternalUrlOpener que
+               la page ModDB : rien n'est jamais navigué à l'intérieur de Prospect. -->
+          <StackPanel Spacing="8" IsVisible="{Binding HasLinks}">
+            <TextBlock Text="{StaticResource Mods_Detail_Links}" FontSize="{StaticResource FsCaption}"
+                       FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
+            <ItemsControl ItemsSource="{Binding Links}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ModExternalLinkViewModel">
+                  <Button Classes="sm secondary" Margin="0,0,8,8" Command="{Binding OpenCommand}"
+                          ToolTip.Tip="{Binding Url}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <Path Width="12" Height="12" Stretch="Uniform" Data="{StaticResource Icon.external-link}"
+                            Stroke="{DynamicResource Text2}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                      <TextBlock Text="{Binding Label}" />
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
 
           <StackPanel Spacing="4">
             <TextBlock Text="{StaticResource Mods_Detail_SourceNote}" TextWrapping="Wrap" LineHeight="18"

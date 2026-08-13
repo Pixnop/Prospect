@@ -25,4 +25,21 @@ public interface IModLogoCache
     /// est bien relancée, à distinguer d'un simple échec réseau.
     /// </param>
     Task<Bitmap?> GetAsync(Uri logoUrl, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Même contrat, pour une image affichée PLUS GRANDE qu'une vignette de carte : les
+    /// illustrations d'une description de fiche, larges comme la colonne de lecture.
+    /// </summary>
+    /// <remarks>
+    /// La largeur d'usage est un paramètre plutôt qu'une constante parce que c'est elle, et rien
+    /// d'autre, qui décide du coût mémoire : une image est décodée puis RÉDUITE à cette largeur,
+    /// et c'est cette réduction qui a évité l'épuisement mémoire mesuré sur le catalogue réel. Une
+    /// seule infrastructure sert les deux usages, avec la même borne de téléchargements
+    /// simultanés, le même plafond d'entrées et la même règle absolue de ne jamais libérer un
+    /// bitmap déjà distribué (voir <c>ModLogoCache</c>).
+    /// </remarks>
+    /// <param name="imageUrl">URL absolue de l'image, telle que l'écrit l'auteur de la fiche.</param>
+    /// <param name="maxWidth">Largeur d'affichage maximale, en pixels. Une image déjà plus petite n'est jamais agrandie.</param>
+    /// <param name="cancellationToken">Annulation côté appelant.</param>
+    Task<Bitmap?> GetAsync(Uri imageUrl, int maxWidth, CancellationToken cancellationToken = default);
 }

@@ -133,21 +133,47 @@
 
         <ProgressBar IsIndeterminate="True" Height="3" IsVisible="{Binding IsLoading}" />
 
-        <!-- ── Grille de résultats ───────────────────────────────────────────────── -->
+        <!-- ── Grille de résultats ───────────────────────────────────────────────────
+             Grille FLUIDE : FluidGridPanel décide du nombre de colonnes depuis la largeur qu'il
+             reçoit et étire ses colonnes pour la remplir (voir Layout/FluidGridPanel.cs, qui dit
+             pourquoi aucun panneau fourni ne convenait). Aux trois tailles de la garde, la zone
+             de contenu vaut 688, 828 et 1008 points, soit deux, deux et trois colonnes.
+
+             Les cartes n'ont plus ni largeur ni HAUTEUR fixes. Les 204 px imposés jusqu'ici
+             dépassaient d'une bonne cinquantaine ce que leur contenu demande : le pied flottait
+             au milieu et laissait un gouffre sous la description. La carte se dimensionne
+             maintenant sur son contenu, le pied est ancré en bas par le DockPanel, et c'est le
+             panneau qui aligne les cartes d'une même rangée sur la plus haute. -->
         <ItemsControl ItemsSource="{Binding Results}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
-              <WrapPanel />
+              <layout:FluidGridPanel MinItemWidth="320" ColumnSpacing="16" RowSpacing="16" />
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:ModCardViewModel">
-              <Border Classes="card interactive" Width="300" Height="204" Margin="0,0,16,16">
+              <Border Classes="card interactive" Padding="14,13">
                 <DockPanel>
                   <!-- Même dispositif que la carte d'instance : un bouton sans chrome couvre la
                        zone d'ouverture de la fiche, la rangée d'actions reste en dehors pour que
                        « Installer » ne soit jamais avalé par le clic d'ouverture. -->
-                  <Button DockPanel.Dock="Top" Classes="cardHit" Command="{Binding OpenCommand}">
+                  <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,12,0,0">
+                    <ContentControl Grid.Column="0" Classes="badge" Content="{Binding CompatibilityText}" IsVisible="{Binding ShowCompatibility}"
+                                    VerticalAlignment="Center"
+                                    Classes.stable="{Binding CompatibilityTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=stable}"
+                                    Classes.incompatible="{Binding CompatibilityTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=incompatible}" />
+                    <ContentControl Grid.Column="1" Classes="badge" Margin="6,0,0,0" Content="{Binding SideText}" IsVisible="{Binding HasSide}"
+                                    VerticalAlignment="Center" />
+                    <Button Grid.Column="3" Classes="sm secondary" Command="{Binding InstallCommand}">
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Path Width="13" Height="13" Stretch="Uniform" Data="{StaticResource Icon.download}"
+                              Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                        <TextBlock Text="{StaticResource Mods_Install}" />
+                      </StackPanel>
+                    </Button>
+                  </Grid>
+
+                  <Button Classes="cardHit" VerticalAlignment="Top" Command="{Binding OpenCommand}">
                     <StackPanel>
                       <Grid ColumnDefinitions="Auto,*,Auto">
                         <Border Grid.Column="0" Width="40" Height="40" CornerRadius="{StaticResource RadiusSm}"
@@ -176,26 +202,15 @@
                                      FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
                         </StackPanel>
                       </Grid>
-                      <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,12,0,0" MaxLines="2"
+                      <!-- Description bornée à deux lignes ET tronquée : sans MaxLines, une notice
+                           bavarde ferait une carte deux fois plus haute que ses voisines, et le
+                           panneau alignerait toute la rangée sur elle. -->
+                      <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,10,0,0" MaxLines="2"
                                  IsVisible="{Binding HasDescription}"
                                  TextTrimming="CharacterEllipsis" LineHeight="19" TextAlignment="Left"
                                  FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text2}" />
                     </StackPanel>
                   </Button>
-
-                  <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,14,0,0">
-                    <ContentControl Grid.Column="0" Classes="badge" Content="{Binding CompatibilityText}" IsVisible="{Binding ShowCompatibility}"
-                                    Classes.stable="{Binding CompatibilityTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=stable}"
-                                    Classes.incompatible="{Binding CompatibilityTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=incompatible}" />
-                    <ContentControl Grid.Column="1" Classes="badge" Margin="6,0,0,0" Content="{Binding SideText}" IsVisible="{Binding HasSide}" />
-                    <Button Grid.Column="3" Classes="sm secondary" Command="{Binding InstallCommand}">
-                      <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Path Width="13" Height="13" Stretch="Uniform" Data="{StaticResource Icon.download}"
-                              Stroke="{DynamicResource Text1}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
-                        <TextBlock Text="{StaticResource Mods_Install}" />
-                      </StackPanel>
-                    </Button>
-                  </Grid>
                 </DockPanel>
               </Border>
             </DataTemplate>

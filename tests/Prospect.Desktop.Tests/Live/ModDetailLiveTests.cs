@@ -78,6 +78,7 @@ public sealed class ModDetailLiveTests(ITestOutputHelper output)
             shell.ModBrowser.SelectedInstance,
             new FakeExternalUrlOpener(),
             shell.Overlay,
+            ModDbDoubles.CreateLogoCache(),
             () => Task.CompletedTask);
 
         shell.Overlay.Show(dialog);

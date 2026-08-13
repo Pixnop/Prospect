@@ -419,6 +419,23 @@ internal sealed class EnglishModsText : ModsText
 
     internal override string UpdateFailedTitle => "Cannot update";
 
+    internal override string LinkSourceCode => "Source code";
+
+    internal override string LinkIssues => "Issues";
+
+    internal override string LinkWiki => "Wiki";
+
+    internal override string LinkHomepage => "Mod website";
+
+    internal override string ApproximateReleaseTag => "assumed compatibility";
+
+    internal override string ReleaseChoiceCount(int count) => count switch
+    {
+        0 => "no compatible version",
+        1 => "1 compatible version",
+        _ => $"{FormatCount(count)} compatible versions",
+    };
+
     protected override CultureInfo NumberCulture { get; } = CultureInfo.GetCultureInfo("en-US");
 
     internal override string Subtitle(int indexedCount) => indexedCount switch

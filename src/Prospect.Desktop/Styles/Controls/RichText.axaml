@@ -1,0 +1,80 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Apparence de la description d'une fiche ModDB. La STRUCTURE des contrôles est construite en C#
+    (Controls/RichTextPresenter.cs, qui explique pourquoi), les VALEURS sont ici : ce fichier est
+    le seul endroit où l'on décide à quoi ressemble un titre, une puce ou un bloc de code, et il
+    puise dans les mêmes jetons que le reste du produit.
+
+    Les tailles descendent d'un titre à l'autre sans jamais atteindre celles des titres d'écran :
+    c'est du contenu tiers posé DANS un dialogue, il ne doit pas concurrencer visuellement les
+    titres de Prospect lui-même.
+  -->
+
+  <Style Selector="TextBlock.richBody">
+    <Setter Property="FontSize" Value="{StaticResource FsBodySm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Text2}" />
+    <Setter Property="LineHeight" Value="21" />
+  </Style>
+
+  <Style Selector="TextBlock.richHeading">
+    <Setter Property="FontFamily" Value="{DynamicResource FontDisplay}" />
+    <Setter Property="FontWeight" Value="{StaticResource FwSemibold}" />
+    <Setter Property="Foreground" Value="{DynamicResource Text1}" />
+    <Setter Property="Margin" Value="0,6,0,0" />
+    <Setter Property="LineHeight" Value="22" />
+  </Style>
+  <Style Selector="TextBlock.richHeading1">
+    <Setter Property="FontSize" Value="{StaticResource FsHeading}" />
+  </Style>
+  <Style Selector="TextBlock.richHeading2">
+    <Setter Property="FontSize" Value="{StaticResource FsSubheading}" />
+  </Style>
+  <Style Selector="TextBlock.richHeading3">
+    <Setter Property="FontSize" Value="{StaticResource FsBody}" />
+  </Style>
+  <Style Selector="TextBlock.richHeading4, TextBlock.richHeading5, TextBlock.richHeading6">
+    <Setter Property="FontSize" Value="{StaticResource FsBodySm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Text2}" />
+  </Style>
+
+  <!-- La puce est alignée sur la première ligne de son entrée, pas centrée sur la hauteur totale :
+       une entrée de trois lignes garde sa puce en face de la première. -->
+  <Style Selector="TextBlock.richBullet">
+    <Setter Property="FontSize" Value="{StaticResource FsBodySm}" />
+    <Setter Property="Foreground" Value="{DynamicResource Text4}" />
+    <Setter Property="LineHeight" Value="21" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="MinWidth" Value="14" />
+  </Style>
+
+  <Style Selector="Border.richCode">
+    <Setter Property="Background" Value="{DynamicResource GlassItem}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassEdge}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+    <Setter Property="Padding" Value="12,10" />
+  </Style>
+
+  <Style Selector="TextBlock.richCodeText">
+    <Setter Property="FontFamily" Value="{DynamicResource FontMono}" />
+    <Setter Property="FontSize" Value="{StaticResource FsMicro}" />
+    <Setter Property="Foreground" Value="{DynamicResource Text3}" />
+    <Setter Property="LineHeight" Value="18" />
+  </Style>
+
+  <Style Selector="Border.richRule">
+    <Setter Property="Background" Value="{DynamicResource GlassEdgeStrong}" />
+    <Setter Property="Margin" Value="0,4" />
+  </Style>
+
+  <!-- Une illustration qui n'arrive jamais laisse son texte de remplacement, en retrait typographique
+       assumé : c'est une information sur ce qui manque, pas du contenu. -->
+  <Style Selector="TextBlock.richImageFallback">
+    <Setter Property="FontSize" Value="{StaticResource FsMicro}" />
+    <Setter Property="FontStyle" Value="Italic" />
+    <Setter Property="Foreground" Value="{DynamicResource Text4}" />
+  </Style>
+
+</Styles>

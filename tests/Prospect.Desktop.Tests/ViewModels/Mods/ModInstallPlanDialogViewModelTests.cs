@@ -34,8 +34,17 @@ public sealed class ModInstallPlanDialogViewModelTests
         return new ModInstallPlan(primary, [], [], unresolved, GameVersion.Parse(gameVersion));
     }
 
+    // Le sélecteur de version n'entre pas en jeu ici : ces plans n'ont qu'une release, donc le
+    // rappel de recalcul n'est jamais invoqué.
     private static ModInstallPlanDialogViewModel Dialog(ModInstallPlan plan)
-        => new(plan, "Homestead 1.22", _ => Task.CompletedTask, new RecordingOverlayService());
+        => new(
+            plan,
+            "Homestead 1.22",
+            (_, _) => Task.CompletedTask,
+            _ => Task.FromResult(plan),
+            new RecordingOverlayService(),
+            new FakeExternalUrlOpener(),
+            new FakeModLogoCache());
 
     /// <summary>Le cas réel : la fiche existe, seules ses releases manquent pour cette version.</summary>
     [Fact]

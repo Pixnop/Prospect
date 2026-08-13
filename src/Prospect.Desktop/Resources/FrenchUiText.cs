@@ -415,6 +415,23 @@ internal sealed class FrenchModsText : ModsText
 
     internal override string UpdateFailedTitle => "Mise à jour impossible";
 
+    internal override string LinkSourceCode => "Code source";
+
+    internal override string LinkIssues => "Tickets";
+
+    internal override string LinkWiki => "Wiki";
+
+    internal override string LinkHomepage => "Site du mod";
+
+    internal override string ApproximateReleaseTag => "compatibilité supposée";
+
+    internal override string ReleaseChoiceCount(int count) => count switch
+    {
+        0 => "aucune version compatible",
+        1 => "1 version compatible",
+        _ => $"{FormatCount(count)} versions compatibles",
+    };
+
     protected override CultureInfo NumberCulture { get; } = CultureInfo.GetCultureInfo("fr-FR");
 
     internal override string Subtitle(int indexedCount) => indexedCount switch
