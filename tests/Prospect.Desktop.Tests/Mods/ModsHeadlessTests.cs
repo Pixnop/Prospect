@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Prospect.Core.Instances;
 using Prospect.Core.ModDb;
+using Prospect.Desktop.Layout;
 using Prospect.Desktop.Tests.Support;
 using Prospect.Desktop.Tests.TestDoubles;
 using Prospect.Desktop.ViewModels.Dialogs;
@@ -380,17 +381,22 @@ public sealed class ModsHeadlessTests
     }
 
     /// <summary>
-    /// Être dans l'arbre visuel ne suffit pas : la rangée de badges d'une carte défile sans jamais
-    /// montrer de barre, donc une pastille poussée au-delà du champ n'existe pas pour
-    /// l'utilisateur. C'est ce qui arrivait à « Installé · 1.11.1 », dernière d'une rangée de trois
-    /// qui en demande 330 points quand la carte n'en offre que 200 à 300 : la carte disait
-    /// « Gérer » sans jamais dire pourquoi. Le test mesure donc la pastille contre le champ visible
-    /// du défileur, aux trois tailles de la garde.
+    /// Aucune pastille d'une carte n'est jamais À MOITIÉ visible : chacune est entièrement dans le
+    /// champ de sa rangée, ou entièrement dehors. Rien entre les deux, à aucune des trois tailles
+    /// de la garde et dans les deux thèmes.
     /// </summary>
+    /// <remarks>
+    /// La rangée défilait, barre masquée, et la garde précédente ne surveillait que « Installé ·
+    /// version ». Le résultat n'était donc pas une pastille cachée mais une pastille COUPÉE EN
+    /// PLEIN MOT contre le bouton « Gérer » (« cli », « client et ») : trois pastilles demandent
+    /// environ 330 points quand une carte de la grille fluide n'en offre que 200 à 300. Un glyphe
+    /// tranché se lit comme un défaut d'affichage, pas comme un choix, d'où la mesure sur CHAQUE
+    /// pastille plutôt que sur la première.
+    /// </remarks>
     [AvaloniaTheory]
     [InlineData("Dark")]
     [InlineData("Light")]
-    public async Task ModBrowser_TheInstalledBadge_StaysInsideTheVisiblePartOfItsRow(string variant)
+    public async Task ModBrowser_NoBadgeOfACard_IsEverPartlyVisible(string variant)
     {
         using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
         var window = ResponsiveScenario.ShowWindow(provider, variant == "Light" ? ThemeVariant.Light : ThemeVariant.Dark);
@@ -410,18 +416,73 @@ public sealed class ModsHeadlessTests
             window.Height = size.Height;
             window.Settle();
 
-            var badge = window
-                .GetVisualDescendants()
-                .OfType<ContentControl>()
-                .Single(control => Equals(control.Content, installedText) && control.IsVisible);
-            var row = badge.FindAncestorOfType<ScrollViewer>().ShouldNotBeNull();
-            var right = badge.TranslatePoint(new Point(badge.Bounds.Width, 0d), row).ShouldNotBeNull().X;
+            var rows = window.GetVisualDescendants().OfType<PriorityRowPanel>().ToArray();
+            rows.ShouldNotBeEmpty($"aucune rangée de pastilles rendue à {size}");
 
-            badge.Bounds.Width.ShouldBeGreaterThan(0d, $"la pastille « {installedText} » n'est pas mesurée à {size}");
-            right.ShouldBeLessThanOrEqualTo(
-                row.Viewport.Width + 0.5d,
-                $"la pastille « {installedText} » sort du champ visible de sa rangée à {size}");
+            foreach (var row in rows)
+            {
+                foreach (var badge in row.Children.OfType<ContentControl>().Where(control => control.IsVisible))
+                {
+                    var left = badge.Bounds.X;
+                    var right = badge.Bounds.Right;
+                    var label = badge.Content as string ?? string.Empty;
+
+                    // Entièrement dedans, ou entièrement dehors. Le milieu est le défaut.
+                    var inside = left >= -0.5d && right <= row.Bounds.Width + 0.5d;
+                    var outside = left >= row.Bounds.Width - 0.5d;
+
+                    (inside || outside).ShouldBeTrue(
+                        $"la pastille « {label} » est coupée à {size} : {left:0.#}..{right:0.#} dans une rangée de {row.Bounds.Width:0.#}");
+                }
+            }
+
+            // Et la priorité tient : « Installé · version » est celle qu'on garde toujours.
+            var installed = rows
+                .SelectMany(row => row.Children.OfType<ContentControl>().Select(badge => (Row: row, Badge: badge)))
+                .Single(pair => Equals(pair.Badge.Content, installedText) && pair.Badge.IsVisible);
+
+            installed.Badge.Bounds.Width.ShouldBeGreaterThan(0d, $"la pastille « {installedText} » n'est pas mesurée à {size}");
+            installed.Badge.Bounds.Right.ShouldBeLessThanOrEqualTo(
+                installed.Row.Bounds.Width + 0.5d,
+                $"la pastille « {installedText} » sort du champ de sa rangée à {size}");
         }
+
+        window.Close();
+    }
+
+    /// <summary>
+    /// La rangée écarte des pastilles ENTIÈRES et le dit : l'indicateur d'écart paraît exactement
+    /// quand quelque chose a été écarté, jamais autrement.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task ModBrowser_ACardTooNarrowForEveryBadge_DropsWholeBadgesAndShowsTheOverflowMark()
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var slug = await provider.SeedTargetInstanceAsync(ResponsiveScenario.LongInstanceName);
+        ResponsiveScenario.SeedInstalledMod(provider, fileSystem, slug);
+
+        shell.ShowModBrowser(slug);
+        await shell.ModBrowser.InitializeCommand.ExecuteAsync(null);
+        window.Width = ResponsiveWindowSizes.Floor.Width;
+        window.Height = ResponsiveWindowSizes.Floor.Height;
+        window.Settle();
+
+        var installedText = shell.ModBrowser.Results.Single(card => card.IsInstalled).InstalledText;
+        var row = window
+            .GetVisualDescendants()
+            .OfType<PriorityRowPanel>()
+            .Single(candidate => candidate.Children.OfType<ContentControl>().Any(badge => Equals(badge.Content, installedText)));
+
+        row.DroppedCount.ShouldBeGreaterThan(0, "trois pastilles ne tiennent pas dans une carte de la grille au plancher");
+
+        var marker = row.Children
+            .OfType<ContentControl>()
+            .Single(PriorityRowPanel.GetIsOverflowIndicator);
+
+        marker.Bounds.Right.ShouldBeLessThanOrEqualTo(row.Bounds.Width + 0.5d, "l'indicateur d'écart déborde de sa rangée");
+        marker.Bounds.Width.ShouldBeGreaterThan(0d);
 
         window.Close();
     }

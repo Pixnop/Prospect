@@ -233,6 +233,7 @@
   <x:String x:Key="Mods_Offline_Description">La connexion au dépôt officiel a échoué. Les mods déjà installés restent utilisables hors ligne.</x:String>
   <x:String x:Key="Mods_ShowMore">Afficher plus</x:String>
   <x:String x:Key="Mods_Tags_ScrollHint">Molette ou barre pour faire défiler la rangée et voir toutes les catégories.</x:String>
+  <x:String x:Key="Mods_BadgesTruncated">La carte est trop étroite pour toutes les pastilles. Ouvre la fiche du mod pour les voir en entier.</x:String>
 
   <!-- ── Fiche d'un mod ──────────────────────────────────────────────────────────── -->
   <x:String x:Key="Mods_Detail_Versions">Versions</x:String>
