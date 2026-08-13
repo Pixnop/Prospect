@@ -240,6 +240,25 @@ public sealed class SettingsHeadlessTests
         thumbnails.ShouldAllBe(image => image.Source != null);
         thumbnails.ShouldAllBe(image => image.Bounds.Height > 80 && image.Bounds.Height < 92);
 
+        // Et la tuile entière tient : vignette PLUS nom. Sans la remise à l'automatique de la
+        // hauteur (voir Button.backdrop-choice dans SettingsView.axaml), le ControlTheme Button
+        // imposait ses 32 points, la vignette se faisait rogner et le nom disparaissait — un
+        // défaut que l'arpenteur d'invariants ne peut pas voir, puisqu'il juge sur les rectangles
+        // PEINTS et qu'un contenu rogné n'en a plus.
+        var tiles = window.GetVisualDescendants().OfType<Button>()
+            .Where(button => button.Classes.Contains("backdrop-choice"))
+            .ToList();
+
+        tiles.Count.ShouldBe(BackdropCatalog.Keys.Count);
+        tiles.ShouldAllBe(button => button.Bounds.Height > 100);
+
+        var names = window.GetVisualDescendants().OfType<TextBlock>()
+            .Where(text => text.Classes.Contains("backdrop-name"))
+            .ToList();
+
+        names.Count.ShouldBe(BackdropCatalog.Keys.Count);
+        names.ShouldAllBe(text => text.Bounds.Height > 0 && text.Text!.Length > 0);
+
         window.Close();
     }
 }
