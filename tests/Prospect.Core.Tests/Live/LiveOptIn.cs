@@ -35,6 +35,7 @@ public static class LiveOptIn
     public static string? SkipReason { get; } =
         Environment.GetEnvironmentVariable(EnvironmentVariableName) == "1"
             ? null
-            : "Ignoré par défaut : ce test interroge le VRAI ModDB (https://mods.vintagestory.at). "
+            : "Ignoré par défaut : ce test interroge les VRAIS services Vintage Story "
+                + "(mods.vintagestory.at, api et cdn.vintagestory.at). "
                 + $"Pour l'exécuter : {EnvironmentVariableName}=1 dotnet test.";
 }
