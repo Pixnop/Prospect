@@ -185,6 +185,12 @@ internal sealed class FrenchDownloadsText : DownloadsText
         (0, _) => $"{queued} en attente",
         _ => $"{running} en cours · {queued} en attente",
     };
+
+    internal override string OutcomeCompleted => "terminé";
+
+    internal override string OutcomeFailed => "échec";
+
+    internal override string OutcomeCanceled => "annulé";
 }
 
 internal sealed class FrenchVersionsText : VersionsText
@@ -876,6 +882,13 @@ internal sealed class FrenchTimeText : TimeText
     internal override string PlayedUnderAnHour => "joué < 1 h";
 
     internal override string DaysAgo(int days) => $"il y a {days} jours";
+
+    internal override string JustNow => "à l'instant";
+
+    // Le singulier compte : « il y a 1 minutes » se remarque tout de suite.
+    internal override string MinutesAgo(int minutes) => minutes <= 1 ? "il y a 1 minute" : $"il y a {minutes} minutes";
+
+    internal override string HoursAgo(int hours) => hours <= 1 ? "il y a 1 heure" : $"il y a {hours} heures";
 
     internal override string AbsoluteDate(DateTime utcValue) => utcValue.ToString("d MMMM yyyy", French);
 

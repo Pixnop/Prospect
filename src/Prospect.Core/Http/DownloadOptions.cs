@@ -11,11 +11,18 @@ namespace Prospect.Core.Http;
 /// </param>
 /// <param name="BufferSize">Taille des blocs de lecture et de calcul d'empreinte.</param>
 /// <param name="ProgressStepBytes">Quantité d'octets entre deux notifications d'avancement, pour ne pas noyer l'interface.</param>
+/// <param name="HistoryLimit">
+/// Nombre d'opérations TERMINÉES gardées dans la file. Au-delà, les plus anciennes sortent seules.
+/// L'historique vit le temps de la session et rien n'est écrit sur disque : un historique persisté
+/// serait une autre décision (quoi garder, combien de temps, comment le purger), pas une simple
+/// extension de celle-ci.
+/// </param>
 public sealed record DownloadOptions(
     int MaxParallelDownloads,
     TimeSpan ReadInactivityTimeout,
     int BufferSize,
-    long ProgressStepBytes)
+    long ProgressStepBytes,
+    int HistoryLimit = 20)
 {
     /// <summary>Réglage par défaut : deux téléchargements en parallèle, 90 s d'inactivité tolérées, blocs de 128 Ko.</summary>
     public static DownloadOptions Default { get; } = new(2, TimeSpan.FromSeconds(90), 128 * 1024, 512 * 1024);

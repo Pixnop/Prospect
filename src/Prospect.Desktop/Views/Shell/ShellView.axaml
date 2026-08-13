@@ -89,18 +89,24 @@
          déclaration (donc de z-order) ; tout autre recouvrement dans ce shell reste un défaut. -->
 
     <!-- Popover Téléchargements : vue directe sur la file du DownloadManager
-         (design/components/launcher/DownloadItem.jsx). L'état vide reste affiché tant que rien
-         ne tourne. -->
+         (design/components/launcher/DownloadItem.jsx). La file garde ce qui est terminé, donc ce
+         panneau est aussi l'historique de la session : chaque ligne finie porte son verdict, sa
+         taille et son heure relative, et se retire à la croix. L'état vide reste affiché tant que
+         rien n'a jamais été téléchargé. -->
     <Border IsVisible="{Binding IsDownloadsPopoverOpen}" Width="400" layout:LayoutContract.AllowsOverlap="True"
             HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,44,20,0"
             CornerRadius="{StaticResource RadiusMd}" ClipToBounds="True"
             Classes="glass menu">
       <StackPanel>
-        <Grid ColumnDefinitions="*,Auto" Margin="16,12">
+        <Grid ColumnDefinitions="*,Auto,Auto" Margin="16,12">
           <TextBlock Grid.Column="0" Text="{StaticResource Downloads_Title}" VerticalAlignment="Center"
                      FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsOverline}"
                      FontWeight="{StaticResource FwMedium}" LetterSpacing="1.1" Foreground="{DynamicResource Text3}" />
-          <Button Grid.Column="1" Classes="icon sm" Command="{Binding CloseDownloadsPopoverCommand}" ToolTip.Tip="{StaticResource Downloads_Close}">
+          <Button Grid.Column="1" Classes="ghost sm" Margin="0,0,4,0"
+                  Command="{Binding Downloads.ClearFinishedCommand}"
+                  IsVisible="{Binding Downloads.HasFinished}"
+                  Content="{StaticResource Downloads_ClearAll}" />
+          <Button Grid.Column="2" Classes="icon sm" Command="{Binding CloseDownloadsPopoverCommand}" ToolTip.Tip="{StaticResource Downloads_Close}">
             <Path Width="12" Height="12" Stretch="Uniform" Data="{StaticResource Icon.x}"
                   Stroke="{DynamicResource Text2}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
           </Button>
@@ -109,39 +115,57 @@
         <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}"
                 IsVisible="{Binding Downloads.HasDownloads}">
           <StackPanel>
-            <ItemsControl ItemsSource="{Binding Downloads.Items}" MaxHeight="320">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="dl:DownloadItemViewModel">
-                  <StackPanel Spacing="8" Margin="16,12">
-                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                      <Path Grid.Column="0" Width="15" Height="15" Margin="0,0,10,0" Stretch="Uniform" VerticalAlignment="Center"
-                            Data="{Binding IconKey, Converter={x:Static conv:IconKeyToGeometryConverter.Instance}}"
-                            Stroke="{DynamicResource Text3}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
-                      <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                 FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text1}" />
-                      <TextBlock Grid.Column="2" Text="{Binding StatText}" VerticalAlignment="Center" Margin="8,0,0,0"
-                                 FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
-                      <Button Grid.Column="3" Classes="icon sm" Margin="4,0,0,0" Command="{Binding CancelCommand}"
-                              ToolTip.Tip="{StaticResource Downloads_Cancel}">
-                        <Path Width="12" Height="12" Stretch="Uniform" Data="{StaticResource Icon.x}"
+            <ScrollViewer MaxHeight="360" HorizontalScrollBarVisibility="Disabled">
+              <ItemsControl ItemsSource="{Binding Downloads.Items}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="dl:DownloadItemViewModel">
+                    <StackPanel Spacing="8" Margin="16,12">
+                      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                        <Path Grid.Column="0" Width="15" Height="15" Margin="0,0,10,0" Stretch="Uniform" VerticalAlignment="Center"
+                              Data="{Binding IconKey, Converter={x:Static conv:IconKeyToGeometryConverter.Instance}}"
                               Stroke="{DynamicResource Text3}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
-                      </Button>
-                    </Grid>
-                    <StackPanel Spacing="4" IsVisible="{Binding !IsQueued}">
-                      <ProgressBar Value="{Binding ProgressPercent}" Minimum="0" Maximum="100"
-                                   IsIndeterminate="{Binding IsIndeterminate}"
-                                   Classes.danger="{Binding IsFailed}" />
-                      <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0" Text="{Binding SpeedText}" TextTrimming="CharacterEllipsis"
+                        <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                   FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text1}" />
+                        <TextBlock Grid.Column="2" Text="{Binding StatText}" VerticalAlignment="Center" Margin="8,0,0,0"
                                    FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
-                        <TextBlock Grid.Column="1" Text="{Binding PercentText}" Margin="8,0,0,0"
-                                   FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+                        <!-- Une seule croix, deux gestes : annuler ce qui tourne, retirer ce qui est
+                             fini. Le ViewModel choisit, l'infobulle suit. -->
+                        <Button Grid.Column="3" Classes="icon sm" Margin="4,0,0,0" Command="{Binding DismissCommand}"
+                                ToolTip.Tip="{StaticResource Downloads_Cancel}">
+                          <Path Width="12" Height="12" Stretch="Uniform" Data="{StaticResource Icon.x}"
+                                Stroke="{DynamicResource Text3}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                        </Button>
                       </Grid>
+                      <StackPanel Spacing="4" IsVisible="{Binding !IsQueued}">
+                        <ProgressBar Value="{Binding ProgressPercent}" Minimum="0" Maximum="100"
+                                     IsIndeterminate="{Binding IsIndeterminate}"
+                                     IsVisible="{Binding IsActive}"
+                                     Classes.danger="{Binding IsFailed}" />
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding IsActive}">
+                          <TextBlock Grid.Column="0" Text="{Binding SpeedText}" TextTrimming="CharacterEllipsis"
+                                     FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+                          <TextBlock Grid.Column="1" Text="{Binding PercentText}" Margin="8,0,0,0"
+                                     FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+                        </Grid>
+                        <!-- Ligne d'historique : verdict, puis la raison de l'échec le cas échéant,
+                             puis l'heure relative. La barre et le débit n'ont plus rien à dire. -->
+                        <Grid ColumnDefinitions="Auto,*,Auto" IsVisible="{Binding IsFinished}">
+                          <ContentControl Grid.Column="0" Classes="badge" Content="{Binding OutcomeText}"
+                                          VerticalAlignment="Center"
+                                          Classes.stable="{Binding OutcomeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=stable}"
+                                          Classes.incompatible="{Binding OutcomeTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=incompatible}" />
+                          <TextBlock Grid.Column="1" Text="{Binding SpeedText}" Margin="8,0,0,0" VerticalAlignment="Center"
+                                     TextTrimming="CharacterEllipsis" IsVisible="{Binding IsFailed}"
+                                     FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource DangerText}" />
+                          <TextBlock Grid.Column="2" Text="{Binding FinishedText}" Margin="8,0,0,0" VerticalAlignment="Center"
+                                     FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+                        </Grid>
+                      </StackPanel>
                     </StackPanel>
-                  </StackPanel>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
             <Border Classes="glassBand" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}" Padding="16,10">
               <TextBlock Text="{Binding Downloads.SummaryText}"
                          FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />

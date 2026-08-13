@@ -187,6 +187,12 @@ internal sealed class EnglishDownloadsText : DownloadsText
         (0, _) => $"{queued} queued",
         _ => $"{running} running · {queued} queued",
     };
+
+    internal override string OutcomeCompleted => "done";
+
+    internal override string OutcomeFailed => "failed";
+
+    internal override string OutcomeCanceled => "canceled";
 }
 
 internal sealed class EnglishVersionsText : VersionsText
@@ -899,6 +905,12 @@ internal sealed class EnglishTimeText : TimeText
     internal override string PlayedUnderAnHour => "played < 1 h";
 
     internal override string DaysAgo(int days) => $"{days} days ago";
+
+    internal override string JustNow => "just now";
+
+    internal override string MinutesAgo(int minutes) => minutes <= 1 ? "1 minute ago" : $"{minutes} minutes ago";
+
+    internal override string HoursAgo(int hours) => hours <= 1 ? "1 hour ago" : $"{hours} hours ago";
 
     internal override string AbsoluteDate(DateTime utcValue) => utcValue.ToString("MMMM d, yyyy", English);
 

@@ -33,6 +33,7 @@
   <x:String x:Key="Downloads_EmptyDescription">Game versions and mods you download will show up here.</x:String>
   <x:String x:Key="Downloads_Close">Close</x:String>
   <x:String x:Key="Downloads_Cancel">Cancel</x:String>
+  <x:String x:Key="Downloads_ClearAll">Clear all</x:String>
 
   <!-- ── Accueil ─────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Home_Title">Instances</x:String>

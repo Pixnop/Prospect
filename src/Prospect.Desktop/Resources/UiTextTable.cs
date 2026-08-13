@@ -193,6 +193,13 @@ internal abstract class DownloadsText
     internal abstract string GenericFailure { get; }
 
     internal abstract string Summary(int running, int queued);
+
+    /// <summary>Verdicts d'une ligne d'historique.</summary>
+    internal abstract string OutcomeCompleted { get; }
+
+    internal abstract string OutcomeFailed { get; }
+
+    internal abstract string OutcomeCanceled { get; }
 }
 
 /// <summary>Textes de l'écran Versions du jeu.</summary>
@@ -734,6 +741,13 @@ internal abstract class TimeText
     internal abstract string PlayedUnderAnHour { get; }
 
     internal abstract string DaysAgo(int days);
+
+    /// <summary>Moins d'une minute : le compte à la minute serait faux avant d'être affiché.</summary>
+    internal abstract string JustNow { get; }
+
+    internal abstract string MinutesAgo(int minutes);
+
+    internal abstract string HoursAgo(int hours);
 
     /// <summary>Date absolue, au-delà de la fenêtre où le relatif reste lisible.</summary>
     internal abstract string AbsoluteDate(DateTime utcValue);

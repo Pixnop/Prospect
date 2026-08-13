@@ -42,4 +42,33 @@ public static class RelativeDateFormatter
             _ => UiText.Time.AbsoluteDate(target.UtcDateTime),
         };
     }
+
+    /// <summary>
+    /// Même idée, à l'échelle d'une session : « à l'instant », « il y a 3 minutes », « il y a
+    /// 2 heures », puis on repasse à <see cref="Format(DateTimeOffset?, DateTimeOffset)"/> pour la
+    /// granularité du jour. C'est ce dont a besoin l'historique des téléchargements, où tout s'est
+    /// passé dans les minutes qui précèdent, et où « aujourd'hui » ne dirait rien.
+    ///
+    /// Un instant futur (horloge décalée) est ramené à « à l'instant » plutôt que rendu en négatif.
+    /// </summary>
+    public static string FormatMoment(DateTimeOffset value, DateTimeOffset now)
+    {
+        var elapsed = now - value;
+        if (elapsed < TimeSpan.FromMinutes(1))
+        {
+            return UiText.Time.JustNow;
+        }
+
+        if (elapsed < TimeSpan.FromHours(1))
+        {
+            return UiText.Time.MinutesAgo((int)elapsed.TotalMinutes);
+        }
+
+        if (elapsed < TimeSpan.FromHours(24))
+        {
+            return UiText.Time.HoursAgo((int)elapsed.TotalHours);
+        }
+
+        return Format(value, now);
+    }
 }

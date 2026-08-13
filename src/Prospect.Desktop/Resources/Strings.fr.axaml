@@ -45,6 +45,7 @@
   <x:String x:Key="Downloads_EmptyDescription">Les téléchargements de versions du jeu et de mods apparaîtront ici.</x:String>
   <x:String x:Key="Downloads_Close">Fermer</x:String>
   <x:String x:Key="Downloads_Cancel">Annuler</x:String>
+  <x:String x:Key="Downloads_ClearAll">Tout effacer</x:String>
 
   <!-- ── Accueil ─────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Home_Title">Instances</x:String>

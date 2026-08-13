@@ -222,7 +222,7 @@ public sealed class DownloadManagerTests
     }
 
     [Fact]
-    public async Task DownloadAsync_CanceledMidStream_DeletesThePartialFileAndLeavesTheQueueEmpty()
+    public async Task DownloadAsync_CanceledMidStream_DeletesThePartialFileAndLeavesACanceledRow()
     {
         using var cancellation = new CancellationTokenSource();
         var server = new FakeDownloadServer(Payload()) { AfterChunk = sent => { if (sent >= 128) cancellation.Cancel(); } };
@@ -236,7 +236,12 @@ public sealed class DownloadManagerTests
 
         fileSystem.File.Exists(TargetPath(fileSystem, request) + ".partial").ShouldBeFalse();
         fileSystem.File.Exists(TargetPath(fileSystem, request)).ShouldBeFalse();
-        manager.Operations.ShouldBeEmpty();
+
+        // La ligne reste, barrée « annulé » : ce qu'un utilisateur vient d'interrompre doit se
+        // relire, et c'est lui qui la retire.
+        var canceled = manager.Operations.ShouldHaveSingleItem();
+        canceled.State.ShouldBe(DownloadState.Canceled);
+        canceled.FinishedUtc.ShouldNotBeNull();
     }
 
     [Fact]
@@ -258,7 +263,7 @@ public sealed class DownloadManagerTests
         await Should.ThrowAsync<OperationCanceledException>(
             () => manager.DownloadAsync(Request(server, CdnUrl), cancellationToken: CancellationToken.None));
 
-        manager.Operations.ShouldBeEmpty();
+        manager.Operations.ShouldHaveSingleItem().State.ShouldBe(DownloadState.Canceled);
     }
 
     [Fact]
@@ -313,7 +318,7 @@ public sealed class DownloadManagerTests
     }
 
     [Fact]
-    public async Task DownloadAsync_WhileRunning_ExposesTheOperationInTheQueueThenRemovesIt()
+    public async Task DownloadAsync_WhileRunning_ExposesTheOperationInTheQueueThenArchivesIt()
     {
         var server = new FakeDownloadServer(Payload());
         using var handler = new FakeHttpMessageHandler(server.Handle);
@@ -331,10 +336,53 @@ public sealed class DownloadManagerTests
 
         await manager.DownloadAsync(Request(server, CdnUrl), cancellationToken: CancellationToken.None);
 
+        // Deux notifications de composition : l'entrée dans la file, puis le passage à l'état
+        // terminal. La ligne ne sort pas, elle devient de l'historique.
         changes.ShouldBe(2);
         seenStates.ShouldContain(DownloadState.Running);
         seenStates.ShouldContain(DownloadState.Verifying);
         seenStates.ShouldContain(DownloadState.Completed);
+
+        var archived = manager.Operations.ShouldHaveSingleItem();
+        archived.State.ShouldBe(DownloadState.Completed);
+        archived.IsFinished.ShouldBeTrue();
+        archived.FinishedUtc.ShouldBe(Noon);
+    }
+
+    /// <summary>
+    /// L'historique est borné et perd ses lignes les plus anciennes ; ce qui tourne encore n'est
+    /// jamais évincé, quel que soit le nombre de lignes terminées qui s'accumulent.
+    /// </summary>
+    [Fact]
+    public async Task Operations_BeyondTheHistoryLimit_DropTheOldestFinishedRows()
+    {
+        var server = new FakeDownloadServer(Payload());
+        using var handler = new FakeHttpMessageHandler(server.Handle);
+        using var manager = CreateManager(handler, new MockFileSystem(), DownloadOptions.Default with { HistoryLimit = 2 });
+
+        for (var index = 0; index < 4; index++)
+        {
+            await manager.DownloadAsync(
+                Request(server, CdnUrl) with { FileName = $"fichier-{index}.tar.gz" },
+                cancellationToken: CancellationToken.None);
+        }
+
+        manager.Operations.Select(operation => operation.FileName)
+            .ShouldBe(["fichier-2.tar.gz", "fichier-3.tar.gz"]);
+    }
+
+    [Fact]
+    public async Task DismissFinished_ClearsTheHistoryAndKeepsWhatIsStillRunning()
+    {
+        var server = new FakeDownloadServer(Payload());
+        using var handler = new FakeHttpMessageHandler(server.Handle);
+        using var manager = CreateManager(handler, new MockFileSystem());
+
+        await manager.DownloadAsync(Request(server, CdnUrl), cancellationToken: CancellationToken.None);
+        manager.Operations.ShouldHaveSingleItem();
+
+        manager.DismissFinished();
+
         manager.Operations.ShouldBeEmpty();
     }
 

@@ -139,4 +139,10 @@ internal sealed class FakeDownloadManager : IDownloadManager
         _operations.Remove(operation);
         OperationsChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    public void DismissFinished()
+    {
+        _operations.RemoveAll(candidate => candidate.IsFinished);
+        OperationsChanged?.Invoke(this, EventArgs.Empty);
+    }
 }

@@ -459,5 +459,9 @@ public sealed class GameInstallServiceTests
         public void Dismiss(DownloadOperation operation)
         {
         }
+
+        public void DismissFinished()
+        {
+        }
     }
 }
