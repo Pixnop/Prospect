@@ -489,8 +489,14 @@ public sealed class ModInstallPlanDialogViewModelTests
 
     // ── Dépendance sans release compatible, installable quand même ───────────────────────────
 
+    /// <summary>
+    /// Renversement de défaut, décision produit : les librairies déclarées par un modinfo.json sont
+    /// NÉCESSAIRES au fonctionnement du mod. Décochée, l'installation aboutissait sur un jeu qui ne
+    /// démarre pas, sans que l'utilisateur fasse le lien. Le consentement reste — la case se décoche
+    /// et l'avertissement reste attaché — mais le défaut devient « ça marchera ».
+    /// </summary>
     [Fact]
-    public async Task ADependencyWithNoCompatibleRelease_IsOfferedUncheckedWithItsRealTags()
+    public async Task ADependencyWithNoCompatibleRelease_IsOfferedTickedWithItsRealTags()
     {
         var fixture = await CreateAsync();
         fixture.Handler.CarryOnLibGameVersions = ["1.22.0"];
@@ -504,40 +510,54 @@ public sealed class ModInstallPlanDialogViewModelTests
         offer.VersionText.ShouldBe("1.2.0");
         offer.ReasonText.ShouldContain("1.22.0");
         offer.IsDeclaredIncompatible.ShouldBeTrue();
+        offer.IsSelected.ShouldBeTrue();
 
-        // Décochée d'avance : une case pré-cochée est acceptable pour ce que l'auteur a déclaré,
-        // pas pour ce qu'il n'a pas déclaré.
-        offer.IsSelected.ShouldBeFalse();
+        // Le bandeau ambré n'est pas rendu deux fois : quand il y a des cases, il vit juste
+        // au-dessus d'elles, jamais en plus dans un bloc à part.
+        dialog.HasNoCompatibleReleaseWithoutOffer.ShouldBeFalse();
+    }
+
+    /// <summary>Une dépendance ordinaire, elle, était déjà cochée d'avance et le reste.</summary>
+    [Fact]
+    public async Task AnOrdinaryDependency_IsTickedTooAndTheTwoListsAgree()
+    {
+        var fixture = await CreateAsync();
+        var dialog = await OpenAsync(fixture);
+
+        dialog.Dependencies.ShouldHaveSingleItem().IsSelected.ShouldBeTrue();
+        dialog.HasAnyDependencyNews.ShouldBeTrue();
     }
 
     [Fact]
-    public async Task ConfirmWithoutTickingTheOffer_InstallsTheModAlone()
+    public async Task ConfirmAsIs_InstallsTheModAndTheOfferedDependency()
     {
         var fixture = await CreateAsync();
         fixture.Handler.CarryOnLibGameVersions = ["1.22.0"];
         var dialog = await OpenAsync(fixture);
-
-        await dialog.ConfirmCommand.ExecuteAsync(null);
-
-        var installed = await fixture.Mods.ScanAsync(fixture.Slug, CancellationToken.None);
-        installed.Select(mod => mod.Provenance?.ModIdString).ShouldBe(["carryon"]);
-    }
-
-    [Fact]
-    public async Task TickingTheOffer_InstallsTheDependencyInTheSameGesture()
-    {
-        var fixture = await CreateAsync();
-        fixture.Handler.CarryOnLibGameVersions = ["1.22.0"];
-        var dialog = await OpenAsync(fixture);
-        dialog.InstallableAnyway.ShouldHaveSingleItem().IsSelected = true;
 
         await dialog.ConfirmCommand.ExecuteAsync(null);
 
         var installed = await fixture.Mods.ScanAsync(fixture.Slug, CancellationToken.None);
         installed.Select(mod => mod.Provenance?.ModIdString).OrderBy(id => id).ShouldBe(["carryon", "carryonlib"]);
 
-        // 1.22.0 sur une instance en 1.21.3 : autre série mineure, donc un choix pleinement assumé.
+        // 1.22.0 sur une instance en 1.21.3 : autre série mineure. La provenance continue de le
+        // marquer, même si la case était cochée d'avance.
         var lib = installed.Single(mod => mod.Provenance?.ModIdString == "carryonlib").Provenance!;
         lib.DeclaredIncompatible.ShouldBeTrue();
+    }
+
+    /// <summary>Décocher reste possible, et reste obéi : c'est le défaut qui a changé, pas le contrôle.</summary>
+    [Fact]
+    public async Task UntickingTheOffer_InstallsTheModAlone()
+    {
+        var fixture = await CreateAsync();
+        fixture.Handler.CarryOnLibGameVersions = ["1.22.0"];
+        var dialog = await OpenAsync(fixture);
+        dialog.InstallableAnyway.ShouldHaveSingleItem().IsSelected = false;
+
+        await dialog.ConfirmCommand.ExecuteAsync(null);
+
+        var installed = await fixture.Mods.ScanAsync(fixture.Slug, CancellationToken.None);
+        installed.Select(mod => mod.Provenance?.ModIdString).ShouldBe(["carryon"]);
     }
 }

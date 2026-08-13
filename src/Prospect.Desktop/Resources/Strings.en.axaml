@@ -224,6 +224,7 @@
   <x:String x:Key="Mods_Plan_Changelog">Release notes</x:String>
   <x:String x:Key="Mods_Plan_NoChangelog">The author published nothing for this version.</x:String>
   <x:String x:Key="Mods_Plan_InstallAnyway">Install anyway</x:String>
+  <x:String x:Key="Mods_Plan_NoDependencies">This mod needs nothing else.</x:String>
   <x:String x:Key="Mods_Plan_ReleaseReloadFailed">This version could not be prepared. The plan on screen is still the previous one.</x:String>
 
   <!-- ── Onglet Mods d'une instance ──────────────────────────────────────────────── -->

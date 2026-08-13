@@ -238,6 +238,7 @@
   <x:String x:Key="Mods_Plan_Changelog">Notes de version</x:String>
   <x:String x:Key="Mods_Plan_NoChangelog">L'auteur n'a rien publié pour cette version.</x:String>
   <x:String x:Key="Mods_Plan_InstallAnyway">Installer quand même</x:String>
+  <x:String x:Key="Mods_Plan_NoDependencies">Ce mod ne demande rien d'autre.</x:String>
   <x:String x:Key="Mods_Plan_ReleaseReloadFailed">Cette version n'a pas pu être préparée. Le plan affiché reste celui de la version précédente.</x:String>
 
   <!-- ── Onglet Mods d'une instance ──────────────────────────────────────────────── -->

@@ -559,6 +559,15 @@ public sealed class ResponsiveRegressionTests
                 ? "Dialogue d'installation, version incompatible dévoilée, thème clair"
                 : "Dialogue d'installation, version incompatible dévoilée");
 
+        // Les deux volets tiennent réellement côte à côte au PLANCHER de la fenêtre : c'est le cas
+        // dur du dialogue, et une garde d'invariants passerait tout aussi bien sur une pile.
+        window.Width = ResponsiveWindowSizes.Floor.Width;
+        window.Height = ResponsiveWindowSizes.Floor.Height;
+        window.Settle();
+
+        var panes = window.GetVisualDescendants().OfType<SidePanePanel>().Single();
+        panes.IsSideBySide.ShouldBeTrue();
+
         Application.Current!.RequestedThemeVariant = ThemeVariant.Dark;
         window.Close();
     }

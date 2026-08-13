@@ -150,19 +150,26 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
     private string _incompatibleWarning = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAnyDependencyNews))]
     private IReadOnlyList<ModDependencyChoiceViewModel> _dependencies = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAnyDependencyNews))]
     private bool _hasDependencies;
 
     /// <summary>
-    /// Dépendances publiées sans release compatible, proposées à l'installation malgré tout.
-    /// DÉCOCHÉES d'avance, contrairement aux dépendances ordinaires.
+    /// Dépendances publiées sans release compatible, proposées à l'installation malgré tout, avec
+    /// leur avertissement ambré attaché. Cochées d'avance comme les autres : voir
+    /// <see cref="ModDependencyChoiceViewModel.ForInstallAnyway"/>.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNoCompatibleReleaseWithoutOffer))]
+    [NotifyPropertyChangedFor(nameof(HasAnyDependencyNews))]
     private IReadOnlyList<ModDependencyChoiceViewModel> _installableAnyway = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNoCompatibleReleaseWithoutOffer))]
+    [NotifyPropertyChangedFor(nameof(HasAnyDependencyNews))]
     private bool _hasInstallableAnyway;
 
     /// <summary>Dépendances dont le ModDB ne publie aucune fiche : le seul cas « introuvable ».</summary>
@@ -170,6 +177,7 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
     private string _unresolvedMessage = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAnyDependencyNews))]
     private bool _hasUnresolved;
 
     /// <summary>Dépendances publiées sur le ModDB, mais sans release pour cette version du jeu.</summary>
@@ -177,13 +185,30 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
     private string _noCompatibleReleaseMessage = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNoCompatibleReleaseWithoutOffer))]
+    [NotifyPropertyChangedFor(nameof(HasAnyDependencyNews))]
     private bool _hasNoCompatibleRelease;
+
+    /// <summary>
+    /// Le bandeau « aucune release compatible » quand il n'y a RIEN à cocher en dessous. Sinon il
+    /// est rendu juste au-dessus des cases « installer quand même », auxquelles il se rapporte :
+    /// l'afficher deux fois, ou loin d'elles, en ferait un avertissement flottant.
+    /// </summary>
+    public bool HasNoCompatibleReleaseWithoutOffer => HasNoCompatibleRelease && !HasInstallableAnyway;
 
     [ObservableProperty]
     private string _disabledMessage = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAnyDependencyNews))]
     private bool _hasDisabled;
+
+    /// <summary>
+    /// Vrai dès que le volet des dépendances a quelque chose à montrer. Faux, il affiche « ce mod
+    /// n'a besoin de rien d'autre » : un volet vide poserait la question sans y répondre.
+    /// </summary>
+    public bool HasAnyDependencyNews
+        => HasDependencies || HasInstallableAnyway || HasUnresolved || HasNoCompatibleRelease || HasDisabled;
 
     /// <summary>Vrai pendant l'application du plan ou pendant le recalcul déclenché par le sélecteur.</summary>
     [ObservableProperty]
@@ -492,17 +517,20 @@ public sealed partial class ModDependencyChoiceViewModel : ObservableObject
         VersionText = item.Version.ToString();
         ReasonText = UiText.Mods.InstallAnywayReason(dependency.BestAvailableGameVersions);
         IsDeclaredIncompatible = true;
-        _isSelected = false;
     }
 
     /// <summary>
     /// Ligne « installer quand même » d'une dépendance publiée sans release compatible : même
-    /// contrôle, mais DÉCOCHÉE d'avance et étiquetée de ses vraies versions taguées.
+    /// contrôle, étiquetée de ses vraies versions taguées et de son avertissement ambré.
     /// </summary>
     /// <remarks>
-    /// Une case cochée d'avance est acceptable quand elle propose ce que l'auteur a déclaré ;
-    /// elle ne l'est pas quand elle propose ce qu'il n'a PAS déclaré. Le pari doit être pris
-    /// activement, pas subi.
+    /// Cochée d'avance, comme les autres, et c'est un renversement assumé. L'argument d'avant était
+    /// qu'une case pré-cochée convient pour ce que l'auteur a déclaré et pas pour ce qu'il n'a pas
+    /// déclaré. Sauf qu'une dépendance déclarée par un modinfo.json est NÉCESSAIRE au fonctionnement
+    /// du mod : décochée, l'installation aboutit sur un jeu qui ne démarre pas, et l'utilisateur ne
+    /// fait pas le lien. Le consentement reste entier — la case se décoche, l'avertissement reste
+    /// attaché à la ligne, et la provenance continue de marquer l'installation
+    /// (<c>ModProvenance.DeclaredIncompatible</c>) — mais le défaut devient « ça marchera ».
     /// </remarks>
     public static ModDependencyChoiceViewModel ForInstallAnyway(UnresolvedModDependency dependency)
     {
