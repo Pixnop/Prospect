@@ -127,6 +127,9 @@ StyleCopReport.xml
 *.tmp_proj
 *_wpftmp.csproj
 *.log
+# ... sauf les journaux de jeu qui servent d'échantillons de test : ce sont des fixtures
+# embarquées dans un assembly de test, pas des traces de build (voir Prospect.Core.Tests).
+!tests/**/Fixtures/*.log
 *.tlog
 *.vspscc
 *.vssscc

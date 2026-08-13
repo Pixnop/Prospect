@@ -587,6 +587,34 @@ public sealed class InstanceModsTabViewModelTests
         fixture.Tab.Mods.ShouldHaveSingleItem().HasLogErrors.ShouldBeFalse();
     }
 
+    /// <summary>
+    /// Les intégrations dépendent de ce qui est INSTALLÉ, pas seulement de ce que le dernier
+    /// lancement a dit : retirer la cible doit changer le verdict tout de suite, sans attendre un
+    /// lancement de plus.
+    /// </summary>
+    [Fact]
+    public async Task UninstallingTheTargetMod_TurnsWorksWithIntoAWaitingReference()
+    {
+        var fixture = await CreateAsync();
+        ModDbDoubles.SeedMod(
+            fixture.FileSystem,
+            fixture.Mods.GetModsDirectory(fixture.Slug),
+            "carryon-1.0.0.zip",
+            ModDbDoubles.ModInfo("carryon", "Carry On", "1.0.0"),
+            extraEntries: new Dictionary<string, string>
+            {
+                ["assets/carryon/patches/crates.json"] = """[{ "file": "bettercrates:blocktypes/a", "op": "add", "path": "/x", "value": 1 }]""",
+            });
+        SeedMod(fixture, "bettercrates-1.0.0.zip", "bettercrates", "Better Crates");
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+        fixture.Tab.Mods.Single(row => row.Name == "Carry On").IntegrationText.ShouldBe("fonctionne avec Better Crates");
+
+        await fixture.Tab.Mods.Single(row => row.Name == "Better Crates").RemoveCommand.ExecuteAsync(null);
+        await ((UninstallModDialogViewModel)fixture.Overlay.Active!).ConfirmCommand.ExecuteAsync(null);
+
+        fixture.Tab.Mods.ShouldHaveSingleItem().IntegrationText.ShouldBe("attend du contenu de bettercrates");
+    }
+
     [Fact]
     public async Task RefreshAsync_ModThatPatchesAnInstalledMod_SaysItWorksWithIt()
     {

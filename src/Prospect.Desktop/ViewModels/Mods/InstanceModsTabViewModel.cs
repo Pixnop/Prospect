@@ -497,6 +497,12 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
     {
         ApplyReport(null);
         _updateCache.Invalidate(_slug);
+
+        // Les intégrations, elles, dépendent de ce qui est INSTALLÉ à cet instant : installer le
+        // mod que ce zip visait transforme « attend du contenu de X » en « fonctionne avec X »,
+        // sans qu'aucun lancement n'ait eu lieu entre les deux. La lecture est donc refaite au
+        // rafraîchissement qui suit, à partir du même journal.
+        _logInsightsCache.Invalidate(_slug);
     }
 
     /// <summary>Libère le jeton d'annulation d'un éventuel « Tout mettre à jour » en cours.</summary>
