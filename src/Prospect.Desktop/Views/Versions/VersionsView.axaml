@@ -56,7 +56,13 @@
                          FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
             </StackPanel>
 
-            <StackPanel Spacing="6" MaxWidth="420" HorizontalAlignment="Left" Margin="0,5,0,0"
+            <!-- Stretch, pas Left : la ProgressBar de ce dépôt n'a pas de largeur minimale (voir
+                 Styles/Controls/ProgressBar.axaml), donc un panneau aligné à gauche se réduisait à
+                 la largeur du seul enfant qui en a une, la ligne de libellés — une barre de
+                 progression d'une soixantaine de points, relevée en test réel. MaxWidth garde la
+                 mesure du design sur les grandes fenêtres, Stretch la fait descendre avec la
+                 colonne sur les petites. -->
+            <StackPanel Spacing="6" MaxWidth="420" HorizontalAlignment="Stretch" Margin="0,5,0,0"
                         IsVisible="{Binding IsWorking}">
               <ProgressBar Value="{Binding ProgressPercent}" Minimum="0" Maximum="100"
                            IsIndeterminate="{Binding IsIndeterminate}" />
