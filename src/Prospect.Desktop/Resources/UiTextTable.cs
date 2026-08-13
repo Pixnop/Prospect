@@ -562,6 +562,14 @@ internal abstract class ModsText
     /// </summary>
     internal abstract string ShownCount(int shown, int total);
 
+    /// <summary>
+    /// Même compteur, quand la grille a atteint son plafond de rendu
+    /// (<c>ModBrowserViewModel.MaxRenderedResults</c>) : il doit alors dire non seulement combien de
+    /// mods correspondent, mais aussi que le défilement n'en montrera pas davantage et par quoi le
+    /// remplacer. Sans cette phrase, un plafond franc se lit comme un bug.
+    /// </summary>
+    internal abstract string ShownCountCapped(int shown, int total);
+
     internal abstract string ByAuthor(string author);
 
     internal abstract string EmptyResultsDescription(string query);

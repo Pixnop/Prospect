@@ -34,6 +34,19 @@ namespace Prospect.Desktop.ViewModels.Mods;
 /// téléchargements et de décodages de logos : mesuré, près de 8 Gio de jeu de travail et une
 /// dizaine de secondes de mise en page par frappe.
 /// </para>
+/// <para>
+/// Et cette fenêtre est PLAFONNÉE (<see cref="MaxRenderedResults"/>), ce qu'elle n'était pas.
+/// L'extension par tranches bornait le rendu INITIAL sans rien borner du tout ensuite : défiler
+/// suffisait à matérialiser tout le catalogue, une tranche à la fois, et à retomber exactement dans
+/// le cas que la fenêtre devait éviter. La grille ne virtualise pas, c'est un choix documenté
+/// (<see cref="Prospect.Desktop.Layout.FluidGridPanel"/>) qui repose sur la promesse que ce
+/// ViewModel ne lui confie qu'une poignée de cartes : le plafond est ce qui rend cette promesse
+/// vraie. Mesuré par le harnais de charge de ce chantier, sur une fenêtre laissée libre : 800 cartes
+/// rendues d'affilée coûtaient 392 Mio de mémoire gérée (environ 490 Kio par carte, l'arbre de
+/// contrôles et ses mises en forme de texte), et le jeu de travail passait de 177 à 644 Mio. Au-delà
+/// du plafond, le compteur sous la grille le DIT et invite à affiner la recherche, plutôt que de
+/// laisser croire que le défilement continue.
+/// </para>
 /// </remarks>
 public sealed partial class ModBrowserViewModel : ObservableObject
 {
@@ -44,6 +57,18 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     /// l'extension suivante ne soit demandée.
     /// </summary>
     public const int RenderWindowSize = 30;
+
+    /// <summary>
+    /// Nombre maximal de cartes rendues d'un coup, quelle que soit la longueur du défilement. Cinq
+    /// tranches, soit une douzaine d'écrans à la plus grande taille de fenêtre prévue par la garde
+    /// de mise en page : bien au-delà de ce qu'un défilement ordinaire atteint, et assez bas pour
+    /// que le pire cas reste de l'ordre d'une centaine de mégaoctets (mesuré : 96 Mio d'arbre
+    /// visuel, rendus dès qu'on quitte la page) plutôt que de plusieurs centaines qui ne
+    /// s'arrêtaient nulle part. C'est un plafond FRANC, dans l'esprit de celui
+    /// d'<c>IModLogoCache</c> : au-delà, l'écran ne rend plus rien de nouveau et le dit, plutôt que
+    /// de retirer des cartes déjà affichées sous le curseur de l'utilisateur.
+    /// </summary>
+    public const int MaxRenderedResults = 5 * RenderWindowSize;
 
     private readonly IModDbClient _client;
     private readonly ModInstallService _installService;
@@ -146,6 +171,14 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     /// <summary>Compteur « X sur Y affichés », sous la grille.</summary>
     [ObservableProperty]
     private string _shownCountText = string.Empty;
+
+    /// <summary>
+    /// Vrai quand la grille a atteint <see cref="MaxRenderedResults"/> alors qu'il reste des
+    /// correspondances : le défilement ne rendra plus rien, et <see cref="ShownCountText"/> le dit.
+    /// Exposé pour que la borne se teste sans passer par le libellé traduit.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isRenderCapped;
 
     [ObservableProperty]
     private string _emptyStateTitle = UiText.Mods.EmptyResultsTitle;
@@ -368,7 +401,10 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
     private void ExtendWindow()
     {
-        var target = Math.Min(_matches.Count, Results.Count + RenderWindowSize);
+        // Le plafond s'applique AVANT la tranche : une dernière tranche complète qui dépasserait le
+        // plafond serait exactement la fuite qu'on borne ici.
+        var ceiling = Math.Min(_matches.Count, MaxRenderedResults);
+        var target = Math.Min(ceiling, Results.Count + RenderWindowSize);
         for (var index = Results.Count; index < target; index++)
         {
             var summary = _matches[index];
@@ -381,8 +417,11 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                 _logoCache));
         }
 
-        HasMoreResults = Results.Count < _matches.Count;
-        ShownCountText = UiText.Mods.ShownCount(Results.Count, _matches.Count);
+        HasMoreResults = Results.Count < ceiling;
+        IsRenderCapped = Results.Count >= MaxRenderedResults && _matches.Count > Results.Count;
+        ShownCountText = IsRenderCapped
+            ? UiText.Mods.ShownCountCapped(Results.Count, _matches.Count)
+            : UiText.Mods.ShownCount(Results.Count, _matches.Count);
     }
 
     // Sans index (aucune instance cible, ou ModDB muet), aucun badge : mieux vaut ne rien affirmer

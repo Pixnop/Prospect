@@ -558,6 +558,9 @@ internal sealed class EnglishModsText : ModsText
             }
             : $"{FormatCount(shown)} of {FormatCount(total)} mods shown";
 
+    internal override string ShownCountCapped(int shown, int total)
+        => $"{FormatCount(shown)} of {FormatCount(total)} mods shown · narrow the search to see the rest";
+
     internal override string ByAuthor(string author)
         => string.IsNullOrWhiteSpace(author) ? "unknown author" : $"by {author}";
 
