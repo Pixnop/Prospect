@@ -123,6 +123,27 @@ public sealed record ModInstallPlan(
     public IReadOnlyList<ModReleaseChoice> AvailableReleases { get; init; } = [];
 
     /// <summary>
+    /// La copie DÉJÀ installée du mod demandé, s'il y en a une, ou <see langword="null"/>.
+    /// </summary>
+    /// <remarks>
+    /// Sa présence transforme l'installation en REMPLACEMENT, avec la discipline de la mise à jour
+    /// (voir <see cref="ModInstallService.ApplyAsync"/>). Sans ce champ, réinstaller un mod ou en
+    /// changer la version depuis le navigateur empilait un second zip à côté du premier :
+    /// <c>configlib-1.10.0.zip</c> et <c>configlib-1.11.1.zip</c> dans le même <c>Mods/</c>, deux
+    /// fois le même modid au chargement du jeu, comportement indéfini.
+    /// </remarks>
+    public InstalledMod? Existing { get; init; }
+
+    /// <summary>Vrai quand appliquer ce plan remplacera une copie déjà installée.</summary>
+    public bool IsReplacement => Existing is not null;
+
+    /// <summary>
+    /// Version actuellement installée du mod demandé, quand elle est lisible. <see langword="null"/>
+    /// si aucune copie n'est installée ou si son <c>modinfo.json</c> n'a pas pu être lu.
+    /// </summary>
+    public ModVersion? ExistingVersion => Existing?.Info?.Version;
+
+    /// <summary>
     /// Dépendances qu'on peut proposer d'installer malgré l'absence de compatibilité déclarée,
     /// chacune avec sa meilleure release publiée. Toujours DÉCOCHÉES par défaut.
     /// </summary>

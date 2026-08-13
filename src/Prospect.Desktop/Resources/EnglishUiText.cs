@@ -547,6 +547,13 @@ internal sealed class EnglishModsText : ModsText
     internal override string PlanMessage(string version, string instanceName)
         => $"Version {version} will be added to “{instanceName}”.";
 
+    internal override string ReplacePlanTitle(string modName) => $"Replace “{modName}”?";
+
+    internal override string ReplacePlanMessage(string currentVersion, string version, string instanceName)
+        => string.IsNullOrEmpty(currentVersion)
+            ? $"The copy already installed in “{instanceName}” will be replaced by version {version}. Whether it is enabled or disabled is kept."
+            : $"Version {currentVersion} installed in “{instanceName}” will be replaced by version {version}. Whether it is enabled or disabled is kept.";
+
     internal override string ApproximateWarning(string gameVersion)
         => $"No release declares itself compatible with {gameVersion}: this one is offered because it targets the same series. The author has not confirmed it, so it may not work.";
 

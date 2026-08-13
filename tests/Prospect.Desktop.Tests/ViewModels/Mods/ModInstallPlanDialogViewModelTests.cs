@@ -72,6 +72,50 @@ public sealed class ModInstallPlanDialogViewModelTests
             new FakeExternalUrlOpener(),
             new FakeModLogoCache());
 
+    /// <summary>
+    /// Le libellé suit ce que l'opération FAIT : ajouter tant que rien n'est installé, remplacer dès
+    /// qu'une copie est là. Laisser « installer » sur un remplacement laisserait croire à un joueur
+    /// qui change de version de mod qu'il en pose une seconde à côté.
+    /// </summary>
+    [Fact]
+    public void APlanOverAnAlreadyInstalledMod_SaysReplaceRatherThanAdd()
+    {
+        var fresh = Dialog(PlanWith("1.22.6"));
+        fresh.Title.ShouldContain("Installer");
+        fresh.Message.ShouldContain("ajoutée");
+
+        var existing = new InstalledMod
+        {
+            FilePath = "/mods/carryon-1.9.0.zip",
+            FileName = "carryon-1.9.0.zip",
+            IsEnabled = true,
+            Info = new ModInfo { ModId = "carryon", Name = "Carry On", Version = ModVersion.Parse("1.9.0") },
+        };
+        var replacement = Dialog(PlanWith("1.22.6") with { Existing = existing });
+
+        replacement.Title.ShouldContain("Remplacer");
+        replacement.Message.ShouldContain("1.9.0");
+        replacement.Message.ShouldContain("2.0.0-pre.8");
+    }
+
+    /// <summary>Une copie installée dont le modinfo.json est illisible reste un remplacement, sans version à nommer.</summary>
+    [Fact]
+    public void APlanOverAnUnreadableInstalledCopy_StillSaysReplace()
+    {
+        var existing = new InstalledMod
+        {
+            FilePath = "/mods/carryon.zip",
+            FileName = "carryon.zip",
+            IsEnabled = true,
+            Problem = ModInfoProblem.MissingModInfo,
+        };
+
+        var dialog = Dialog(PlanWith("1.22.6") with { Existing = existing });
+
+        dialog.Title.ShouldContain("Remplacer");
+        dialog.Message.ShouldContain("2.0.0-pre.8");
+    }
+
     /// <summary>Le cas réel : la fiche existe, seules ses releases manquent pour cette version.</summary>
     [Fact]
     public void ADependencyPublishedWithoutACompatibleRelease_IsNeverCalledNotFound()

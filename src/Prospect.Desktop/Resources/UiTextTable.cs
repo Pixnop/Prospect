@@ -501,6 +501,16 @@ internal abstract class ModsText
 
     internal abstract string PlanMessage(string version, string instanceName);
 
+    /// <summary>
+    /// Titre quand une copie du mod est déjà installée : ce n'est plus un ajout mais un
+    /// remplacement, et le dire est la moitié du travail (l'autre moitié est de le FAIRE, voir
+    /// <c>ModInstallService.ApplyAsync</c>).
+    /// </summary>
+    internal abstract string ReplacePlanTitle(string modName);
+
+    /// <summary>Message de remplacement. <paramref name="currentVersion"/> est vide si la version installée est illisible.</summary>
+    internal abstract string ReplacePlanMessage(string currentVersion, string version, string instanceName);
+
     internal abstract string ApproximateWarning(string gameVersion);
 
     internal abstract string DependencyReason(ModDependencyIssue? issue);
