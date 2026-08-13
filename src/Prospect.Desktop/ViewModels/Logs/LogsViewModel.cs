@@ -107,11 +107,20 @@ public sealed partial class LogsViewModel : ObservableObject, ILivePage, IDispos
 
     /// <inheritdoc />
     /// <remarks>
-    /// Rien d'autre que l'arrêt de la boucle : la page reste parfaitement utilisable après, ce qui
-    /// est indispensable puisque le conteneur n'en construit qu'un exemplaire et le rend à chaque
-    /// visite. C'est aussi tout ce que fait <see cref="Dispose"/>.
+    /// Rien d'autre que l'arrêt de la boucle, qui libère au passage le jeton d'annulation : la page
+    /// reste parfaitement utilisable après, ce qui est indispensable puisque le conteneur n'en
+    /// construit qu'un exemplaire et le rend à chaque visite.
     /// </remarks>
-    public void Dispose() => StopLiveRefresh();
+    public void Dispose()
+    {
+        StopLiveRefresh();
+
+        // Redondant avec la ligne au-dessus, qui a déjà disposé et remis le champ à null, et gardé
+        // quand même : c'est la seule écriture qui rattache visiblement le champ jetable à la
+        // méthode censée le libérer, aussi bien pour un lecteur que pour l'analyse statique.
+        _liveCancellation?.Dispose();
+        _liveCancellation = null;
+    }
 
     /// <inheritdoc />
     public void StopLiveRefresh()
@@ -242,8 +251,11 @@ public sealed partial class LogsViewModel : ObservableObject, ILivePage, IDispos
     [RelayCommand(CanExecute = nameof(CanExport))]
     private async Task ExportAsync()
     {
+        // CancellationToken.None explicite, et surtout PAS celui de la relecture périodique : les
+        // deux durées de vie n'ont rien à voir. Quitter la page arrête la boucle, ce qui est voulu,
+        // mais ne doit pas refermer une fenêtre « Enregistrer sous » que l'utilisateur a devant lui.
         var destination = await _filePicker
-            .PickSaveFileAsync(UiText.Logs.ExportPickerTitle, UiText.Logs.ExportFileName, "zip")
+            .PickSaveFileAsync(UiText.Logs.ExportPickerTitle, UiText.Logs.ExportFileName, "zip", CancellationToken.None)
             .ConfigureAwait(true);
 
         if (destination is null)
