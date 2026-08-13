@@ -25,6 +25,7 @@ public sealed class ModBrowserViewModelTests
         RecordingToastService Toasts,
         IInstalledModRepository Mods,
         MockFileSystem FileSystem,
+        FakeExternalUrlOpener Opener,
         string Slug);
 
     private static async Task<Fixture> CreateAsync(string gameVersion = "1.21.3")
@@ -43,9 +44,10 @@ public sealed class ModBrowserViewModelTests
         var overlay = new RecordingOverlayService();
         var toasts = new RecordingToastService();
 
-        var browser = new ModBrowserViewModel(client, installService, instances, new FakeExternalUrlOpener(), overlay, toasts, logoCache);
+        var opener = new FakeExternalUrlOpener();
+        var browser = new ModBrowserViewModel(client, installService, instances, opener, overlay, toasts, logoCache);
 
-        return new Fixture(browser, handler, overlay, toasts, mods, fileSystem, record.Slug);
+        return new Fixture(browser, handler, overlay, toasts, mods, fileSystem, opener, record.Slug);
     }
 
     [Fact]
@@ -205,6 +207,57 @@ public sealed class ModBrowserViewModelTests
         // Config lib n'a pas d'urlalias : la page se construit sur son ASSETID (9551), jamais sur
         // son modid (1783), qui désigne un tout autre asset sur le site.
         dialog.PageUrlText.ShouldBe("https://mods.vintagestory.at/show/mod/9551");
+    }
+
+    [Fact]
+    public async Task OpenCard_OnAModWithAnUrlAlias_UsesTheShortRouteForItsPage()
+    {
+        var fixture = await CreateAsync();
+        await fixture.Browser.InitializeCommand.ExecuteAsync(null);
+
+        await fixture.Browser.Results.Single(card => card.Name == "BetterRuins").OpenCommand.ExecuteAsync(null);
+
+        fixture.Overlay.Shown.ShouldHaveSingleItem().ShouldBeOfType<ModDetailDialogViewModel>()
+            .PageUrlText.ShouldBe("https://mods.vintagestory.at/betterruins");
+    }
+
+    [Fact]
+    public async Task OpenCard_ExternalLinksDeclaredByTheAuthor_AreOfferedAndOpenedOutside()
+    {
+        var fixture = await CreateAsync();
+        fixture.Handler.CatalogJson = FakeModDbHandler.CatalogWith(FakeModDbHandler.CarryOnCatalogEntry);
+        fixture.Handler.CompatibleModIds = [1783, 792, 890];
+        await fixture.Browser.InitializeCommand.ExecuteAsync(null);
+
+        await fixture.Browser.Results.Single(card => card.Name == "Carry On").OpenCommand.ExecuteAsync(null);
+        var dialog = fixture.Overlay.Shown.ShouldHaveSingleItem().ShouldBeOfType<ModDetailDialogViewModel>();
+
+        // Carry On déclare son dépôt et son suivi de tickets, pas de site ni de wiki : les champs
+        // vides de l'API (chaîne vide plutôt que null, voir la recherche) ne produisent pas de
+        // bouton mort.
+        dialog.Links.Select(link => link.Label).ShouldBe(["Code source", "Tickets"]);
+
+        await dialog.Links[0].OpenCommand.ExecuteAsync(null);
+        fixture.Opener.Opened.ShouldHaveSingleItem().ShouldBe(new Uri("https://github.com/NerdScurvy/CarryOn"));
+    }
+
+    [Fact]
+    public async Task OpenCard_ARealDescription_IsRenderedAsBlocksWithItsLinksAndImages()
+    {
+        var fixture = await CreateAsync();
+        fixture.Handler.CatalogJson = FakeModDbHandler.CatalogWith(FakeModDbHandler.CarryOnCatalogEntry);
+        fixture.Handler.CompatibleModIds = [1783, 792, 890];
+        await fixture.Browser.InitializeCommand.ExecuteAsync(null);
+
+        await fixture.Browser.Results.Single(card => card.Name == "Carry On").OpenCommand.ExecuteAsync(null);
+        var dialog = fixture.Overlay.Shown.ShouldHaveSingleItem().ShouldBeOfType<ModDetailDialogViewModel>();
+
+        // 29 Ko d'éditeur WYSIWYG réel : la fiche doit en sortir une structure, pas un mur de texte.
+        var blocks = dialog.Description.Document.Blocks;
+        blocks.OfType<RichTextHeading>().Count().ShouldBeGreaterThan(20);
+        blocks.OfType<RichTextList>().Count().ShouldBeGreaterThan(20);
+        blocks.OfType<RichTextImage>().Count().ShouldBe(4);
+        dialog.Description.Images.Count.ShouldBe(4);
     }
 
     [Fact]

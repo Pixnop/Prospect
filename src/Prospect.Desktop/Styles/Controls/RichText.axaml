@@ -10,38 +10,43 @@
     Les tailles descendent d'un titre à l'autre sans jamais atteindre celles des titres d'écran :
     c'est du contenu tiers posé DANS un dialogue, il ne doit pas concurrencer visuellement les
     titres de Prospect lui-même.
+
+    Les sélecteurs de texte s'écrivent `:is(TextBlock)` et non `TextBlock` : le paragraphe cliquable
+    des descriptions (Controls/LinkableTextBlock.cs) DÉRIVE de TextBlock, et un sélecteur de type
+    ne matche en Avalonia que le type exact. Écrits `TextBlock`, ces styles laissaient tous les
+    paragraphes à la taille et à la couleur par défaut du framework.
   -->
 
-  <Style Selector="TextBlock.richBody">
+  <Style Selector=":is(TextBlock).richBody">
     <Setter Property="FontSize" Value="{StaticResource FsBodySm}" />
     <Setter Property="Foreground" Value="{DynamicResource Text2}" />
     <Setter Property="LineHeight" Value="21" />
   </Style>
 
-  <Style Selector="TextBlock.richHeading">
+  <Style Selector=":is(TextBlock).richHeading">
     <Setter Property="FontFamily" Value="{DynamicResource FontDisplay}" />
     <Setter Property="FontWeight" Value="{StaticResource FwSemibold}" />
     <Setter Property="Foreground" Value="{DynamicResource Text1}" />
     <Setter Property="Margin" Value="0,6,0,0" />
     <Setter Property="LineHeight" Value="22" />
   </Style>
-  <Style Selector="TextBlock.richHeading1">
+  <Style Selector=":is(TextBlock).richHeading1">
     <Setter Property="FontSize" Value="{StaticResource FsHeading}" />
   </Style>
-  <Style Selector="TextBlock.richHeading2">
+  <Style Selector=":is(TextBlock).richHeading2">
     <Setter Property="FontSize" Value="{StaticResource FsSubheading}" />
   </Style>
-  <Style Selector="TextBlock.richHeading3">
+  <Style Selector=":is(TextBlock).richHeading3">
     <Setter Property="FontSize" Value="{StaticResource FsBody}" />
   </Style>
-  <Style Selector="TextBlock.richHeading4, TextBlock.richHeading5, TextBlock.richHeading6">
+  <Style Selector=":is(TextBlock).richHeading4, :is(TextBlock).richHeading5, :is(TextBlock).richHeading6">
     <Setter Property="FontSize" Value="{StaticResource FsBodySm}" />
     <Setter Property="Foreground" Value="{DynamicResource Text2}" />
   </Style>
 
   <!-- La puce est alignée sur la première ligne de son entrée, pas centrée sur la hauteur totale :
        une entrée de trois lignes garde sa puce en face de la première. -->
-  <Style Selector="TextBlock.richBullet">
+  <Style Selector=":is(TextBlock).richBullet">
     <Setter Property="FontSize" Value="{StaticResource FsBodySm}" />
     <Setter Property="Foreground" Value="{DynamicResource Text4}" />
     <Setter Property="LineHeight" Value="21" />
@@ -57,7 +62,7 @@
     <Setter Property="Padding" Value="12,10" />
   </Style>
 
-  <Style Selector="TextBlock.richCodeText">
+  <Style Selector=":is(TextBlock).richCodeText">
     <Setter Property="FontFamily" Value="{DynamicResource FontMono}" />
     <Setter Property="FontSize" Value="{StaticResource FsMicro}" />
     <Setter Property="Foreground" Value="{DynamicResource Text3}" />
@@ -71,7 +76,7 @@
 
   <!-- Une illustration qui n'arrive jamais laisse son texte de remplacement, en retrait typographique
        assumé : c'est une information sur ce qui manque, pas du contenu. -->
-  <Style Selector="TextBlock.richImageFallback">
+  <Style Selector=":is(TextBlock).richImageFallback">
     <Setter Property="FontSize" Value="{StaticResource FsMicro}" />
     <Setter Property="FontStyle" Value="Italic" />
     <Setter Property="Foreground" Value="{DynamicResource Text4}" />

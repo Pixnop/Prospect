@@ -63,6 +63,9 @@ public sealed class RichTextDocumentViewModel : IDisposable
     /// <summary>Vrai quand il n'y a rien à afficher.</summary>
     public bool IsEmpty => Document.IsEmpty;
 
+    /// <summary>Illustrations du document, une par source distincte.</summary>
+    public IReadOnlyCollection<RichTextImageViewModel> Images => _images.Values;
+
     /// <summary>Le ViewModel d'image d'un bloc, jamais <see langword="null"/> pour un bloc de ce document.</summary>
     public RichTextImageViewModel ImageFor(RichTextImage block)
     {
