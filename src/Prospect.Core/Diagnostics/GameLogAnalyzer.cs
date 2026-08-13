@@ -243,6 +243,7 @@ public static partial class GameLogAnalyzer
     private static string? ResolveByTypeName(string text, Vocabulary vocabulary)
     {
         string? bySegment = null;
+        var bestLength = 0;
 
         foreach (Match match in DottedIdentifierPattern().Matches(text))
         {
@@ -257,9 +258,10 @@ public static partial class GameLogAnalyzer
             // second qui décrit ce type. Deux mods d'un même auteur partagent souvent leur racine.
             foreach (var segment in identifier.Split('.'))
             {
-                if (vocabulary.Resolve(segment) is { } candidate && segment.Length > (bySegment?.Length ?? 0))
+                if (segment.Length > bestLength && vocabulary.Resolve(segment) is { } candidate)
                 {
                     bySegment = candidate;
+                    bestLength = segment.Length;
                 }
             }
         }
