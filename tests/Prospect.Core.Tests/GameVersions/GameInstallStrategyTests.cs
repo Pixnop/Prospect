@@ -35,7 +35,7 @@ public sealed class GameInstallStrategyTests
         var fileSystem = WithArchive(archive);
         var strategy = new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions());
 
-        await strategy.InstallAsync(ArchivePath, TargetDirectory, CancellationToken.None);
+        await strategy.InstallAsync(ArchivePath, TargetDirectory, cancellationToken: CancellationToken.None);
 
         fileSystem.File.ReadAllText(fileSystem.Path.Combine(TargetDirectory, "Vintagestory")).ShouldBe("#!/bin/sh");
         fileSystem.File.ReadAllText(fileSystem.Path.Combine(TargetDirectory, "assets", "game", "lang", "fr.json")).ShouldBe("{}");
@@ -48,7 +48,7 @@ public sealed class GameInstallStrategyTests
         var fileSystem = WithArchive(archive);
         var strategy = new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions());
 
-        await strategy.InstallAsync(ArchivePath, TargetDirectory, CancellationToken.None);
+        await strategy.InstallAsync(ArchivePath, TargetDirectory, cancellationToken: CancellationToken.None);
 
         fileSystem.Directory.Exists(fileSystem.Path.Combine(TargetDirectory, "Mods")).ShouldBeTrue();
     }
@@ -63,7 +63,7 @@ public sealed class GameInstallStrategyTests
         var permissions = new RecordingUnixFilePermissions();
         var strategy = new LinuxGameInstallStrategy(fileSystem, permissions);
 
-        await strategy.InstallAsync(ArchivePath, TargetDirectory, CancellationToken.None);
+        await strategy.InstallAsync(ArchivePath, TargetDirectory, cancellationToken: CancellationToken.None);
 
         // Les chemins posés sont ceux de la cible normalisée : sur Windows, « /data/... » devient
         // « C:\data\... », d'où la comparaison à partir de GetFullPath plutôt que du chemin brut.
@@ -83,7 +83,7 @@ public sealed class GameInstallStrategyTests
         var fileSystem = WithArchive(archive);
         var strategy = new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions());
 
-        await strategy.InstallAsync(ArchivePath, TargetDirectory, CancellationToken.None);
+        await strategy.InstallAsync(ArchivePath, TargetDirectory, cancellationToken: CancellationToken.None);
 
         fileSystem.File.Exists("/data/prospect/versions/piege.sh").ShouldBeFalse();
         fileSystem.File.Exists(fileSystem.Path.Combine(TargetDirectory, "Vintagestory")).ShouldBeTrue();
@@ -96,7 +96,7 @@ public sealed class GameInstallStrategyTests
         var strategy = new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions());
 
         var exception = await Should.ThrowAsync<GameInstallFailedException>(
-            () => strategy.InstallAsync(ArchivePath, TargetDirectory, CancellationToken.None));
+            () => strategy.InstallAsync(ArchivePath, TargetDirectory, cancellationToken: CancellationToken.None));
 
         exception.InnerException.ShouldBeOfType<InvalidDataException>();
     }
@@ -118,7 +118,7 @@ public sealed class GameInstallStrategyTests
         var fileSystem = WithArchive(archive);
         var permissions = new RecordingUnixFilePermissions();
 
-        await new MacOsGameInstallStrategy(fileSystem, permissions).InstallAsync(ArchivePath, TargetDirectory, CancellationToken.None);
+        await new MacOsGameInstallStrategy(fileSystem, permissions).InstallAsync(ArchivePath, TargetDirectory, cancellationToken: CancellationToken.None);
 
         fileSystem.File.Exists(fileSystem.Path.Combine(TargetDirectory, "Vintagestory.app", "Contents", "MacOS", "Vintagestory")).ShouldBeTrue();
         permissions.Modes.Values.ShouldAllBe(mode => mode == Mode755);
@@ -131,7 +131,7 @@ public sealed class GameInstallStrategyTests
         var runner = new FakeProcessRunner();
         const string installer = "/data/prospect/cache/downloads/vs_install_win-x64_1.22.6.exe";
 
-        await new WindowsGameInstallStrategy(fileSystem, runner).InstallAsync(installer, TargetDirectory, CancellationToken.None);
+        await new WindowsGameInstallStrategy(fileSystem, runner).InstallAsync(installer, TargetDirectory, cancellationToken: CancellationToken.None);
 
         var request = runner.Requests.ShouldHaveSingleItem();
         request.FileName.ShouldBe(installer);
@@ -152,7 +152,7 @@ public sealed class GameInstallStrategyTests
         var runner = new FakeProcessRunner { ExitCode = 5, StandardError = "annulé par l'utilisateur" };
 
         var exception = await Should.ThrowAsync<GameInstallFailedException>(
-            () => new WindowsGameInstallStrategy(new MockFileSystem(), runner).InstallAsync("setup.exe", TargetDirectory, CancellationToken.None));
+            () => new WindowsGameInstallStrategy(new MockFileSystem(), runner).InstallAsync("setup.exe", TargetDirectory, cancellationToken: CancellationToken.None));
 
         exception.Message.ShouldContain("5");
         exception.Message.ShouldContain("annulé par l'utilisateur");

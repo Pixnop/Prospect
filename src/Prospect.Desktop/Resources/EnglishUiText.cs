@@ -208,6 +208,11 @@ internal sealed class EnglishVersionsText : VersionsText
         _ => string.Empty,
     };
 
+    // Le séparateur et le format du pourcentage suivent DownloadDetail, dans les deux langues ;
+    // seul l'espace avant le signe change, parce que le français en met un et pas l'anglais.
+    internal override string InstallDetail(int percent)
+        => $"extracting · {percent.ToString(CultureInfo.InvariantCulture)}%";
+
     internal override string BrokenReason(GameInstallBrokenReason reason) => reason switch
     {
         GameInstallBrokenReason.MissingCompletionMarker => "install cut short, needs reinstalling",

@@ -71,8 +71,11 @@ public sealed class GameInstallService
 
         var archivePath = await _downloads.DownloadAsync(request, downloadProgress, cancellationToken).ConfigureAwait(false);
 
+        // Annonce d'entrée dans la phase, indéterminée : la stratégie prendra le relais avec un
+        // avancement chiffré si elle sait se mesurer (extraction), et restera muette sinon
+        // (installeur Inno silencieux), auquel cas c'est ce rapport-ci qui tient la barre.
         progress?.Report(GameInstallProgress.ForPhase(GameInstallPhase.Installing));
-        await InstallArchiveAsync(version, archivePath, cancellationToken).ConfigureAwait(false);
+        await InstallArchiveAsync(version, archivePath, progress, cancellationToken).ConfigureAwait(false);
         progress?.Report(GameInstallProgress.ForPhase(GameInstallPhase.Completed));
 
         return _repository.Find(version)
@@ -108,14 +111,18 @@ public sealed class GameInstallService
     // Le fichier sentinelle est écrit en dernier, et le dossier est effacé si quoi que ce soit
     // échoue en route : c'est ce qui garantit qu'un dossier de versions/ porteur de la sentinelle
     // est toujours une installation complète.
-    private async Task InstallArchiveAsync(GameVersion version, string archivePath, CancellationToken cancellationToken)
+    private async Task InstallArchiveAsync(
+        GameVersion version,
+        string archivePath,
+        IProgress<GameInstallProgress>? progress,
+        CancellationToken cancellationToken)
     {
         _repository.PrepareDirectory(version);
 
         var completed = false;
         try
         {
-            await _strategy.InstallAsync(archivePath, _repository.GetVersionDirectory(version), cancellationToken).ConfigureAwait(false);
+            await _strategy.InstallAsync(archivePath, _repository.GetVersionDirectory(version), progress, cancellationToken).ConfigureAwait(false);
             await _repository.MarkCompleteAsync(version, cancellationToken).ConfigureAwait(false);
             completed = true;
         }

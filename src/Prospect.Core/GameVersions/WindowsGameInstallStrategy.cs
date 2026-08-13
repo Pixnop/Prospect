@@ -45,7 +45,18 @@ public sealed class WindowsGameInstallStrategy : IGameInstallStrategy
     public IReadOnlyList<string> PlatformKeys { get; } = [GamePlatforms.Windows];
 
     /// <inheritdoc />
-    public async Task InstallAsync(string archivePath, string targetDirectory, CancellationToken cancellationToken = default)
+    /// <remarks>
+    /// <paramref name="progress"/> n'est jamais alimenté ici, et c'est un fait de l'installeur, pas
+    /// un oubli : <c>/VERYSILENT</c> ne publie aucun avancement et le processus ne rend la main
+    /// qu'une fois terminé, sans rien écrire d'exploitable entre-temps. La phase reste donc
+    /// indéterminée, ce que l'interface sait afficher — inventer un pourcentage serait pire que ne
+    /// rien annoncer.
+    /// </remarks>
+    public async Task InstallAsync(
+        string archivePath,
+        string targetDirectory,
+        IProgress<GameInstallProgress>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         _fileSystem.Directory.CreateDirectory(targetDirectory);
 

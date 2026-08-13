@@ -199,6 +199,13 @@ internal abstract class VersionsText
 
     internal abstract string PhaseLabel(GameInstallPhase phase);
 
+    /// <summary>
+    /// Détail de la phase d'installation, quand la stratégie sait se mesurer : elle nomme le
+    /// travail en cours (extraction de l'archive), là où le seul mot « Installation » ne disait pas
+    /// si quelque chose avançait encore.
+    /// </summary>
+    internal abstract string InstallDetail(int percent);
+
     internal abstract string BrokenReason(GameInstallBrokenReason reason);
 
     internal abstract string UninstallTitle(string version);

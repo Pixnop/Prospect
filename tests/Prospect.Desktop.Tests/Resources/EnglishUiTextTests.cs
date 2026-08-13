@@ -372,4 +372,18 @@ public sealed class EnglishUiTextTests
             .ShouldBe(french.Versions.DownloadDetail("230.1 MB / 590.5 MB", "4.2 MB/s"));
         English.Mods.BulkUpdateProgress(1, 4, "configlib").ShouldBe(french.Mods.BulkUpdateProgress(1, 4, "configlib"));
     }
+
+    /// <summary>
+    /// Le détail de la phase d'installation porte un mot, donc il se traduit — et le pourcentage
+    /// suit la convention typographique de chaque langue : le français met une espace avant le
+    /// signe, l'anglais non. C'est exactement le genre d'écart qu'on rate en traduisant.
+    /// </summary>
+    [Fact]
+    public void Versions_InstallDetail_FollowsEachLanguagePercentConvention()
+    {
+        var french = UiText.TableFor(ProspectSettings.French);
+
+        English.Versions.InstallDetail(42).ShouldBe("extracting · 42%");
+        french.Versions.InstallDetail(42).ShouldBe("extraction · 42 %");
+    }
 }

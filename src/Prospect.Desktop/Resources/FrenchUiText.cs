@@ -206,6 +206,9 @@ internal sealed class FrenchVersionsText : VersionsText
         _ => string.Empty,
     };
 
+    internal override string InstallDetail(int percent)
+        => $"extraction · {percent.ToString(CultureInfo.InvariantCulture)} %";
+
     internal override string BrokenReason(GameInstallBrokenReason reason) => reason switch
     {
         GameInstallBrokenReason.MissingCompletionMarker => "installation interrompue, à réinstaller",

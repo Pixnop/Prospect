@@ -246,11 +246,7 @@ public sealed partial class ImportModpackViewModel : ObservableObject, IProgress
 
         IsProgressIndeterminate = progress.Ratio is null;
         ProgressPercent = (progress.Ratio ?? 0d) * 100d;
-        ProgressDetailText = progress.Phase == GameInstallPhase.Downloading
-            ? UiText.Versions.DownloadDetail(
-                ByteSizeFormatter.FormatProgress(progress.ReceivedBytes, progress.TotalBytes),
-                ByteSizeFormatter.FormatSpeed(progress.BytesPerSecond))
-            : string.Empty;
+        ProgressDetailText = GameInstallProgressPresenter.DetailText(progress);
     }
 
     // Positifs d'abord (voix produit : mener par ce qui a marché), puis les catégories d'échec dans

@@ -148,10 +148,6 @@ public sealed partial class GameVersionRowViewModel : ObservableObject, IProgres
         PhaseText = UiText.Versions.PhaseLabel(progress.Phase);
         IsIndeterminate = progress.Ratio is null;
         ProgressPercent = (progress.Ratio ?? 0d) * 100d;
-        PhaseDetailText = progress.Phase == GameInstallPhase.Downloading
-            ? UiText.Versions.DownloadDetail(
-                ByteSizeFormatter.FormatProgress(progress.ReceivedBytes, progress.TotalBytes),
-                ByteSizeFormatter.FormatSpeed(progress.BytesPerSecond))
-            : string.Empty;
+        PhaseDetailText = GameInstallProgressPresenter.DetailText(progress);
     }
 }
