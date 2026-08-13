@@ -11,6 +11,7 @@ using Prospect.Desktop.ViewModels.Logs;
 using Prospect.Desktop.ViewModels.Mods;
 using Prospect.Desktop.ViewModels.Settings;
 using Prospect.Desktop.ViewModels.Versions;
+using Prospect.Desktop.Windowing;
 
 namespace Prospect.Desktop.ViewModels.Shell;
 
@@ -60,7 +61,7 @@ public sealed partial class ShellViewModel : ObservableObject
         Overlay = overlay;
         Toasts = toasts;
         Backdrop = backdrop;
-        UseCustomTitlebar = ResolveUseCustomTitlebar(appEnvironment.CurrentOperatingSystem);
+        WindowChrome = WindowChromeSettings.For(appEnvironment.CurrentOperatingSystem);
         Home.InstanceOpenRequested += (_, slug) => ShowInstanceDetail(slug);
         Settings.FirstRun.NavigateToVersionsRequested += (_, _) => ShowVersions();
         Settings.FirstRun.NavigateToAccountSettingsRequested += (_, _) => ShowAccountSettings();
@@ -135,12 +136,22 @@ public sealed partial class ShellViewModel : ObservableObject
     public NavItemViewModel SettingsNavItem { get; }
 
     /// <summary>
-    /// Unique point de bascule vers les décorations natives (docs/architecture.md) : vrai sur les
-    /// trois OS aujourd'hui. La fenêtre applicative l'applique à ses propres propriétés de
-    /// décoration et masque sa <c>TitlebarView</c> quand il est faux ; à rebasculer ici pour Linux
-    /// si Wayland pose un problème réel, sans toucher au reste du shell.
+    /// Décorations de fenêtre du système courant, décidées une fois par
+    /// <see cref="WindowChromeSettings.For"/>. La fenêtre applicative les applique telles quelles,
+    /// et le shell en tire ce qui le concerne : la visibilité de sa <c>TitlebarView</c> et
+    /// l'affichage de ses poignées de redimensionnement.
     /// </summary>
-    public bool UseCustomTitlebar { get; }
+    public WindowChromeSettings WindowChrome { get; }
+
+    /// <summary>Vrai quand notre <c>TitlebarView</c> est visible plutôt que la barre du système.</summary>
+    public bool UseCustomTitlebar => WindowChrome.UseCustomTitlebar;
+
+    /// <summary>
+    /// Vrai quand la fenêtre doit poser ses propres poignées de bord : Linux uniquement, où la
+    /// décoration serveur est retirée (voir <see cref="WindowChromeSettings"/>) et où plus rien
+    /// n'offrirait le redimensionnement autrement.
+    /// </summary>
+    public bool ShowsResizeGrips => WindowChrome.NeedsCustomResizeGrips;
 
     [ObservableProperty]
     private object _currentPage;
@@ -302,17 +313,4 @@ public sealed partial class ShellViewModel : ObservableObject
         }
     }
 
-    // Table plutôt qu'un switch/if : les trois OS valent aujourd'hui vrai (voir la docstring
-    // d'UseCustomTitlebar), et une table de correspondance par OS rend ça lisible comme un
-    // réglage plutôt que comme une branche conditionnelle qui semble avoir oublié de différencier
-    // ses cas.
-    private static readonly IReadOnlyDictionary<AppOperatingSystem, bool> CustomTitlebarByOperatingSystem = new Dictionary<AppOperatingSystem, bool>
-    {
-        [AppOperatingSystem.Windows] = true,
-        [AppOperatingSystem.MacOs] = true,
-        [AppOperatingSystem.Linux] = true, // à rebasculer sur false si Wayland pose problème, voir docs/architecture.md
-    };
-
-    private static bool ResolveUseCustomTitlebar(AppOperatingSystem operatingSystem)
-        => CustomTitlebarByOperatingSystem.GetValueOrDefault(operatingSystem, true);
 }

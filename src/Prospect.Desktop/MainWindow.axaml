@@ -75,6 +75,41 @@
                layout:LayoutContract.AllowsOverlap="True" />
 
     <shell:ShellView />
+
+    <!--
+      Poignées de redimensionnement, LINUX uniquement (voir Windowing/WindowChromeSettings.cs).
+      Sans décoration serveur, le gestionnaire de fenêtres n'a plus de bord à attraper : ces huit
+      zones le rendent, chacune nommant son bord dans son Tag, que le code-behind traduit en
+      WindowEdge pour Window.BeginResizeDrag.
+
+      Six points de large : assez pour se viser au doigt, assez peu pour ne rien voler. La gouttière
+      posée sur tous les ScrollViewer (Styles/Controls/ScrollViewer.axaml) est plus large que cette
+      bande, donc la poignée de défilement reste attrapable — c'est exactement le vol qui avait été
+      corrigé côté Windows, et il n'est pas rejoué ici.
+
+      Le centre de la grille est vide : sans fond, il ne capte aucun pointeur, et tout le shell
+      reste cliquable au travers.
+    -->
+    <Grid x:Name="ResizeGrips" IsVisible="{Binding ShowsResizeGrips}"
+          RowDefinitions="6,*,6" ColumnDefinitions="6,*,6"
+          layout:LayoutContract.AllowsOverlap="True">
+      <Border Grid.Row="0" Grid.Column="0" Background="Transparent" Cursor="TopLeftCorner"
+              Tag="NorthWest" PointerPressed="OnResizeGripPressed" />
+      <Border Grid.Row="0" Grid.Column="1" Background="Transparent" Cursor="TopSide"
+              Tag="North" PointerPressed="OnResizeGripPressed" />
+      <Border Grid.Row="0" Grid.Column="2" Background="Transparent" Cursor="TopRightCorner"
+              Tag="NorthEast" PointerPressed="OnResizeGripPressed" />
+      <Border Grid.Row="1" Grid.Column="0" Background="Transparent" Cursor="LeftSide"
+              Tag="West" PointerPressed="OnResizeGripPressed" />
+      <Border Grid.Row="1" Grid.Column="2" Background="Transparent" Cursor="RightSide"
+              Tag="East" PointerPressed="OnResizeGripPressed" />
+      <Border Grid.Row="2" Grid.Column="0" Background="Transparent" Cursor="BottomLeftCorner"
+              Tag="SouthWest" PointerPressed="OnResizeGripPressed" />
+      <Border Grid.Row="2" Grid.Column="1" Background="Transparent" Cursor="BottomSide"
+              Tag="South" PointerPressed="OnResizeGripPressed" />
+      <Border Grid.Row="2" Grid.Column="2" Background="Transparent" Cursor="BottomRightCorner"
+              Tag="SouthEast" PointerPressed="OnResizeGripPressed" />
+    </Grid>
   </Panel>
 
 </Window>
