@@ -75,10 +75,12 @@
                   <TextBlock Text="{StaticResource Settings_LanguageLabel}" FontSize="{StaticResource FsBodySm}"
                              FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text1}" />
                   <ComboBox Width="200" HorizontalAlignment="Left" IsEnabled="{Binding IsLanguageEditable}"
-                            SelectedIndex="0">
-                    <ComboBoxItem Content="{Binding SelectedLanguageLabel}" />
+                            SelectedIndex="{Binding SelectedLanguageIndex, Mode=TwoWay}">
+                    <ComboBoxItem Content="{StaticResource Settings_LanguageFrench}" />
+                    <ComboBoxItem Content="{StaticResource Settings_LanguageEnglish}" />
                   </ComboBox>
-                  <TextBlock Text="{StaticResource Settings_LanguageLockedHint}" FontSize="{StaticResource FsMicro}"
+                  <TextBlock Text="{StaticResource Settings_LanguageRestartHint}" FontSize="{StaticResource FsMicro}"
+                             TextWrapping="Wrap" MaxWidth="420"
                              Foreground="{DynamicResource Text4}" />
                 </StackPanel>
               </StackPanel>

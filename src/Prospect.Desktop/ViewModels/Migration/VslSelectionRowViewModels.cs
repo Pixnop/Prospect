@@ -19,7 +19,7 @@ public sealed partial class VslInstallationSelectionRowViewModel : ObservableObj
 
         Source = source;
         Name = string.IsNullOrWhiteSpace(source.Name) ? source.Id : source.Name;
-        VersionText = string.IsNullOrWhiteSpace(source.Version) ? "version inconnue" : source.Version;
+        VersionText = string.IsNullOrWhiteSpace(source.Version) ? UiText.Mods.UnknownVersion : source.Version;
         SizeText = sizeText;
         ModCountText = UiText.Migration.ModCount(modCount);
         _isSelected = isSelected;

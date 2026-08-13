@@ -109,6 +109,11 @@ Les erreurs attendues du domaine sont des exceptions typées du projet (jamais
 d'`Exception` nue), et les cas « absence normale » (fichier pas encore créé) sont des
 retours nullables, pas des exceptions.
 
+Une seule exception à « jamais d'état statique muable » est admise, et elle est nommée ici
+pour qu'elle reste unique : `Prospect.Desktop.Resources.UiText`, la table de textes de la
+langue choisie, fixée une fois au démarrage avec une garde qui refuse toute deuxième
+fixation (voir « Langue de l'interface »).
+
 ## Solution et arborescence
 
 ```
@@ -247,9 +252,10 @@ dégrade l'expérience (on retombe sur la correspondance par modid), il ne casse
 
 ### prospect.json (réglages globaux, v1 minimale)
 
-Langue de l'UI, chemin racine si déplacé, préférences de téléchargement (parallélisme),
-et la référence de session du compte vintagestory.at (jamais le mot de passe, voir plus
-bas). Tout le reste attendra d'exister.
+Langue de l'UI (`fr` ou `en`, voir « Langue de l'interface » plus bas), chemin racine si
+déplacé, préférences de téléchargement (parallélisme), et la référence de session du
+compte vintagestory.at (jamais le mot de passe, voir plus bas). Tout le reste attendra
+d'exister.
 
 ### Manifest de modpack (prospect-pack.json, v1)
 
@@ -543,9 +549,66 @@ d'entrées mémorisées, et ne libère jamais un bitmap déjà distribué — un
 pointant vers un `Bitmap` libéré fait lever une `NullReferenceException` dans la passe de
 mise en page suivante.
 
+### Langue de l'interface
+
+Prospect parle français et anglais. Le choix vit dans `prospect.json` (`language`, valeurs
+`fr` et `en`), se règle dans Réglages > Général, et s'applique AU DÉMARRAGE. Pas de
+bascule à chaud : c'est une décision, pas une limite temporaire, et l'écran de réglages
+l'annonce sous le sélecteur (« le changement prend effet au redémarrage de Prospect »).
+La raison est le rapport entre le coût et l'usage. Retraduire une fenêtre ouverte
+demanderait que chaque texte XAML devienne une ressource dynamique et que chaque texte
+calculé par un ViewModel soit renotifié, pour un réglage qu'on change une fois dans la vie
+d'une installation.
+
+Le texte de l'interface a deux moitiés, et chacune a son mécanisme.
+
+Les textes STATIQUES vivent dans deux dictionnaires de ressources aux jeux de clés
+strictement identiques, `Resources/Strings.fr.axaml` et `Resources/Strings.en.axaml`. Les
+vues continuent de les consommer en `{StaticResource Xyz}` sans rien savoir de la langue.
+`App.Initialize` fusionne le français comme valeur de démarrage sûre, exactement comme il
+pose la variante de thème sombre avant d'avoir lu le réglage, puis
+`LanguageService.ApplyStartupLanguage` le remplace par l'anglais si c'est ce que dit le
+réglage. Cela se passe après `SettingsService.LoadAsync` et avant la construction de la
+première fenêtre, ce qui est la seule fenêtre de tir possible : un `{StaticResource}` se
+résout à la construction du contrôle et ne se relit jamais. L'égalité des deux jeux de
+clés est vérifiée par un test de parité qui charge les deux dictionnaires et nomme toute
+clé manquante d'un côté, parce qu'une clé oubliée ne se voit pas à la compilation.
+
+Les textes CALCULÉS par du C# (confirmations qui nomment une instance, pluriels,
+décomptes, énumérations) vivent dans `Resources/UiText.cs`, façade statique au-dessus
+d'une table par langue. `UiTextTable` est abstraite et chaque langue en est une
+implémentation scellée : la parité de ces textes-là est donc une erreur de compilation, et
+non un test. Les quelques formats sans le moindre mot (« nom · version », une date ISO)
+sont concrets sur la classe de base pour qu'ils ne puissent pas diverger. Ce qui se
+traduit s'arrête aux phrases : les noms propres (Prospect, Vintage Story, ModDB), les
+chemins, les versions et les empreintes restent tels quels. Ce qui change en revanche avec
+la langue et qu'on rate facilement : le séparateur de milliers (1 234 contre 1,234), les
+guillemets (« » contre “ ”), et l'ordre des dates absolues.
+
+`UiText` est la seule entorse du projet à la règle « jamais d'état statique muable ». Elle
+est assumée et gardée : la langue s'y fixe UNE FOIS (`UiText.Fix`), une seconde fixation
+lève, et le harnais de test épingle le français pour tout l'assembly. L'alternative,
+injecter la table dans la trentaine de ViewModels qui écrivent du texte, ajouterait une
+dépendance de constructeur partout pour une valeur que personne ne peut changer.
+
+La langue par défaut d'une installation neuve se déduit de la culture d'interface du
+système : français si elle commence par `fr`, anglais sinon. La culture passe par un port
+injectable (`IUiCulture`, à côté d'`IClock`, plutôt qu'un membre de plus sur
+`IAppEnvironment` dont le contrat est l'emplacement des données), donc la détection se
+teste sans dépendre de la machine qui exécute la suite. Elle ne joue qu'à la CRÉATION des
+réglages, c'est-à-dire quand aucun `prospect.json` n'existe : dès qu'un fichier est là,
+c'est lui qui décide, et rien n'est écrit sur disque pour autant. Persister une déduction
+la transformerait en décision que l'utilisateur n'a pas prise.
+
+Enfin, le piège habituel de `System.Text.Json` s'applique ici comme ailleurs : une valeur
+de langue inconnue, absente ou mal casée dans le JSON retombe sur le français, et c'est
+`ProspectSettings.Normalized()` qui le garantit, jamais l'initialiseur de la propriété
+`init` (il n'est pas rejoué quand le champ manque). Toute évolution de forme des réglages
+passe par `Normalized()`.
+
 Les règles restent : aucun code-behind au-delà d'`InitializeComponent`, ViewModels
-constructibles sans UI (testables en headless), textes en français centralisés dans un
-dictionnaire de ressources. La voix du produit est spécifiée dans le readme du design :
+constructibles sans UI (testables en headless), textes centralisés dans les dictionnaires
+de ressources par langue et dans `UiText`. La voix du produit est spécifiée dans le readme du design :
 tutoiement, casse de phrase, boutons à l'infinitif, valeurs machine en monospace,
 jamais d'emoji. Deux dérogations documentées à la première règle : `TitlebarView`
 (primitives natives de `Window`) et `ModBrowserView` (position de défilement, un fait de

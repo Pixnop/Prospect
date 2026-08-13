@@ -17,6 +17,10 @@ public sealed class ViewLocator : IDataTemplate
 {
     private const string ViewModelNamespacePrefix = "Prospect.Desktop.ViewModels";
 
+    // Les deux textes de secours ci-dessous ne passent volontairement pas par Resources/UiText.cs,
+    // seul endroit du Desktop qui échappe à la traduction : ce ne sont pas des messages produit mais
+    // des diagnostics de câblage, qui nomment un type .NET et n'apparaissent que si une vue manque à
+    // la compilation. Les traduire donnerait à UiText deux entrées qu'aucun joueur ne lira jamais.
     public Control Build(object? param)
     {
         if (param is null)

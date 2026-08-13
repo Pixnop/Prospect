@@ -1,8 +1,10 @@
 using System.IO.Abstractions.TestingHelpers;
 
+using Prospect.Core.Common;
 using Prospect.Core.Settings;
 using Prospect.Core.Settings.Migrations;
 using Prospect.Core.Storage;
+using Prospect.Core.Tests.Common;
 
 using Shouldly;
 
@@ -18,8 +20,20 @@ public class SettingsServiceTests
 {
     private static readonly AppPaths Paths = new(new SystemAppEnvironment(), "/data/prospect");
 
-    private static SettingsService Create(MockFileSystem fileSystem, IEnumerable<ISettingsMigration>? migrations = null)
-        => new(fileSystem, Paths, new JsonFileStore(fileSystem), new SettingsMigrationPipeline(migrations ?? []));
+    // La culture est épinglée sur le français par défaut, indépendamment de la machine qui exécute
+    // la suite : sans cela, chaque test « fichier absent » lirait la langue de l'OS (la CI tourne
+    // en en-US) et les assertions sur les valeurs par défaut deviendraient dépendantes du poste.
+    // Les tests qui portent SUR la détection passent explicitement une autre culture.
+    private static SettingsService Create(
+        MockFileSystem fileSystem,
+        IEnumerable<ISettingsMigration>? migrations = null,
+        IUiCulture? uiCulture = null)
+        => new(
+            fileSystem,
+            Paths,
+            new JsonFileStore(fileSystem),
+            new SettingsMigrationPipeline(migrations ?? []),
+            uiCulture ?? FakeUiCulture.French);
 
     [Fact]
     public void Constructor_NullArguments_ThrowArgumentNullException()
@@ -27,11 +41,13 @@ public class SettingsServiceTests
         var fileSystem = new MockFileSystem();
         var store = new JsonFileStore(fileSystem);
         var pipeline = new SettingsMigrationPipeline([]);
+        var culture = FakeUiCulture.French;
 
-        Should.Throw<ArgumentNullException>(() => new SettingsService(null!, Paths, store, pipeline));
-        Should.Throw<ArgumentNullException>(() => new SettingsService(fileSystem, null!, store, pipeline));
-        Should.Throw<ArgumentNullException>(() => new SettingsService(fileSystem, Paths, null!, pipeline));
-        Should.Throw<ArgumentNullException>(() => new SettingsService(fileSystem, Paths, store, null!));
+        Should.Throw<ArgumentNullException>(() => new SettingsService(null!, Paths, store, pipeline, culture));
+        Should.Throw<ArgumentNullException>(() => new SettingsService(fileSystem, null!, store, pipeline, culture));
+        Should.Throw<ArgumentNullException>(() => new SettingsService(fileSystem, Paths, null!, pipeline, culture));
+        Should.Throw<ArgumentNullException>(() => new SettingsService(fileSystem, Paths, store, null!, culture));
+        Should.Throw<ArgumentNullException>(() => new SettingsService(fileSystem, Paths, store, pipeline, null!));
     }
 
     [Fact]
@@ -178,6 +194,98 @@ public class SettingsServiceTests
         await service.LoadAsync();
 
         service.Current.HasSeenFirstRun.ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData("fr-FR", ProspectSettings.French)]
+    [InlineData("fr", ProspectSettings.French)]
+    [InlineData("fr-CA", ProspectSettings.French)]
+    [InlineData("en-US", ProspectSettings.English)]
+    [InlineData("de-DE", ProspectSettings.English)]
+    [InlineData("", ProspectSettings.English)]
+    public async Task LoadAsync_FileDoesNotExist_TakesTheDefaultLanguageFromTheSystemCulture(string cultureName, string expectedLanguage)
+    {
+        // Premier lancement : rien sur disque, donc la seule information disponible sur la langue
+        // attendue est la culture d'interface du système.
+        var service = Create(new MockFileSystem(), uiCulture: new FakeUiCulture(cultureName));
+
+        await service.LoadAsync();
+
+        service.Current.Language.ShouldBe(expectedLanguage);
+    }
+
+    [Fact]
+    public async Task LoadAsync_FileDoesNotExist_WritesNothingToDisk()
+    {
+        // Une déduction n'est pas une décision : tant que l'utilisateur n'a rien réglé, aucun
+        // prospect.json n'apparaît (voir la remarque de LoadAsync).
+        var fileSystem = new MockFileSystem();
+        var service = Create(fileSystem, uiCulture: new FakeUiCulture("en-US"));
+
+        await service.LoadAsync();
+
+        fileSystem.File.Exists(Paths.SettingsFilePath).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task LoadAsync_ExistingFile_IsNeverOverriddenByCultureDetection()
+    {
+        // Le point qui compte pour un utilisateur français sur une machine anglaise (ou l'inverse) :
+        // un choix déjà persisté gagne toujours contre la culture de l'OS.
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddFile(Paths.SettingsFilePath, new MockFileData("""
+        { "schemaVersion": 1, "theme": "Dark", "language": "fr" }
+        """));
+        var service = Create(fileSystem, uiCulture: new FakeUiCulture("en-US"));
+
+        await service.LoadAsync();
+
+        service.Current.Language.ShouldBe(ProspectSettings.French);
+    }
+
+    [Fact]
+    public async Task LoadAsync_ExistingFileWithoutLanguageField_FallsBackToFrenchNotToTheCulture()
+    {
+        // Fichier écrit à la main, champ language absent : le repli documenté de Normalized()
+        // s'applique, pas la détection — ce fichier EXISTE, donc il décide.
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddFile(Paths.SettingsFilePath, new MockFileData("""
+        { "schemaVersion": 1, "theme": "Dark" }
+        """));
+        var service = Create(fileSystem, uiCulture: new FakeUiCulture("en-US"));
+
+        await service.LoadAsync();
+
+        service.Current.Language.ShouldBe(ProspectSettings.French);
+    }
+
+    [Fact]
+    public async Task LoadAsync_ThenUpdateAsync_ThenFreshServiceLoadAsync_RoundTripsEnglish()
+    {
+        var fileSystem = new MockFileSystem();
+        var writer = Create(fileSystem);
+        await writer.LoadAsync();
+
+        await writer.UpdateAsync(current => current with { Language = ProspectSettings.English });
+
+        var reader = Create(fileSystem);
+        await reader.LoadAsync();
+
+        reader.Current.Language.ShouldBe(ProspectSettings.English);
+    }
+
+    [Fact]
+    public async Task LoadAsync_UnknownLanguageInTheFile_FallsBackToFrenchWithoutThrowing()
+    {
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddFile(Paths.SettingsFilePath, new MockFileData("""
+        { "schemaVersion": 1, "theme": "Dark", "language": "kl" }
+        """));
+        var service = Create(fileSystem);
+
+        await service.LoadAsync();
+
+        service.Current.Language.ShouldBe(ProspectSettings.French);
     }
 
     [Fact]

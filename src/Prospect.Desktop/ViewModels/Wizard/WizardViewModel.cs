@@ -30,15 +30,16 @@ public sealed partial class WizardViewModel : ObservableObject, IProgress<GameIn
     /// <summary>
     /// Icônes proposées à l'étape 3 : aucune icône d'instance n'est fournie par le handoff design
     /// (voir design/readme.md, ICONOGRAPHY), donc un sous-ensemble curé du jeu de glyphes existant
-    /// en attendant la personnalisation par fichier, prévue plus tard.
+    /// en attendant la personnalisation par fichier, prévue plus tard. Le libellé n'est PAS dans ce
+    /// tableau : c'est du texte traduit, donc <see cref="UiText.Wizard"/> le rend par clé.
     /// </summary>
-    private static readonly (string Key, string IconKey, string Label)[] IconCatalog =
+    private static readonly (string Key, string IconKey)[] IconCatalog =
     [
-        ("default", "layers", "Par défaut"),
-        ("package", "package", "Caisse"),
-        ("star", "star", "Étoile"),
-        ("hard-drive", "hard-drive", "Disque"),
-        ("image", "image", "Image"),
+        ("default", "layers"),
+        ("package", "package"),
+        ("star", "star"),
+        ("hard-drive", "hard-drive"),
+        ("image", "image"),
     ];
 
     private readonly InstanceService _instanceService;
@@ -441,7 +442,12 @@ public sealed partial class WizardViewModel : ObservableObject, IProgress<GameIn
 
     private void RecomputeIconChoices()
         => IconChoices = IconCatalog
-            .Select(icon => new IconChoiceOption(icon.Key, icon.IconKey, icon.Label, icon.Key == SelectedIconKey, SelectIcon))
+            .Select(icon => new IconChoiceOption(
+                icon.Key,
+                icon.IconKey,
+                UiText.Wizard.IconLabel(icon.Key),
+                icon.Key == SelectedIconKey,
+                SelectIcon))
             .ToArray();
 
     private void SelectIcon(string key) => SelectedIconKey = key;

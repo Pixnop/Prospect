@@ -61,7 +61,7 @@ public sealed class SettingsViewModelTests
         var gameVersions = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
         var adoptionService = new VslAdoptionService(instanceService, instanceRepository, gameVersions, store, fileSystem, clock);
         var detector = new VslDetector(fileSystem, environment);
-        var settings = new SettingsService(fileSystem, Paths, store, new SettingsMigrationPipeline([]));
+        var settings = new SettingsService(fileSystem, Paths, store, new SettingsMigrationPipeline([]), new FakeUiCulture());
         var urlOpener = new FakeExternalUrlOpener();
 
         var overlay = new RecordingOverlayService();
