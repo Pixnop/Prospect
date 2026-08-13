@@ -62,5 +62,8 @@
         <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/Tabs.axaml" />
         <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/Alert.axaml" />
         <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/RichText.axaml" />
+        <!-- Après le ControlTheme de ScrollBar (Application.Resources) : un Style l'emporte sur
+             un setter de thème, c'est ce qui permet à la gouttière de s'y ajouter. -->
+        <StyleInclude Source="avares://Prospect.Desktop/Styles/Controls/ScrollViewer.axaml" />
     </Application.Styles>
 </Application>

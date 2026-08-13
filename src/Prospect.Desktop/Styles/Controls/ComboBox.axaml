@@ -138,7 +138,10 @@
                       CornerRadius="{StaticResource RadiusSm}"
                       BoxShadow="{DynamicResource GlassElevMenu}"
                       Padding="4">
-                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <!-- `flush` : la liste déroulante flotte au-dessus de la fenêtre et ne touche
+                     jamais son bord, donc la gouttière anti-redimensionnement des ScrollViewer
+                     de page (Styles/Controls/ScrollViewer.axaml) n'a rien à y faire. -->
+                <ScrollViewer Classes="flush" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                   <ItemsPresenter Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}" />
                 </ScrollViewer>
               </Border>

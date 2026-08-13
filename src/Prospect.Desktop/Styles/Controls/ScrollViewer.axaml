@@ -1,0 +1,47 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Gouttière des barres de défilement : quelques points entre la piste et le bord de son
+    ScrollViewer, pour que la poignée reste attrapable.
+
+    Le défaut corrigé n'était pas visuel. Notre fenêtre étend sa zone client sous les
+    décorations (ExtendClientAreaToDecorationsHint, voir MainWindow.axaml.cs), et Windows
+    continue alors de traiter les derniers points INTÉRIEURS de la fenêtre comme la poignée
+    de redimensionnement du cadre : viser une barre collée au bord droit attrapait le bord
+    avant le pouce. La bande fait 8 points (SM_CXSIZEFRAME + SM_CXPADDEDBORDER), et le
+    backend Win32 d'Avalonia 11.3.20 la dérive d'AdjustWindowRectEx sans rien exposer pour la
+    réduire — ExtendClientAreaChromeHints ne décrit que le chrome DESSINÉ, WindowDecorationMargin
+    et OffScreenMargin sont en lecture seule, et Avalonia.Controls.ICustomHitTest, le seul
+    crochet de test de survol non client du framework, n'est référencée par aucun backend
+    (chaîne absente d'Avalonia.Win32, Avalonia.X11 et Avalonia.Native en 11.3.20).
+
+    D'où le choix inverse et portable : ce n'est pas la fenêtre qui rend du terrain, c'est la
+    barre qui s'écarte. Rien ici ne dépend de Windows, et la règle est posée UNE fois pour
+    tous les ScrollViewer plutôt que vue par vue.
+
+    Rien n'est retiré à la zone lisible : dans le gabarit Fluent, le ScrollContentPresenter
+    occupe toute la grille et les barres flottent au-dessus. La marge les déplace, le contenu
+    continue de défiler dessous.
+
+    La classe `flush` annule la gouttière pour les surfaces qui ne touchent jamais le bord de
+    la fenêtre — la liste déroulante d'un ComboBox, par exemple, où douze points de vide
+    n'achèteraient rien.
+  -->
+
+  <Style Selector="ScrollViewer /template/ ScrollBar:vertical">
+    <!-- Valeur littérale de ScrollbarGutter (Styles/Tokens/Spacing.axaml) : Avalonia ne sait
+         pas composer un seul axe d'un Thickness à partir d'une ressource. Un test vérifie que
+         les deux ne divergent pas. -->
+    <Setter Property="Margin" Value="0,0,12,0" />
+  </Style>
+
+  <Style Selector="ScrollViewer /template/ ScrollBar:horizontal">
+    <Setter Property="Margin" Value="0,0,0,12" />
+  </Style>
+
+  <Style Selector="ScrollViewer.flush /template/ ScrollBar">
+    <Setter Property="Margin" Value="0" />
+  </Style>
+
+</Styles>

@@ -48,4 +48,26 @@
   <x:Double x:Key="CardPad">16</x:Double>
   <x:Double x:Key="Gutter">20</x:Double>
 
+  <!--
+    Épaisseur de la barre de défilement, et gouttière qui la sépare du bord de la fenêtre.
+
+    La gouttière n'est pas une coquetterie : sur une fenêtre à zone client étendue
+    (ExtendClientAreaToDecorationsHint, notre cas sur Windows), Windows continue de traiter
+    les derniers points INTÉRIEURS de la fenêtre comme la poignée de redimensionnement du
+    cadre. Le backend Win32 d'Avalonia 11.3.20 dérive cette bande d'AdjustWindowRectEx
+    (SM_CXSIZEFRAME + SM_CXPADDEDBORDER, soit 8 points quel que soit le facteur d'échelle) et
+    n'expose AUCUNE propriété pour la réduire : ExtendClientAreaChromeHints ne parle que du
+    chrome dessiné, WindowDecorationMargin et OffScreenMargin sont en lecture seule, et
+    l'interface Avalonia.Controls.ICustomHitTest — le seul crochet de test de survol non
+    client du framework — n'est référencée par aucun des trois backends (vérifié sur les
+    assemblages 11.3.20 : la chaîne n'apparaît ni dans Avalonia.Win32, ni dans Avalonia.X11,
+    ni dans Avalonia.Native). Une barre collée au bord se faisait donc voler sa poignée par
+    le cadre : on attrapait le redimensionnement au lieu du pouce.
+
+    12 points laissent 4 points de marge au-dessus des 8 de la bande système, et le résultat
+    est portable : rien ici ne dépend de Windows, la barre respire simplement partout.
+  -->
+  <x:Double x:Key="ScrollbarW">10</x:Double>
+  <x:Double x:Key="ScrollbarGutter">12</x:Double>
+
 </ResourceDictionary>
