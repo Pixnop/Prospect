@@ -338,7 +338,10 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                 _overlay.Close();
                 SelectTab(InstanceDetailTab.Mods);
 
-                return ModsTab.InstallByIdentifierAsync(modIdString);
+                // CancellationToken.None explicite, et non celui du diagnostic : ce clic arrive
+                // APRÈS que la commande de vérification a rendu la main, donc son jeton ne veut
+                // plus rien dire ici. L'installation a sa propre durée de vie.
+                return ModsTab.InstallByIdentifierAsync(modIdString, CancellationToken.None);
             },
             _overlay));
     }
