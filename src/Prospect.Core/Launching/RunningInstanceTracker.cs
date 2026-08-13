@@ -143,6 +143,25 @@ public sealed class RunningInstanceTracker
         }
     }
 
+    /// <summary>
+    /// Oublie tout ce qui est retenu pour ce slug. Appelé quand l'instance disparaît : sans ça,
+    /// l'entrée survit à la suppression, et une instance recréée du même nom hérite de l'état de
+    /// l'ancienne — au mieux un bouton « Arrêter » branché sur un processus mort, au pire un refus
+    /// de lancement pour cause d'instance « déjà en cours ».
+    /// </summary>
+    /// <remarks>
+    /// Ne TUE rien : ce n'est pas une demande d'arrêt (voir <see cref="RequestStop"/>), seulement un
+    /// oubli. Le processus éventuellement encore vivant continue sa vie et sa sortie ne sera
+    /// simplement plus observée par personne.
+    /// </remarks>
+    public void Forget(string slug)
+    {
+        lock (_gate)
+        {
+            _tracked.Remove(slug);
+        }
+    }
+
     private async Task ObserveExitAsync(string slug, IRunningProcess process, DateTimeOffset startedUtc)
     {
         var exitCode = await process.WaitForExitAsync().ConfigureAwait(false);
@@ -155,12 +174,27 @@ public sealed class RunningInstanceTracker
         // qui réagit à Stopped (relecture de l'entête de la page de détail, par exemple) peut
         // gagner la course contre cette méthode et observer un playtime pas encore à jour, ou un
         // test attendre Stopped puis vérifier IsDisposed avant que Dispose() ait eu lieu.
-        await _instanceService.AddPlaytimeAsync(slug, elapsedSeconds, CancellationToken.None).ConfigureAwait(false);
+        // L'instance a pu être supprimée pendant que le jeu tournait : il n'y a alors plus rien où
+        // écrire, et surtout il ne faut RIEN écrire — un slug libéré peut déjà appartenir à une
+        // instance neuve, à qui ce temps de jeu n'appartient pas.
+        try
+        {
+            await _instanceService.AddPlaytimeAsync(slug, elapsedSeconds, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (InstanceNotFoundException)
+        {
+            // Rien à cumuler : l'instance n'existe plus.
+        }
+
         process.Dispose();
 
         lock (_gate)
         {
-            _tracked[slug] = new TrackedProcess(process, status);
+            // Même raison : ne rien réintroduire pour un slug qu'on nous a demandé d'oublier.
+            if (_tracked.ContainsKey(slug))
+            {
+                _tracked[slug] = new TrackedProcess(process, status);
+            }
         }
 
         StatusChanged?.Invoke(this, status);

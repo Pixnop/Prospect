@@ -44,20 +44,50 @@ public sealed partial class DeleteInstanceDialogViewModel : ObservableObject
 
     public string Message { get; }
 
+    /// <summary>
+    /// Vrai pendant la suppression. Le dialogue RESTE ouvert et vivant : sur une instance dont les
+    /// mondes pèsent plusieurs gigaoctets, l'effacement prend des dizaines de secondes, et le
+    /// travail est déporté hors du thread d'interface (voir <c>InstanceService.DeleteAsync</c>) donc
+    /// l'interface continue de se dessiner. Autant qu'elle dise ce qu'elle fait.
+    /// </summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ConfirmCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CancelCommand))]
     private bool _isDeleting;
 
-    [RelayCommand]
+    /// <summary>Phrase d'attente affichée à la place des boutons pendant la suppression.</summary>
+    public string ProgressText { get; } = UiText.Dialogs.DeleteInProgress;
+
+    /// <summary>Message d'échec, quand il reste des fichiers sur le disque. Le dialogue reste ouvert.</summary>
+    [ObservableProperty]
+    private string? _errorMessage;
+
+    // Aucune annulation n'est offerte une fois la suppression commencée : une instance à moitié
+    // supprimée est pire que les deux états francs. Le bouton disparaît donc plutôt que de mentir.
+    [RelayCommand(CanExecute = nameof(CanCancel))]
     private void Cancel() => _overlay.Close();
 
     [RelayCommand(CanExecute = nameof(CanConfirm))]
     private async Task ConfirmAsync()
     {
         IsDeleting = true;
+        ErrorMessage = null;
         try
         {
             await _instanceService.DeleteAsync(_slug, CancellationToken.None).ConfigureAwait(true);
+            _overlay.Close();
+            await _requestRefresh().ConfigureAwait(true);
+        }
+        catch (InstanceDeleteFailedException exception)
+        {
+            // Message honnête plutôt que silence : il reste quelque chose, et l'accueil doit quand
+            // même être rafraîchi puisque la suppression a pu emporter une partie du dossier.
+            ErrorMessage = UiText.Dialogs.DeletePartialFailure(exception.Directory);
+            await _requestRefresh().ConfigureAwait(true);
+        }
+        catch (InstanceNotFoundException)
+        {
+            // Déjà supprimée entre-temps : rien à annoncer, on referme comme si c'était fait.
             _overlay.Close();
             await _requestRefresh().ConfigureAwait(true);
         }
@@ -68,4 +98,6 @@ public sealed partial class DeleteInstanceDialogViewModel : ObservableObject
     }
 
     private bool CanConfirm() => !IsDeleting;
+
+    private bool CanCancel() => !IsDeleting;
 }

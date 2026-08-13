@@ -87,6 +87,9 @@ internal abstract class WizardText
 
     internal abstract string SummaryNoVersion { get; }
 
+    /// <summary>Le nom demandé appartient à une instance en cours de suppression.</summary>
+    internal abstract string NameBeingDeleted { get; }
+
     /// <summary>Les quatre étapes, dans l'ordre.</summary>
     internal abstract IReadOnlyList<string> StepLabels { get; }
 
@@ -116,6 +119,12 @@ internal abstract class DialogsText
     internal abstract string DeleteTitle(string instanceName);
 
     internal abstract string DeleteMessage(string instanceName);
+
+    /// <summary>Affiché pendant la suppression, qui prend des dizaines de secondes sur un gros dossier de mondes.</summary>
+    internal abstract string DeleteInProgress { get; }
+
+    /// <summary>La suppression n'est pas allée jusqu'au bout : le dossier restant est nommé.</summary>
+    internal abstract string DeletePartialFailure(string directory);
 
     internal abstract string RestoreBackupTitle(string instanceName);
 

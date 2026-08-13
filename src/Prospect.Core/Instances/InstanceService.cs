@@ -23,6 +23,15 @@ public sealed class InstanceService
     private readonly IFileSystem _fileSystem;
     private readonly IClock _clock;
 
+    /// <summary>
+    /// Slugs dont la suppression est EN VOL. Le dossier existe encore pendant tout ce temps (une
+    /// suppression récursive vide l'arbre avant de retirer la racine), donc rien ne pourrait écrire
+    /// par-dessus ; ce registre sert à ce qu'un slug en cours de suppression ne soit pas non plus
+    /// silencieusement décalé en <c>-2</c> par la création suivante, et à refuser proprement la
+    /// création d'une instance qui reprendrait exactement ce nom.
+    /// </summary>
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _deleting = new(StringComparer.OrdinalIgnoreCase);
+
     public InstanceService(IInstanceRepository repository, IFileSystem fileSystem, IClock clock)
     {
         ArgumentNullException.ThrowIfNull(repository);
@@ -39,11 +48,23 @@ public sealed class InstanceService
     /// <c>data/</c> vide, <c>instance.json</c> au schéma courant avec un identifiant neuf.
     /// </summary>
     /// <exception cref="InstanceNameInvalidException"><paramref name="name"/> est vide ou ne contient que des espaces.</exception>
+    /// <exception cref="InstanceDeletionInProgressException">
+    /// Une instance portant exactement ce nom est en cours de suppression. Refuser est plus honnête
+    /// que de créer <c>homestead-2</c> sans le dire : c'est le nom demandé qui compte pour
+    /// l'utilisateur, et la suppression d'un dossier de plusieurs gigaoctets prend le temps qu'elle
+    /// prend.
+    /// </exception>
     public async Task<InstanceRecord> CreateAsync(string name, GameVersion gameVersion, CancellationToken cancellationToken = default)
     {
         EnsureValidName(name);
 
-        var slug = InstanceSlugGenerator.GenerateUnique(name, _repository.Exists);
+        var requestedSlug = InstanceSlugGenerator.Slugify(name);
+        if (IsDeleting(requestedSlug))
+        {
+            throw new InstanceDeletionInProgressException(requestedSlug);
+        }
+
+        var slug = InstanceSlugGenerator.GenerateUnique(name, candidate => _repository.Exists(candidate) || IsDeleting(candidate));
         var metadata = new InstanceMetadata
         {
             SchemaVersion = InstanceMetadata.CurrentSchemaVersion,
@@ -224,12 +245,39 @@ public sealed class InstanceService
     }
 
     /// <summary>
+    /// Levé une fois qu'une instance a été supprimée, avec son slug. Existe pour que tout ce qui
+    /// garde un état PAR SLUG en mémoire l'oublie au même moment : cache de vérification de mises à
+    /// jour, suivi de processus, journal de lancement. Sans ce signal, supprimer une instance puis
+    /// en recréer une du même nom fait hériter la nouvelle de l'état de l'ancienne.
+    /// </summary>
+    public event EventHandler<string>? Deleted;
+
+    /// <summary>Vrai tant que la suppression de <paramref name="slug"/> n'est pas terminée.</summary>
+    public bool IsDeleting(string slug) => !string.IsNullOrEmpty(slug) && _deleting.ContainsKey(slug);
+
+    /// <summary>
     /// Supprime définitivement une instance (dossier <c>instances/&lt;slug&gt;</c> entier, dont
     /// <c>data/</c>). La double confirmation face à l'utilisateur est la responsabilité de l'UI,
     /// pas de ce service.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// La suppression est déportée sur le pool de threads par un <see cref="Task.Run(Action)"/>
+    /// ASSUMÉ, et c'est la seule exception de ce genre dans le Core. La raison : le monde d'une
+    /// instance pèse des gigaoctets, <c>System.IO.Abstractions</c> n'expose que des opérations
+    /// SYNCHRONES, et un <c>await</c> sur une méthode synchrone ne déporte rien du tout — il rend la
+    /// main après coup, sur un travail déjà fait par l'appelant. Sans ce <c>Task.Run</c>, l'interface
+    /// gèle pendant toute la suppression (une quarantaine de secondes relevées en test réel).
+    /// </para>
+    /// <para>
+    /// Aucune ANNULATION n'est offerte une fois la suppression commencée : une instance à moitié
+    /// supprimée est pire que les deux états francs. Le jeton n'est donc consulté qu'avant de
+    /// commencer.
+    /// </para>
+    /// </remarks>
     /// <exception cref="InstanceNotFoundException">Aucune instance pour <paramref name="slug"/>.</exception>
-    public Task DeleteAsync(string slug, CancellationToken cancellationToken = default)
+    /// <exception cref="InstanceDeleteFailedException">La suppression a échoué, en tout ou en partie.</exception>
+    public async Task DeleteAsync(string slug, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -238,9 +286,36 @@ public sealed class InstanceService
             throw new InstanceNotFoundException(slug);
         }
 
-        _fileSystem.Directory.Delete(_repository.GetInstanceDirectory(slug), recursive: true);
+        var directory = _repository.GetInstanceDirectory(slug);
+        _deleting[slug] = 0;
+        try
+        {
+            await Task.Run(() => DeleteDirectoryTree(slug, directory), CancellationToken.None).ConfigureAwait(false);
+        }
+        finally
+        {
+            _deleting.TryRemove(slug, out _);
+        }
 
-        return Task.CompletedTask;
+        // Publié APRÈS la sortie du registre : un abonné qui recrée aussitôt une instance du même
+        // nom doit trouver le slug réellement libre.
+        Deleted?.Invoke(this, slug);
+    }
+
+    // Le catch est large exprès, et le message reste honnête : un fichier verrouillé par le jeu, un
+    // dossier synchronisé, un antivirus qui tient un zip ouvert produisent des exceptions
+    // différentes selon l'OS, mais le seul fait utile à l'utilisateur est le même — il reste
+    // quelque chose sur le disque.
+    private void DeleteDirectoryTree(string slug, string directory)
+    {
+        try
+        {
+            _fileSystem.Directory.Delete(directory, recursive: true);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw InstanceDeleteFailedException.For(slug, directory, exception);
+        }
     }
 
     private static void EnsureValidName(string name)

@@ -101,6 +101,31 @@ public sealed class GameLauncher
     }
 
     /// <summary>
+    /// Supprime le journal de lancement d'une instance. Appelé à la suppression de l'instance :
+    /// le journal vit sous <c>logs/</c>, DEHORS du dossier de l'instance, donc rien ne l'emportait
+    /// avec elle et une instance recréée du même nom affichait le journal de la précédente, entête
+    /// et nom d'origine compris.
+    /// </summary>
+    /// <remarks>Sans effet si le fichier n'existe pas, et silencieux s'il refuse d'être supprimé.</remarks>
+    public void DeleteLogFile(string slug)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(slug);
+
+        try
+        {
+            var path = GetLogFilePath(slug);
+            if (_fileSystem.File.Exists(path))
+            {
+                _fileSystem.File.Delete(path);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Un journal encore verrouillé sera écrasé au prochain lancement : rien à signaler.
+        }
+    }
+
+    /// <summary>
     /// Lance le jeu pour l'instance <paramref name="slug"/>. Valide dans l'ordre : l'instance
     /// n'est pas déjà en cours, elle existe, sa version est installée et complète, le runtime
     /// .NET qu'elle requiert est présent. Toute validation qui échoue lève AVANT qu'un seul

@@ -327,6 +327,10 @@ public static class CompositionRoot
 
         services.AddSingleton<RunningInstanceTracker>();
         services.AddSingleton<GameLauncher>();
+
+        // Résolu au démarrage (App.axaml.cs) : il n'a pas de client, son seul rôle est de rester
+        // abonné aux suppressions d'instances pour que rien ne survive à un slug (voir sa docstring).
+        services.AddSingleton<DeletedInstanceStateCleaner>();
     }
 
     // disposeHandler: false parce qu'un même gestionnaire factice sert les deux clients d'un test.

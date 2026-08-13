@@ -80,6 +80,9 @@ internal sealed class EnglishWizardText : WizardText
 
     internal override string SummaryNoVersion => "Choose a game version at the previous step.";
 
+    internal override string NameBeingDeleted
+        => "An instance with this name is being deleted. Wait for it to finish, or pick another name.";
+
     internal override IReadOnlyList<string> StepLabels { get; } = ["Name", "Version", "Icon", "Summary"];
 
     internal override string IconLabel(string iconChoiceKey) => iconChoiceKey switch
@@ -118,6 +121,11 @@ internal sealed class EnglishDialogsText : DialogsText
 
     internal override string DeleteMessage(string instanceName)
         => $"Everything in “{instanceName}” will be deleted for good, worlds and mods included. This cannot be undone.";
+
+    internal override string DeleteInProgress => "Deleting… This can take a while on an instance with large worlds.";
+
+    internal override string DeletePartialFailure(string directory)
+        => $"The deletion could not finish: files are left in “{directory}”. Close the game if it is still running, then try again.";
 
     internal override string RestoreBackupTitle(string instanceName) => $"Restore “{instanceName}”?";
 

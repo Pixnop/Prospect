@@ -78,6 +78,9 @@ internal sealed class FrenchWizardText : WizardText
 
     internal override string SummaryNoVersion => "Choisis une version du jeu à l'étape précédente.";
 
+    internal override string NameBeingDeleted
+        => "Une instance de ce nom est en cours de suppression. Attends qu'elle soit terminée, ou choisis un autre nom.";
+
     internal override IReadOnlyList<string> StepLabels { get; } = ["Nom", "Version", "Icône", "Résumé"];
 
     internal override string IconLabel(string iconChoiceKey) => iconChoiceKey switch
@@ -116,6 +119,11 @@ internal sealed class FrenchDialogsText : DialogsText
 
     internal override string DeleteMessage(string instanceName)
         => $"Toutes les données de « {instanceName} » seront supprimées définitivement, mondes et mods compris. Cette action est irréversible.";
+
+    internal override string DeleteInProgress => "Suppression en cours… Ça peut prendre un moment sur une instance avec de gros mondes.";
+
+    internal override string DeletePartialFailure(string directory)
+        => $"La suppression n'a pas pu aller jusqu'au bout : il reste des fichiers dans « {directory} ». Ferme le jeu s'il tourne encore, puis réessaie.";
 
     internal override string RestoreBackupTitle(string instanceName) => $"Restaurer « {instanceName} » ?";
 

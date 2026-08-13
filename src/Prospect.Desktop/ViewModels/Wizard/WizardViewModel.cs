@@ -332,6 +332,16 @@ public sealed partial class WizardViewModel : ObservableObject, IProgress<GameIn
         {
             CreateError = exception.Message;
         }
+        catch (InstanceDeletionInProgressException)
+        {
+            // Refus franc plutôt qu'un dossier « -2 » silencieux : c'est le nom demandé qui compte,
+            // et il se libère de lui-même dès que la suppression en cours se termine.
+            CreateError = UiText.Wizard.NameBeingDeleted;
+        }
+        catch (GameInstallIncompleteException exception)
+        {
+            CreateError = UiText.Versions.InstallLandedElsewhere(exception.TargetDirectory);
+        }
         catch (Exception exception) when (exception is GameVersionNotAvailableException or GameInstallFailedException or DownloadFailedException)
         {
             CreateError = exception.Message;

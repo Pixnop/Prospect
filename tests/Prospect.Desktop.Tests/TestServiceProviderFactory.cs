@@ -7,6 +7,7 @@ using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
 using Prospect.Core.Migration;
 using Prospect.Core.Storage;
+using Prospect.Desktop.Services;
 using Prospect.Desktop.Tests.TestDoubles;
 
 namespace Prospect.Desktop.Tests;
@@ -37,7 +38,15 @@ internal static class TestServiceProviderFactory
         // composition root de production.
         services.AddSingleton<IUnixFilePermissions, RecordingUnixFilePermissions>();
 
-        return services.BuildServiceProvider();
+        var provider = services.BuildServiceProvider();
+
+        // Résolu ici pour la même raison qu'App.axaml.cs le résout au démarrage : il n'a pas de
+        // client, seul son abonnement compte. Sans cette ligne, les tests headless tourneraient sur
+        // une application qui, contrairement à la vraie, laisserait survivre l'état d'une instance
+        // supprimée — exactement le genre d'écart entre double et production qui ne garde rien.
+        provider.GetRequiredService<DeletedInstanceStateCleaner>();
+
+        return provider;
     }
 
     /// <summary>
