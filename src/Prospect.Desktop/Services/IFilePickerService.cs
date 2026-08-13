@@ -24,15 +24,6 @@ public interface IFilePickerService
     Task<string?> PickSaveFileAsync(string title, string suggestedFileName, string extension, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Ouvre un sélecteur « Ouvrir ».
-    /// </summary>
-    /// <param name="title">Titre de la fenêtre du sélecteur.</param>
-    /// <param name="extensions">Extensions acceptées (sans le point), pour le filtre de type.</param>
-    /// <param name="cancellationToken">Annulation.</param>
-    /// <returns>Le chemin local choisi, ou <see langword="null"/> si l'utilisateur a annulé.</returns>
-    Task<string?> PickOpenFileAsync(string title, IReadOnlyList<string> extensions, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Ouvre un sélecteur de DOSSIER (adoption VS Launcher, quand la détection automatique ne
     /// trouve rien à l'emplacement par défaut de l'OS : l'utilisateur pointe alors une racine
     /// <c>appData</c> non standard à la main).
@@ -90,25 +81,6 @@ public sealed class AvaloniaFilePickerService : IFilePickerService
     }
 
     /// <inheritdoc />
-    public async Task<string?> PickOpenFileAsync(string title, IReadOnlyList<string> extensions, CancellationToken cancellationToken = default)
-    {
-        var provider = TopLevel.GetTopLevel(_windowFactory())?.StorageProvider;
-        if (provider is null)
-        {
-            return null;
-        }
-
-        var files = await provider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = title,
-            AllowMultiple = false,
-            FileTypeFilter = [FileType(extensions)],
-        }).ConfigureAwait(true);
-
-        return files.Count == 0 ? null : files[0].TryGetLocalPath();
-    }
-
-    /// <inheritdoc />
     public async Task<string?> PickFolderAsync(string title, CancellationToken cancellationToken = default)
     {
         var provider = TopLevel.GetTopLevel(_windowFactory())?.StorageProvider;
@@ -126,10 +98,8 @@ public sealed class AvaloniaFilePickerService : IFilePickerService
         return folders.Count == 0 ? null : folders[0].TryGetLocalPath();
     }
 
-    private static FilePickerFileType FileType(string extension) => FileType([extension]);
-
-    private static FilePickerFileType FileType(IReadOnlyList<string> extensions) => new(string.Join('/', extensions))
+    private static FilePickerFileType FileType(string extension) => new(extension)
     {
-        Patterns = extensions.Select(extension => $"*.{extension}").ToArray(),
+        Patterns = [$"*.{extension}"],
     };
 }
