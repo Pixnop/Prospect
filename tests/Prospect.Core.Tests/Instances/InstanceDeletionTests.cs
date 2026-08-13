@@ -73,7 +73,7 @@ public sealed class InstanceDeletionTests : IDisposable
     [Fact]
     public async Task DeleteAsync_LeavesTheCallingThreadFree_WhileTheRecursiveDeleteRuns()
     {
-        var (service, _, mock) = CreateGatedService();
+        var (service, repository, mock) = CreateGatedService();
         var record = await service.CreateAsync("Homestead", SampleVersion, CancellationToken.None);
         var callerThreadId = Environment.CurrentManagedThreadId;
 
@@ -86,7 +86,10 @@ public sealed class InstanceDeletionTests : IDisposable
         _gate.Set();
         await deletion;
 
-        mock.Directory.Exists(Paths.InstancesDirectory + "/" + record.Slug).ShouldBeFalse();
+        // Chemin demandé au dépôt plutôt que recollé à la main : c'est lui qui connaît la topologie,
+        // et un séparateur en dur dans un test le rendrait faux sur l'un des trois systèmes de la CI.
+        mock.Directory.Exists(repository.GetInstanceDirectory(record.Slug)).ShouldBeFalse();
+        repository.Exists(record.Slug).ShouldBeFalse();
     }
 
     /// <summary>
