@@ -5,9 +5,55 @@
              xmlns:vm="using:Prospect.Desktop.ViewModels.Settings"
              xmlns:settings="using:Prospect.Core.Settings"
              xmlns:conv="using:Prospect.Desktop.Converters"
+             xmlns:layout="using:Prospect.Desktop.Layout"
              mc:Ignorable="d" d:DesignWidth="944" d:DesignHeight="760"
              x:Class="Prospect.Desktop.Views.Settings.SettingsView"
              x:DataType="vm:SettingsViewModel">
+
+  <UserControl.Styles>
+    <!--
+      ══ La grille de fonds (section Général) ══════════════════════════════════════════
+
+      Height="NaN" sur la tuile : exactement le piège déjà documenté sur Button.cardHit
+      (Styles/Controls/Button.axaml). Le ControlTheme Button impose 32 points de haut, pensés
+      pour un bouton de texte ; une vignette de 90 points plus son nom s'y ferait rogner, et il
+      ne resterait qu'une bande d'image sans légende. La hauteur repasse donc en automatique,
+      comme pour n'importe quel conteneur.
+    -->
+    <Style Selector="Button.backdrop-choice">
+      <Setter Property="Height" Value="NaN" />
+    </Style>
+
+    <!--
+      La vignette elle-même est un empilement de DEUX bordures, et c'est le seul moyen d'obtenir
+      le rendu du verre ici : l'image se pose dans une bordure qui la rogne aux coins, la vitre
+      (liseré + sheen) se pose PAR-DESSUS. Un BoxShadow inset porté par la bordure qui contient
+      l'image serait dessiné avant elle, donc caché sous elle.
+
+      La sélection ne change que des couleurs et des ombres, jamais une épaisseur ni une taille :
+      une bordure qui passerait de 1 à 2 points ferait sauter la vignette d'un point à chaque clic.
+    -->
+    <Style Selector="Border.backdrop-thumb">
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+      <Setter Property="ClipToBounds" Value="True" />
+    </Style>
+    <Style Selector="Border.backdrop-glass">
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="BorderBrush" Value="{DynamicResource GlassEdge}" />
+      <Setter Property="BoxShadow" Value="{DynamicResource GlassSheen}" />
+    </Style>
+    <Style Selector="Border.backdrop-glass.selected">
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+      <Setter Property="BoxShadow" Value="{DynamicResource GlassSheenStrong}" />
+    </Style>
+    <Style Selector="TextBlock.backdrop-name">
+      <Setter Property="Foreground" Value="{DynamicResource Text3}" />
+    </Style>
+    <Style Selector="TextBlock.backdrop-name.selected">
+      <Setter Property="Foreground" Value="{DynamicResource AccentText}" />
+    </Style>
+  </UserControl.Styles>
 
   <!--
     Port de design/ui_kits/launcher/screen-settings.jsx : titre, onglets (même Border
@@ -69,6 +115,49 @@
                                  Command="{Binding SelectThemeCommand}" CommandParameter="{x:Static settings:ThemePreference.System}"
                                  IsChecked="{Binding ThemeChoice, Mode=OneWay, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=System}" />
                   </StackPanel>
+                </StackPanel>
+
+                <!-- Fond de fenêtre : une grille de vignettes, appliquée à chaud (voir
+                     BackdropService). WrapPanel plutôt que FluidGridPanel : ce dernier ÉTIRE ses
+                     colonnes pour remplir la largeur, ce qui est juste pour des cartes de mod
+                     élastiques et faux pour des vignettes dont la taille est fixe — il les
+                     déformerait ou laisserait leur boîte dépasser l'image. Ici la taille est un
+                     choix (160x90, le format des captures), donc c'est au panneau de passer à la
+                     ligne autour d'elle, pas à elle de suivre le panneau. -->
+                <StackPanel Spacing="8">
+                  <TextBlock Text="{StaticResource Settings_BackdropLabel}" FontSize="{StaticResource FsBodySm}"
+                             FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text1}" />
+                  <ItemsControl ItemsSource="{Binding BackdropChoices}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <WrapPanel />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:BackdropChoiceOption">
+                        <Button Classes="ghost backdrop-choice" Command="{Binding SelectCommand}"
+                                Margin="0,0,10,10" Padding="0" BorderThickness="0"
+                                ToolTip.Tip="{Binding Label}">
+                          <StackPanel Width="160" Spacing="6">
+                            <!-- Empilement assumé : la vitre se pose sur la vignette, c'est le
+                                 dessin lui-même (voir Layout/LayoutContract.cs). -->
+                            <Panel Height="90" layout:LayoutContract.AllowsOverlap="True">
+                              <Border Classes="backdrop-thumb">
+                                <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                              </Border>
+                              <Border Classes="backdrop-glass" Classes.selected="{Binding IsSelected}" />
+                            </Panel>
+                            <TextBlock Text="{Binding Label}" Classes="backdrop-name"
+                                       Classes.selected="{Binding IsSelected}"
+                                       FontSize="{StaticResource FsCaption}" TextAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Text="{StaticResource Settings_BackdropHint}" FontSize="{StaticResource FsMicro}"
+                             TextWrapping="Wrap" MaxWidth="420" Foreground="{DynamicResource Text4}" />
                 </StackPanel>
 
                 <StackPanel Spacing="6">

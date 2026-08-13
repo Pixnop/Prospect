@@ -815,6 +815,23 @@ internal sealed class FrenchSettingsText : SettingsText
 
     internal override string ConcurrencyChoiceLabel(int count)
         => count == 1 ? "1 téléchargement à la fois" : $"{count} téléchargements simultanés";
+
+    internal override string BackdropLabel(string backdropKey) => backdropKey switch
+    {
+        "ruins-clearing" => "Clairière aux ruines",
+        "sunlit-hills" => "Collines ensoleillées",
+        "village-lane" => "Ruelle du village",
+        "lake-sail" => "Voile sur le lac",
+        "dusk-reeds" => "Roseaux au couchant",
+        "misty-yard" => "Cour embrumée",
+        "reading-room" => "Cabinet de lecture",
+        "stone-cellar" => "Cave de pierre",
+        "overgrown-ruin" => "Ruine envahie",
+        "crystal-vein" => "Veine de cristaux",
+        // Le fond livré avec le thème verre, et le repli de toute clé inconnue : deux bassins
+        // turquoise vus d'en haut.
+        _ => "Bassins turquoise",
+    };
 }
 
 internal sealed class FrenchFirstRunText : FirstRunText

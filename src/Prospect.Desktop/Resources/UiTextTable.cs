@@ -673,6 +673,14 @@ internal abstract class SettingsText
 
     /// <summary>Libellé d'un choix du sélecteur de téléchargements simultanés (section Réseau).</summary>
     internal abstract string ConcurrencyChoiceLabel(int count);
+
+    /// <summary>
+    /// Nom affiché sous la vignette d'un fond, à partir de sa clé
+    /// (<see cref="Prospect.Core.Settings.BackdropCatalog.Keys"/>). Ce que MONTRE l'image, pas ce
+    /// qu'elle évoque : les onze noms doivent rester reconnaissables d'un coup d'œil sur une
+    /// vignette de 160 points floutée.
+    /// </summary>
+    internal abstract string BackdropLabel(string backdropKey);
 }
 
 /// <summary>

@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
@@ -12,6 +13,7 @@ using Prospect.Core.GameVersions;
 using Prospect.Core.ModDb;
 using Prospect.Core.Modpacks;
 using Prospect.Core.Runtime;
+using Prospect.Core.Settings;
 using Prospect.Core.Storage;
 
 using Prospect.Desktop.Layout;
@@ -650,6 +652,43 @@ public sealed class ResponsiveRegressionTests
         window.Settle();
 
         window.ShouldHoldLayoutInvariantsAtEverySize("Réglages, Général, thème clair");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void Settings_BackdropGrid_WrapsCleanlyAtEverySize()
+    {
+        // La grille de fonds a une particularité que rien d'autre n'a dans l'écran : ses vignettes
+        // ont une taille FIXE (160x90) et c'est le panneau qui doit s'adapter autour d'elles. La
+        // garde d'invariants dit qu'aucune ne dépasse ; celle-ci ajoute ce qu'elle ne peut pas
+        // dire — que la grille passe bien à la ligne au lieu d'aligner onze vignettes sur une
+        // rangée qui sortirait de la carte.
+        using var provider = ResponsiveScenario.CreateProvider(out _, out _);
+        var window = ResponsiveScenario.ShowWindow(provider);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+
+        shell.SettingsNavItem.SelectCommand.Execute(null);
+        window.Settle();
+
+        foreach (var size in ResponsiveWindowSizes.All)
+        {
+            window.Width = size.Width;
+            window.Height = size.Height;
+            window.Settle();
+
+            var grid = window.GetVisualDescendants().OfType<WrapPanel>().ShouldHaveSingleItem();
+            grid.Children.Count.ShouldBe(BackdropCatalog.Keys.Count);
+
+            var rows = grid.Children.Select(child => Math.Round(child.Bounds.Y)).Distinct().Count();
+            rows.ShouldBeGreaterThan(1, $"à {size.Width}x{size.Height}, la grille de fonds devrait passer à la ligne");
+
+            // Et chaque rangée tient dans la largeur du panneau, ce qui est la moitié du contrat
+            // qu'un WrapPanel remplit et qu'une simple pile horizontale ne remplirait pas.
+            grid.Children.ShouldAllBe(child => child.Bounds.Right <= grid.Bounds.Width + 1);
+        }
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Réglages, grille de fonds");
 
         window.Close();
     }

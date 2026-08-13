@@ -118,6 +118,10 @@ public static class CompositionRoot
         services.AddSingleton<ThemeService>();
         services.AddSingleton<LanguageService>();
 
+        // Troisième service d'apparence, le seul des trois à s'appliquer à chaud (voir sa
+        // docstring) : il n'a besoin que du réglage, l'image se décode à la première lecture.
+        services.AddSingleton<BackdropService>();
+
         // Cache des logos du navigateur de mods : un délai plus court que celui du catalogue, une
         // vignette décorative ne justifie pas d'attendre aussi longtemps qu'un appel API (voir
         // IModLogoCache).

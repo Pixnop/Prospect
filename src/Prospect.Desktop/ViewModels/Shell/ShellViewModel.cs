@@ -33,6 +33,7 @@ public sealed partial class ShellViewModel : ObservableObject
         Func<string, InstanceDetailViewModel> instanceDetailFactory,
         IOverlayService overlay,
         IToastService toasts,
+        BackdropService backdrop,
         IAppEnvironment appEnvironment)
     {
         ArgumentNullException.ThrowIfNull(home);
@@ -43,6 +44,7 @@ public sealed partial class ShellViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(instanceDetailFactory);
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(toasts);
+        ArgumentNullException.ThrowIfNull(backdrop);
         ArgumentNullException.ThrowIfNull(appEnvironment);
 
         Home = home;
@@ -53,6 +55,7 @@ public sealed partial class ShellViewModel : ObservableObject
         _instanceDetailFactory = instanceDetailFactory;
         Overlay = overlay;
         Toasts = toasts;
+        Backdrop = backdrop;
         UseCustomTitlebar = ResolveUseCustomTitlebar(appEnvironment.CurrentOperatingSystem);
         Home.InstanceOpenRequested += (_, slug) => ShowInstanceDetail(slug);
         Settings.FirstRun.NavigateToVersionsRequested += (_, _) => ShowVersions();
@@ -104,6 +107,14 @@ public sealed partial class ShellViewModel : ObservableObject
     public IOverlayService Overlay { get; }
 
     public IToastService Toasts { get; }
+
+    /// <summary>
+    /// Fond de fenêtre courant, exposé pour la seule <c>Image</c> de <c>MainWindow</c> : c'est la
+    /// fenêtre qui porte les trois couches (image, voile, grain), pas le shell. Le service est
+    /// exposé tel quel, comme <see cref="Overlay"/> et <see cref="Toasts"/>, plutôt que recopié
+    /// dans une propriété miroir qu'il faudrait renotifier à la main.
+    /// </summary>
+    public BackdropService Backdrop { get; }
 
     /// <summary>Section « Bibliothèque » de la sidebar : Accueil, Mods, Versions.</summary>
     public IReadOnlyList<NavItemViewModel> LibraryNavItems { get; }

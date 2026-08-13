@@ -300,6 +300,10 @@
   <x:String x:Key="Settings_LanguageFrench">Français</x:String>
   <x:String x:Key="Settings_LanguageEnglish">English</x:String>
   <x:String x:Key="Settings_LanguageRestartHint">Takes effect the next time you start Prospect.</x:String>
+  <!-- Le fond, lui, s'applique tout de suite : la mention sous la grille dit donc l'inverse de
+       celle de la langue, et c'est voulu (voir docs/architecture.md, « Fond de fenêtre »). -->
+  <x:String x:Key="Settings_BackdropLabel">Window backdrop</x:String>
+  <x:String x:Key="Settings_BackdropHint">The change applies right away.</x:String>
 
   <!-- Jeu -->
   <x:String x:Key="Settings_GameSectionTitle">Where the data lives</x:String>
