@@ -18,10 +18,11 @@ internal static class RealModDbSamples
     public static string CarryOnDescriptionHtml { get; } = Read("carryon-description.html");
 
     /// <summary>
-    /// La fiche complète de Carry On au format de <c>/api/mod/{id}</c>, avec sa description réelle
-    /// et deux releases compatibles pour exercer le sélecteur de version.
+    /// La fiche complète de Carry On au format de <c>/api/mod/{id}</c>, avec sa description réelle,
+    /// deux releases compatibles pour exercer le sélecteur de version, et une troisième taguée pour
+    /// une AUTRE série mineure — celle que seul le dévoilement explicite montre.
     /// </summary>
-    /// <param name="gameVersion">Version de jeu taguée sur les deux releases.</param>
+    /// <param name="gameVersion">Version de jeu taguée sur les deux releases compatibles.</param>
     public static string CarryOnDetailJson(string gameVersion = "1.21.3")
     {
         // Le HTML est réinjecté tel quel dans du JSON : il porte des guillemets et des retours à
@@ -51,7 +52,12 @@ internal static class RealModDbSamples
                 "mainfile": "https://moddbcdn.vintagestory.at/carryon_1.14.2.zip",
                 "filename": "CarryOn-1.22.0_v1.14.2.zip", "downloads": 40118,
                 "tags": ["{{gameVersion}}"], "modidstr": "carryon", "modversion": "1.14.2",
-                "changelog": null, "created": "2026-06-19 08:11:00" }
+                "changelog": null, "created": "2026-06-19 08:11:00" },
+              { "releaseid": 44100, "fileid": 98220,
+                "mainfile": "https://moddbcdn.vintagestory.at/carryon_1.13.0.zip",
+                "filename": "CarryOn-1.20.4_v1.13.0.zip", "downloads": 210433,
+                "tags": ["1.20.4"], "modidstr": "carryon", "modversion": "1.13.0",
+                "changelog": null, "created": "2025-09-02 14:05:00" }
             ]
           }
         }

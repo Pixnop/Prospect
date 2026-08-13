@@ -68,11 +68,16 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
         _instanceName = instanceName;
 
         _plan = plan;
-        Releases = plan.AvailableReleases
+        _allReleases = plan.AvailableReleases
             .Select(choice => new ModReleaseChoiceViewModel(choice, urlOpener, images))
             .ToArray();
-        ReleaseCountText = UiText.Mods.ReleaseChoiceCount(Releases.Count);
-        HasReleaseChoice = Releases.Count > 1;
+
+        // Le décompte annoncé porte sur les COMPATIBLES : c'est le nombre de versions que Prospect
+        // se sent d'installer sans avertir, pas le nombre de fichiers publiés.
+        _compatibleReleases = [.. _allReleases.Where(release => !release.IsDeclaredIncompatible)];
+        ReleaseCountText = UiText.Mods.ReleaseChoiceCount(_compatibleReleases.Length);
+        HasIncompatibleReleases = _allReleases.Length > _compatibleReleases.Length;
+        _releases = _compatibleReleases;
 
         // ApplyPlan présélectionne la release du plan, c'est-à-dire la plus récente compatible :
         // le comportement d'avant le sélecteur, à l'identique tant qu'on n'y touche pas.
@@ -83,14 +88,39 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
     [ObservableProperty]
     private ModInstallPlan _plan;
 
-    /// <summary>Releases compatibles proposées, la plus récente d'abord.</summary>
-    public IReadOnlyList<ModReleaseChoiceViewModel> Releases { get; }
+    private readonly ModReleaseChoiceViewModel[] _allReleases;
+    private readonly ModReleaseChoiceViewModel[] _compatibleReleases;
 
-    /// <summary>Décompte affiché au-dessus du sélecteur.</summary>
+    /// <summary>
+    /// Releases actuellement proposées, la plus récente d'abord : les compatibles seules tant que
+    /// le dévoilement n'a pas été demandé.
+    /// </summary>
+    [ObservableProperty]
+    private IReadOnlyList<ModReleaseChoiceViewModel> _releases;
+
+    /// <summary>Décompte des versions COMPATIBLES, affiché au-dessus du sélecteur.</summary>
     public string ReleaseCountText { get; }
 
+    /// <summary>
+    /// Vrai quand la fiche publie des releases qu'aucun tag ne rattache à cette série de jeu. Le
+    /// dévoilement n'est offert que dans ce cas : ailleurs, il n'aurait rien de plus à montrer.
+    /// </summary>
+    public bool HasIncompatibleReleases { get; }
+
+    /// <summary>
+    /// Vrai quand l'utilisateur a demandé à voir TOUTES les versions. Jamais l'état de départ : le
+    /// contrat est « pas d'élargissement silencieux », pas « pas d'élargissement ».
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ToggleAllReleasesText))]
+    private bool _showsAllReleases;
+
+    /// <summary>Libellé du bouton de dévoilement, qui dit ce que le clic va faire.</summary>
+    public string ToggleAllReleasesText
+        => ShowsAllReleases ? UiText.Mods.ShowCompatibleReleasesOnly : UiText.Mods.ShowAllReleases;
+
     /// <summary>Faux quand une seule release convient : le sélecteur n'a alors rien à offrir.</summary>
-    public bool HasReleaseChoice { get; }
+    public bool HasReleaseChoice => _compatibleReleases.Length > 1 || HasIncompatibleReleases;
 
     /// <summary>Release choisie. La changer recalcule le plan, dépendances comprises.</summary>
     [ObservableProperty]
@@ -112,11 +142,28 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
     [ObservableProperty]
     private string _approximateWarning = string.Empty;
 
+    /// <summary>Avertissement d'une release qu'aucun tag ne déclare compatible. NON bloquant.</summary>
+    [ObservableProperty]
+    private bool _showIncompatibleWarning;
+
+    [ObservableProperty]
+    private string _incompatibleWarning = string.Empty;
+
     [ObservableProperty]
     private IReadOnlyList<ModDependencyChoiceViewModel> _dependencies = [];
 
     [ObservableProperty]
     private bool _hasDependencies;
+
+    /// <summary>
+    /// Dépendances publiées sans release compatible, proposées à l'installation malgré tout.
+    /// DÉCOCHÉES d'avance, contrairement aux dépendances ordinaires.
+    /// </summary>
+    [ObservableProperty]
+    private IReadOnlyList<ModDependencyChoiceViewModel> _installableAnyway = [];
+
+    [ObservableProperty]
+    private bool _hasInstallableAnyway;
 
     /// <summary>Dépendances dont le ModDB ne publie aucune fiche : le seul cas « introuvable ».</summary>
     [ObservableProperty]
@@ -206,13 +253,25 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
             Message = UiText.Mods.PlanMessage(plan.Primary.Version.ToString(), _instanceName);
             FileNameText = plan.Primary.TargetFileName;
 
-            ShowApproximateWarning = plan.Primary.IsApproximateMatch;
+            // Les deux avertissements sont exclusifs et disent deux choses différentes : « même
+            // série, pas cochée » n'est pas « pas déclarée du tout ».
+            ShowIncompatibleWarning = plan.Primary.IsDeclaredIncompatible;
+            IncompatibleWarning = UiText.Mods.IncompatibleReleaseWarning(
+                plan.GameVersion.ToString(),
+                plan.Primary.Release.CompatibleGameVersionTags);
+
+            ShowApproximateWarning = plan.Primary.IsApproximateMatch && !plan.Primary.IsDeclaredIncompatible;
             ApproximateWarning = UiText.Mods.ApproximateWarning(plan.GameVersion.ToString());
 
             Dependencies = plan.MissingDependencies
                 .Select(item => new ModDependencyChoiceViewModel(item, plan.Issues))
                 .ToArray();
             HasDependencies = Dependencies.Count > 0;
+
+            InstallableAnyway = plan.InstallableAnyway
+                .Select(dependency => ModDependencyChoiceViewModel.ForInstallAnyway(dependency))
+                .ToArray();
+            HasInstallableAnyway = InstallableAnyway.Count > 0;
 
             // Les DEUX verdicts de la résolution, distincts et reposés ensemble : changer de
             // release peut faire passer une dépendance de « introuvable sur le ModDB » à « publiée
@@ -236,6 +295,26 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
         }
     }
 
+    /// <summary>
+    /// Dévoile ou remasque les releases qu'aucun tag ne déclare compatibles. Ne change RIEN au plan
+    /// courant : il faut encore en choisir une pour que quoi que ce soit se recalcule.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleAllReleases()
+    {
+        ShowsAllReleases = !ShowsAllReleases;
+        Releases = ShowsAllReleases ? _allReleases : _compatibleReleases;
+
+        // Remasquer alors qu'une release incompatible est choisie la laisserait sélectionnée sans
+        // être listée : le dévoilement reste alors ouvert, ce qui est plus honnête que de la
+        // faire disparaître de l'écran tout en l'installant.
+        if (!ShowsAllReleases && SelectedRelease is { IsDeclaredIncompatible: true })
+        {
+            ShowsAllReleases = true;
+            Releases = _allReleases;
+        }
+    }
+
     [RelayCommand]
     private void Cancel()
     {
@@ -249,7 +328,7 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
         IsBusy = true;
         try
         {
-            var selected = Dependencies
+            var selected = Dependencies.Concat(InstallableAnyway)
                 .Where(dependency => dependency.IsSelected)
                 .Select(dependency => dependency.ModIdString)
                 .ToArray();
@@ -292,8 +371,15 @@ public sealed class ModReleaseChoiceViewModel : IDisposable
         VersionText = choice.Release.Version.ToString();
         DateText = UiText.Mods.ReleaseDate(choice.Release.CreatedUtc);
         DownloadsText = UiText.Mods.FormatCount(choice.Release.Downloads);
-        IsApproximate = choice.IsApproximate;
-        ApproximateTag = UiText.Mods.ApproximateReleaseTag;
+        GameVersionsText = UiText.Mods.CompatibleVersions(choice.Release.CompatibleGameVersionTags);
+
+        // Deux pastilles distinctes pour deux faits distincts : « même série, pas cochée » et
+        // « pas déclarée du tout ». La seconde n'apparaît qu'après le dévoilement.
+        IsApproximate = choice.Compatibility == ModReleaseCompatibility.SameMinorSeries;
+        IsDeclaredIncompatible = choice.IsDeclaredIncompatible;
+        CompatibilityTag = IsDeclaredIncompatible
+            ? UiText.Mods.IncompatibleReleaseTag
+            : UiText.Mods.ApproximateReleaseTag;
 
         Changelog = new RichTextDocumentViewModel(
             HtmlRichTextParser.Parse(choice.Release.Changelog),
@@ -315,11 +401,20 @@ public sealed class ModReleaseChoiceViewModel : IDisposable
     /// <summary>Décompte de téléchargements, séparateur de milliers de la langue.</summary>
     public string DownloadsText { get; }
 
+    /// <summary>Versions de jeu que l'auteur a réellement cochées, déjà résumées quand elles sont nombreuses.</summary>
+    public string GameVersionsText { get; }
+
     /// <summary>Vrai si cette release a été retenue par élargissement à la série mineure.</summary>
     public bool IsApproximate { get; }
 
-    /// <summary>Libellé de la pastille d'approximation.</summary>
-    public string ApproximateTag { get; }
+    /// <summary>Vrai si aucun tag ne rattache cette release à la série de jeu de l'instance.</summary>
+    public bool IsDeclaredIncompatible { get; }
+
+    /// <summary>Vrai dès que la compatibilité n'est pas affirmée par l'auteur : la pastille s'affiche.</summary>
+    public bool HasCompatibilityTag => IsApproximate || IsDeclaredIncompatible;
+
+    /// <summary>Libellé de la pastille : approximation ou absence de déclaration.</summary>
+    public string CompatibilityTag { get; }
 
     /// <summary>Notes de version, rendues comme la description de la fiche.</summary>
     public RichTextDocumentViewModel Changelog { get; }
@@ -379,6 +474,37 @@ public sealed partial class ModDependencyChoiceViewModel : ObservableObject
         ReasonText = UiText.Mods.DependencyReason(issue);
     }
 
+    private ModDependencyChoiceViewModel(UnresolvedModDependency dependency)
+    {
+        var item = dependency.BestAvailable!;
+        ModIdString = dependency.ModIdString;
+        DisplayName = dependency.DisplayName;
+        VersionText = item.Version.ToString();
+        ReasonText = UiText.Mods.InstallAnywayReason(dependency.BestAvailableGameVersions);
+        IsDeclaredIncompatible = true;
+        _isSelected = false;
+    }
+
+    /// <summary>
+    /// Ligne « installer quand même » d'une dépendance publiée sans release compatible : même
+    /// contrôle, mais DÉCOCHÉE d'avance et étiquetée de ses vraies versions taguées.
+    /// </summary>
+    /// <remarks>
+    /// Une case cochée d'avance est acceptable quand elle propose ce que l'auteur a déclaré ;
+    /// elle ne l'est pas quand elle propose ce qu'il n'a PAS déclaré. Le pari doit être pris
+    /// activement, pas subi.
+    /// </remarks>
+    public static ModDependencyChoiceViewModel ForInstallAnyway(UnresolvedModDependency dependency)
+    {
+        ArgumentNullException.ThrowIfNull(dependency);
+        if (dependency.BestAvailable is null)
+        {
+            throw new ArgumentException("Cette dépendance n'a aucune release à proposer.", nameof(dependency));
+        }
+
+        return new ModDependencyChoiceViewModel(dependency);
+    }
+
     public string ModIdString { get; }
 
     public string DisplayName { get; }
@@ -387,6 +513,9 @@ public sealed partial class ModDependencyChoiceViewModel : ObservableObject
 
     /// <summary>Pourquoi cette dépendance est proposée : absente, trop ancienne, signalée par le ModDB.</summary>
     public string ReasonText { get; }
+
+    /// <summary>Vrai pour une ligne « installer quand même » : l'auteur n'a rien déclaré pour cette version du jeu.</summary>
+    public bool IsDeclaredIncompatible { get; }
 
     [ObservableProperty]
     private bool _isSelected = true;

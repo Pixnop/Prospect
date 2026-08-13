@@ -496,6 +496,9 @@ public sealed class ResponsiveRegressionTests
         // Le navigateur filtre sur l'index de compatibilité du serveur dès qu'une instance est
         // ciblée : sans cette ligne, Carry On serait indexé mais jamais affiché.
         catalogHandler.ModDb.CompatibleModIds = [1783, 792, 890];
+        // CarryOnLib n'est publiée que pour une autre série : la dépendance de la release dévoilée
+        // tombe donc dans « publiée mais sans release compatible », donc dans l'offre décochée.
+        catalogHandler.ModDb.CarryOnLibGameVersions = ["1.22.0"];
         var window = ResponsiveScenario.ShowWindow(provider, light ? ThemeVariant.Light : ThemeVariant.Dark);
         var shell = provider.GetRequiredService<ShellViewModel>();
         var home = provider.GetRequiredService<HomeViewModel>();
@@ -512,6 +515,21 @@ public sealed class ResponsiveRegressionTests
 
         window.ShouldHoldLayoutInvariantsAtEverySize(
             light ? "Dialogue d'installation, sélecteur de version, thème clair" : "Dialogue d'installation, sélecteur de version");
+
+        // Le dialogue le plus chargé qui existe : dévoilement ouvert, release non déclarée
+        // compatible choisie (donc avertissement affiché), et la dépendance publiée sans release
+        // compatible offerte à l'installation. C'est cet état-là qui tend le plus ses boîtes.
+        dialog.ToggleAllReleasesCommand.Execute(null);
+        dialog.SelectedRelease = dialog.Releases.Single(release => release.IsDeclaredIncompatible);
+        await dialog.ReloadCompletion;
+        window.Settle();
+        dialog.ShowIncompatibleWarning.ShouldBeTrue();
+        dialog.HasInstallableAnyway.ShouldBeTrue();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize(
+            light
+                ? "Dialogue d'installation, version incompatible dévoilée, thème clair"
+                : "Dialogue d'installation, version incompatible dévoilée");
 
         Application.Current!.RequestedThemeVariant = ThemeVariant.Dark;
         window.Close();

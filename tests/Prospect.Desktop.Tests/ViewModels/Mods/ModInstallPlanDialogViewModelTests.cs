@@ -135,7 +135,23 @@ public sealed class ModInstallPlanDialogViewModelTests
 
     [Fact]
     public void PlanWithoutAnyCandidateRelease_HidesTheSelectorInsteadOfShowingAnEmptyOne()
-        => Dialog(PlanWith("1.22.6")).HasReleaseChoice.ShouldBeFalse();
+    {
+        var dialog = Dialog(PlanWith("1.22.6"));
+
+        dialog.HasReleaseChoice.ShouldBeFalse();
+        dialog.HasIncompatibleReleases.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ADependencyWithNothingToOffer_ShowsNoInstallAnywayLine()
+    {
+        var dialog = Dialog(PlanWith(
+            "1.22.6",
+            new UnresolvedModDependency("mod-fantome", ModDependencyResolution.NotOnModDb)));
+
+        dialog.HasInstallableAnyway.ShouldBeFalse();
+        dialog.InstallableAnyway.ShouldBeEmpty();
+    }
 
     // ── Sélecteur de version ─────────────────────────────────────────────────────────────────
 
@@ -314,17 +330,169 @@ public sealed class ModInstallPlanDialogViewModelTests
     }
 
     [Fact]
-    public async Task SingleCompatibleRelease_HidesTheSelectorRatherThanShowingAChoiceOfOne()
+    public async Task SingleCompatibleRelease_StillOffersTheRevealWhenOtherReleasesExist()
     {
         var fixture = await CreateAsync();
         var dialog = await OpenAsync(fixture);
 
-        // Config lib n'a qu'une release taguée 1.21.3 dans le faux serveur.
+        // Config lib n'a qu'une release taguée 1.21.3 dans le faux serveur, mais elle en publie
+        // une autre : le sélecteur reste utile, à condition de dévoiler.
         await fixture.Browser.Results.Single(card => card.Name == "Config lib").InstallCommand.ExecuteAsync(null);
         var single = fixture.Overlay.Shown.OfType<ModInstallPlanDialogViewModel>().Last();
 
         single.ShouldNotBe(dialog);
         single.Releases.Count.ShouldBe(1);
-        single.HasReleaseChoice.ShouldBeFalse();
+        single.ReleaseCountText.ShouldBe("1 version compatible");
+        single.HasIncompatibleReleases.ShouldBeTrue();
+    }
+
+    // ── Dévoilement des releases non déclarées compatibles ───────────────────────────────────
+
+    [Fact]
+    public async Task Open_ShowsOnlyTheCompatibleReleasesUntilTheRevealIsAskedFor()
+    {
+        var fixture = await CreateAsync();
+
+        var dialog = await OpenAsync(fixture);
+
+        // Carry On publie une troisième release taguée pour une autre série : elle existe, mais
+        // elle n'est pas offerte tant que rien ne l'a demandée. Pas d'élargissement silencieux.
+        dialog.Releases.Count.ShouldBe(2);
+        dialog.HasIncompatibleReleases.ShouldBeTrue();
+        dialog.ShowsAllReleases.ShouldBeFalse();
+        dialog.ToggleAllReleasesText.ShouldBe("Montrer toutes les versions");
+        dialog.Releases.ShouldAllBe(release => !release.IsDeclaredIncompatible);
+    }
+
+    [Fact]
+    public async Task ToggleAllReleases_RevealsTheIncompatibleOnesWithoutChangingThePlan()
+    {
+        var fixture = await CreateAsync();
+        var dialog = await OpenAsync(fixture);
+        var before = dialog.Plan;
+
+        dialog.ToggleAllReleasesCommand.Execute(null);
+
+        dialog.ShowsAllReleases.ShouldBeTrue();
+        dialog.ToggleAllReleasesText.ShouldBe("Ne montrer que les compatibles");
+        dialog.Releases.Count.ShouldBe(3);
+        var revealed = dialog.Releases.Single(release => release.IsDeclaredIncompatible);
+        revealed.VersionText.ShouldBe("1.13.0");
+        revealed.CompatibilityTag.ShouldBe("non déclarée compatible");
+        revealed.GameVersionsText.ShouldContain("1.20.4");
+
+        // Dévoiler n'installe rien et ne change pas la présélection.
+        dialog.Plan.ShouldBe(before);
+        dialog.SelectedRelease.ShouldNotBeNull().ReleaseId.ShouldBe(NewestReleaseId);
+        dialog.ShowIncompatibleWarning.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task SelectARevealedIncompatibleRelease_RecomputesThePlanAndWarnsWithoutBlocking()
+    {
+        var fixture = await CreateAsync();
+        var dialog = await OpenAsync(fixture);
+        dialog.ToggleAllReleasesCommand.Execute(null);
+
+        dialog.SelectedRelease = dialog.Releases.Single(release => release.IsDeclaredIncompatible);
+        await dialog.ReloadCompletion;
+
+        dialog.Plan.Primary.Version.ShouldBe(ModVersion.Parse("1.13.0"));
+        dialog.Plan.Primary.IsDeclaredIncompatible.ShouldBeTrue();
+        dialog.FileNameText.ShouldBe("carryon-1.13.0.zip");
+
+        // Averti, jamais bloqué : le bouton d'installation reste actif.
+        dialog.ShowIncompatibleWarning.ShouldBeTrue();
+        dialog.IncompatibleWarning.ShouldContain("1.21.3");
+        dialog.IncompatibleWarning.ShouldContain("1.20.4");
+        dialog.ShowApproximateWarning.ShouldBeFalse("les deux avertissements ne disent pas la même chose");
+        dialog.ConfirmCommand.CanExecute(null).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ConfirmARevealedIncompatibleRelease_InstallsItAndMarksItsProvenance()
+    {
+        var fixture = await CreateAsync();
+        var dialog = await OpenAsync(fixture);
+        dialog.ToggleAllReleasesCommand.Execute(null);
+        dialog.SelectedRelease = dialog.Releases.Single(release => release.IsDeclaredIncompatible);
+        await dialog.ReloadCompletion;
+
+        await dialog.ConfirmCommand.ExecuteAsync(null);
+
+        var installed = (await fixture.Mods.ScanAsync(fixture.Slug, CancellationToken.None))
+            .Single(mod => mod.FileName == "carryon-1.13.0.zip");
+        installed.Provenance.ShouldNotBeNull().DeclaredIncompatible.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ToggleAllReleases_WhileAnIncompatibleOneIsSelected_StaysRevealed()
+    {
+        // Remasquer une release qu'on a choisie la ferait disparaître de l'écran tout en restant
+        // celle qui s'installe : le dévoilement reste donc ouvert.
+        var fixture = await CreateAsync();
+        var dialog = await OpenAsync(fixture);
+        dialog.ToggleAllReleasesCommand.Execute(null);
+        dialog.SelectedRelease = dialog.Releases.Single(release => release.IsDeclaredIncompatible);
+        await dialog.ReloadCompletion;
+
+        dialog.ToggleAllReleasesCommand.Execute(null);
+
+        dialog.ShowsAllReleases.ShouldBeTrue();
+        dialog.Releases.Count.ShouldBe(3);
+    }
+
+    // ── Dépendance sans release compatible, installable quand même ───────────────────────────
+
+    [Fact]
+    public async Task ADependencyWithNoCompatibleRelease_IsOfferedUncheckedWithItsRealTags()
+    {
+        var fixture = await CreateAsync();
+        fixture.Handler.CarryOnLibGameVersions = ["1.22.0"];
+        var dialog = await OpenAsync(fixture);
+
+        dialog.HasNoCompatibleRelease.ShouldBeTrue("le constat honnête reste");
+        dialog.HasInstallableAnyway.ShouldBeTrue("et il devient actionnable");
+
+        var offer = dialog.InstallableAnyway.ShouldHaveSingleItem();
+        offer.DisplayName.ShouldBe("CarryOnLib");
+        offer.VersionText.ShouldBe("1.2.0");
+        offer.ReasonText.ShouldContain("1.22.0");
+        offer.IsDeclaredIncompatible.ShouldBeTrue();
+
+        // Décochée d'avance : une case pré-cochée est acceptable pour ce que l'auteur a déclaré,
+        // pas pour ce qu'il n'a pas déclaré.
+        offer.IsSelected.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task ConfirmWithoutTickingTheOffer_InstallsTheModAlone()
+    {
+        var fixture = await CreateAsync();
+        fixture.Handler.CarryOnLibGameVersions = ["1.22.0"];
+        var dialog = await OpenAsync(fixture);
+
+        await dialog.ConfirmCommand.ExecuteAsync(null);
+
+        var installed = await fixture.Mods.ScanAsync(fixture.Slug, CancellationToken.None);
+        installed.Select(mod => mod.Provenance?.ModIdString).ShouldBe(["carryon"]);
+    }
+
+    [Fact]
+    public async Task TickingTheOffer_InstallsTheDependencyInTheSameGesture()
+    {
+        var fixture = await CreateAsync();
+        fixture.Handler.CarryOnLibGameVersions = ["1.22.0"];
+        var dialog = await OpenAsync(fixture);
+        dialog.InstallableAnyway.ShouldHaveSingleItem().IsSelected = true;
+
+        await dialog.ConfirmCommand.ExecuteAsync(null);
+
+        var installed = await fixture.Mods.ScanAsync(fixture.Slug, CancellationToken.None);
+        installed.Select(mod => mod.Provenance?.ModIdString).OrderBy(id => id).ShouldBe(["carryon", "carryonlib"]);
+
+        // 1.22.0 sur une instance en 1.21.3 : autre série mineure, donc un choix pleinement assumé.
+        var lib = installed.Single(mod => mod.Provenance?.ModIdString == "carryonlib").Provenance!;
+        lib.DeclaredIncompatible.ShouldBeTrue();
     }
 }

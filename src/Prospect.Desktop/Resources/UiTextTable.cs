@@ -432,7 +432,24 @@ internal abstract class ModsText
     /// </summary>
     internal abstract string ApproximateReleaseTag { get; }
 
+    /// <summary>
+    /// Pastille d'une release qu'AUCUN tag ne rattache à cette série de jeu. Elle n'apparaît
+    /// qu'après le dévoilement explicite : l'utilisateur a le droit de l'installer, pas de
+    /// l'installer sans le savoir.
+    /// </summary>
+    internal abstract string IncompatibleReleaseTag { get; }
+
+    internal abstract string ShowAllReleases { get; }
+
+    internal abstract string ShowCompatibleReleasesOnly { get; }
+
     internal abstract string ReleaseChoiceCount(int count);
+
+    /// <summary>Avertissement NON bloquant affiché quand la release choisie n'est déclarée compatible avec rien.</summary>
+    internal abstract string IncompatibleReleaseWarning(string gameVersion, IReadOnlyList<string> taggedVersions);
+
+    /// <summary>Sous-titre de la case « installer quand même » d'une dépendance sans release compatible.</summary>
+    internal abstract string InstallAnywayReason(IReadOnlyList<string> taggedVersions);
 
     /// <summary>Culture de mise en forme des grands nombres (séparateur de milliers).</summary>
     protected abstract CultureInfo NumberCulture { get; }

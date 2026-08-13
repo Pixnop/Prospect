@@ -199,4 +199,82 @@ public sealed class ModReleaseSelectorTests
     [Fact]
     public void SelectAll_NothingCompatible_GivesAnEmptyListRatherThanNull()
         => ModReleaseSelector.SelectAll([Release("1.12.0", 39980, "1.20.4")], GameVersion.Parse("1.21.3")).ShouldBeEmpty();
+
+    // ── Dévoilement des releases non déclarées compatibles ───────────────────────────────────
+
+    [Fact]
+    public void SelectAll_Revealing_ListsTheThreeVerdictsInDecreasingCertainty()
+    {
+        // Les tags de compatibilité sont des cases cochées à la main sur le site et prennent du
+        // retard : une release taguée jusqu'à 1.21.0 tourne souvent en 1.21.3, et une taguée 1.20
+        // parfois aussi. Le dévoilement les montre toutes, chacune avec ce que l'auteur a
+        // RÉELLEMENT déclaré, sans jamais rien élargir tout seul.
+        ModDbRelease[] releases =
+        [
+            Release("1.12.0", 39980, "1.20.4"),
+            Release("1.11.1", 38314, "1.21.3"),
+            Release("1.10.0", 37000, "1.21.0"),
+        ];
+
+        var candidates = ModReleaseSelector.SelectAll(
+            releases,
+            GameVersion.Parse("1.21.3"),
+            ModCompatibilityMode.ExactGameVersion,
+            includeIncompatible: true);
+
+        candidates.Select(candidate => candidate.Compatibility).ShouldBe(
+        [
+            ModReleaseCompatibility.Declared,
+            ModReleaseCompatibility.SameMinorSeries,
+            ModReleaseCompatibility.NotDeclared,
+        ]);
+        candidates.Select(candidate => candidate.Release.Version.ToString()).ShouldBe(["1.11.1", "1.10.0", "1.12.0"]);
+    }
+
+    [Fact]
+    public void SelectAll_Revealing_NeverChangesWhatTheAutomaticChoiceWouldBe()
+    {
+        // L'invariant qui fait tenir la promesse « jamais d'élargissement silencieux » : dévoiler
+        // ajoute des lignes à l'écran, il ne déplace pas la présélection.
+        ModDbRelease[] releases = [Release("1.12.0", 39980, "1.20.4"), Release("1.11.1", 38314, "1.21.3")];
+        var gameVersion = GameVersion.Parse("1.21.3");
+
+        foreach (var mode in Enum.GetValues<ModCompatibilityMode>())
+        {
+            var revealed = ModReleaseSelector.SelectAll(releases, gameVersion, mode, includeIncompatible: true);
+            var automatic = ModReleaseSelector.Automatic(revealed, mode);
+
+            automatic[0].ShouldBe(ModReleaseSelector.Select(releases, gameVersion, mode));
+            automatic.ShouldAllBe(candidate => !candidate.IsDeclaredIncompatible);
+        }
+    }
+
+    [Fact]
+    public void Automatic_InStrictMode_RefusesTheSameMinorSeriesThatRevealingShowed()
+    {
+        ModDbRelease[] releases = [Release("1.12.0", 39980, "1.21.0")];
+        var revealed = ModReleaseSelector.SelectAll(
+            releases,
+            GameVersion.Parse("1.21.3"),
+            ModCompatibilityMode.ExactGameVersion,
+            includeIncompatible: true);
+
+        revealed.ShouldHaveSingleItem().Compatibility.ShouldBe(ModReleaseCompatibility.SameMinorSeries);
+        ModReleaseSelector.Automatic(revealed, ModCompatibilityMode.ExactGameVersion).ShouldBeEmpty();
+        ModReleaseSelector.Automatic(revealed, ModCompatibilityMode.WidenToMinorSeries).ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public void SelectAll_Revealing_OffersEvenAModDeclaredForNothingAtAll()
+    {
+        // Une release sans aucun tag lisible existe dans la nature : elle reste installable, à la
+        // seule condition d'être annoncée pour ce qu'elle est.
+        var candidates = ModReleaseSelector.SelectAll(
+            [Release("1.12.0", 39980)],
+            GameVersion.Parse("1.21.3"),
+            ModCompatibilityMode.WidenToMinorSeries,
+            includeIncompatible: true);
+
+        candidates.ShouldHaveSingleItem().IsDeclaredIncompatible.ShouldBeTrue();
+    }
 }

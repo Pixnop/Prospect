@@ -173,7 +173,10 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
         "releases": [
           { "releaseid": 38314, "fileid": 84120, "mainfile": "https://moddbcdn.vintagestory.at/configlib_1.11.1.zip",
             "filename": "configlib_1.11.1.zip", "downloads": 90210, "tags": ["1.21.3"], "modidstr": "configlib",
-            "modversion": "1.11.1", "changelog": null, "created": "2026-02-11 09:22:10" }
+            "modversion": "1.11.1", "changelog": null, "created": "2026-02-11 09:22:10" },
+          { "releaseid": 39980, "fileid": 88961, "mainfile": "https://moddbcdn.vintagestory.at/configlib_1.12.0.zip",
+            "filename": "configlib_1.12.0.zip", "downloads": 118728, "tags": ["1.22.0"], "modidstr": "configlib",
+            "modversion": "1.12.0", "changelog": null, "created": "2026-05-01 12:03:34" }
         ]
       }
     }
@@ -205,6 +208,10 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
 
     private static readonly byte[] CarryOnOlderArchive =
         ModDbDoubles.BuildArchive(ModDbDoubles.ModInfo("carryon", "Carry On", "1.14.2"));
+
+    /// <summary>La release taguée pour une AUTRE série mineure, celle que seul le dévoilement montre.</summary>
+    private static readonly byte[] CarryOnOutOfSeriesArchive =
+        ModDbDoubles.BuildArchive(ModDbDoubles.ModInfo("carryon", "Carry On", "1.13.0", dependency: "carryonlib"));
 
     private static readonly byte[] CarryOnLibArchive =
         ModDbDoubles.BuildArchive(ModDbDoubles.ModInfo("carryonlib", "CarryOnLib", "1.2.0"));
@@ -310,6 +317,7 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
                 {
                     "/carryon_1.14.3.zip" => CarryOnArchive,
                     "/carryon_1.14.2.zip" => CarryOnOlderArchive,
+                    "/carryon_1.13.0.zip" => CarryOnOutOfSeriesArchive,
                     "/carryonlib_1.2.0.zip" => CarryOnLibArchive,
                     _ => ConfigLibArchive,
                 };

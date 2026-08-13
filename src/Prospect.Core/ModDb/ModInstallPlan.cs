@@ -17,6 +17,17 @@ public sealed record ModInstallItem(
     string TargetFileName,
     long? AnnouncedSizeBytes)
 {
+    /// <summary>
+    /// Ce que l'auteur a déclaré de la compatibilité de cette release. Plus fin que
+    /// <see cref="IsApproximateMatch"/>, qui ne distingue pas « supposée par la série mineure » de
+    /// « pas déclarée du tout » — or seule la seconde exige un dévoilement et un avertissement.
+    /// </summary>
+    public ModReleaseCompatibility Compatibility { get; init; } =
+        IsApproximateMatch ? ModReleaseCompatibility.SameMinorSeries : ModReleaseCompatibility.Declared;
+
+    /// <summary>Vrai quand l'auteur n'a coché aucune version de cette série de jeu.</summary>
+    public bool IsDeclaredIncompatible => Compatibility == ModReleaseCompatibility.NotDeclared;
+
     /// <summary>Identifiant modinfo.json, celui que porte la release.</summary>
     public string ModIdString => Release.ModIdString;
 
@@ -55,6 +66,23 @@ public sealed record UnresolvedModDependency(string ModIdString, ModDependencyRe
 {
     /// <summary>Comment la nommer à l'écran : le nom de la fiche si on l'a, son identifiant sinon.</summary>
     public string DisplayName => string.IsNullOrWhiteSpace(ModName) ? ModIdString : ModName;
+
+    /// <summary>
+    /// Meilleure release publiée de la fiche, quand elle existe : celle qu'on peut proposer
+    /// d'installer QUAND MÊME. Toujours <see langword="null"/> pour
+    /// <see cref="ModDependencyResolution.NotOnModDb"/>, où il n'y a rien à proposer.
+    /// </summary>
+    /// <remarks>
+    /// Refuser tout net serait plus faux qu'utile : les tags de compatibilité sont des cases
+    /// cochées à la main et prennent du retard. Le cas qui a motivé ceci est réel — CarryOnLib
+    /// 1.0.0-pre.8 s'arrête à 1.22.4 alors que Carry On 2.0.0-pre.8, qui en dépend, est tagué
+    /// jusqu'à 1.22.6. La ligne devient donc actionnable, mais l'option reste DÉCOCHÉE par défaut
+    /// et l'avertissement nomme les versions réellement taguées.
+    /// </remarks>
+    public ModInstallItem? BestAvailable { get; init; }
+
+    /// <summary>Versions de jeu que l'auteur a réellement cochées sur <see cref="BestAvailable"/>.</summary>
+    public IReadOnlyList<string> BestAvailableGameVersions => BestAvailable?.Release.CompatibleGameVersionTags ?? [];
 }
 
 /// <summary>
@@ -93,6 +121,13 @@ public sealed record ModInstallPlan(
     /// la main par un auteur, ni ce que « élargir à la série mineure » veut dire.
     /// </remarks>
     public IReadOnlyList<ModReleaseChoice> AvailableReleases { get; init; } = [];
+
+    /// <summary>
+    /// Dépendances qu'on peut proposer d'installer malgré l'absence de compatibilité déclarée,
+    /// chacune avec sa meilleure release publiée. Toujours DÉCOCHÉES par défaut.
+    /// </summary>
+    public IReadOnlyList<UnresolvedModDependency> InstallableAnyway
+        => [.. UnresolvedDependencies.Where(dependency => dependency.BestAvailable is not null)];
 
     /// <summary>Vrai s'il y a quoi que ce soit à montrer avant d'installer.</summary>
     public bool NeedsConfirmation => MissingDependencies.Count > 0 || UnresolvedDependencies.Count > 0 || Primary.IsApproximateMatch;
