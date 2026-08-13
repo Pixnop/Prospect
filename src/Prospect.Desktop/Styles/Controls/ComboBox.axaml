@@ -5,6 +5,16 @@
        .pr-select__opt. PART_Popup est un nom de partie exigé par ComboBox lui-même. -->
 
   <ControlTheme x:Key="{x:Type ComboBoxItem}" TargetType="ComboBoxItem">
+    <!--
+      Fond TRANSPARENT au repos, et non pas « pas de fond ». La différence n'est pas cosmétique :
+      un fond nul n'est pas testé au pointeur, donc une ligne au repos ne répondait au clic QUE là
+      où le glyphe du texte couvre le pixel visé — ni sur son padding de 12, ni sur la largeur
+      restante de la ligne. Le piège se referme sur lui-même : c'est :pointerover qui donnait un
+      fond à la ligne survolée, mais survoler suppose déjà d'être détecté. Seule la ligne
+      SÉLECTIONNÉE, qui tient son fond de :selected, était cliquable partout — d'où le symptôme
+      remonté depuis Windows, « seul le texte répond ».
+    -->
+    <Setter Property="Background" Value="Transparent" />
     <Setter Property="Padding" Value="12,0" />
     <Setter Property="Height" Value="30" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />

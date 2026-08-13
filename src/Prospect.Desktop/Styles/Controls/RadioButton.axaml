@@ -9,9 +9,12 @@
     <Setter Property="FontFamily" Value="{DynamicResource FontSans}" />
     <Setter Property="FontSize" Value="{StaticResource FsBodySm}" />
     <Setter Property="Cursor" Value="Hand" />
+    <!-- Même correction que la CheckBox : fond TRANSPARENT et non nul sur la racine du template,
+         sans quoi seuls le cercle et les glyphes du libellé sont testés au pointeur. -->
+    <Setter Property="Background" Value="Transparent" />
     <Setter Property="Template">
       <ControlTemplate TargetType="RadioButton">
-        <Grid ColumnDefinitions="Auto,*">
+        <Grid ColumnDefinitions="Auto,*" Background="{TemplateBinding Background}">
           <Border Name="PART_Box"
                   Grid.Column="0"
                   Width="16" Height="16"
