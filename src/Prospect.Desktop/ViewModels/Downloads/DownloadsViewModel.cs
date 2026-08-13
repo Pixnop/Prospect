@@ -58,7 +58,16 @@ public sealed partial class DownloadsViewModel : ObservableObject, IDisposable
     /// que tout est fini.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasActive))]
     private int _count;
+
+    /// <summary>
+    /// Vrai tant qu'il reste un téléchargement vivant. C'est ce qui décide de l'AFFICHAGE de la
+    /// pastille : la masquer et écrire « 0 » ne sont pas la même chose, et un historique conservé
+    /// laissait justement un zéro allumé à côté de « Téléchargements », donc exactement ce que le
+    /// décompte des seules opérations vivantes cherchait à éviter.
+    /// </summary>
+    public bool HasActive => Count > 0;
 
     /// <summary>Compteur affiché en pied de popover, par exemple « 2 actifs · 1 en attente ».</summary>
     [ObservableProperty]

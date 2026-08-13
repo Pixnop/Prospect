@@ -6,6 +6,7 @@ using Avalonia.VisualTree;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Prospect.Core.Http;
 using Prospect.Desktop.ViewModels.Mods;
 using Prospect.Desktop.ViewModels.Settings;
 using Prospect.Desktop.ViewModels.Shell;
@@ -103,6 +104,54 @@ public class ShellHeadlessTests
         shellViewModel.CloseDownloadsPopoverCommand.Execute(null);
         window.Settle();
         shellViewModel.IsDownloadsPopoverOpen.ShouldBeFalse();
+
+        window.Close();
+    }
+
+    /// <summary>
+    /// Conserver l'historique de la session a un effet de bord sur les deux compteurs du panneau :
+    /// ils comptent ce qui TOURNE, et une file qui n'a plus que de l'historique les laissait
+    /// afficher un « 0 » dans la barre latérale et une bande de pied vide sous les lignes. Le
+    /// contenu, lui, doit rester : c'est tout l'intérêt de l'historique.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task DownloadsPopover_WithNothingLeftRunning_KeepsItsHistoryButHidesItsCounters()
+    {
+        using var provider = TestServiceProviderFactory.Create(out _);
+        var window = provider.GetRequiredService<MainWindow>();
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        window.Show();
+
+        await provider.GetRequiredService<IDownloadManager>().DownloadAsync(new DownloadRequest(
+            "Config lib 1.11.1",
+            "configlib_1.11.1.zip",
+            [new Uri("https://moddbcdn.vintagestory.at/configlib_1.11.1.zip")]));
+
+        shell.ToggleDownloadsPopoverCommand.Execute(null);
+        window.Settle();
+
+        shell.Downloads.Items.Count.ShouldBe(1);
+        shell.Downloads.HasDownloads.ShouldBeTrue();
+        shell.Downloads.HasActive.ShouldBeFalse();
+
+        var navItem = window
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Single(button => button.GetVisualDescendants().OfType<TextBlock>().Any(block => block.Text == "Téléchargements"));
+        navItem.GetVisualDescendants().OfType<TextBlock>().Single(block => block.Text == "0").IsVisible.ShouldBeFalse();
+
+        window
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(border => border.Classes.Contains("glassBand"))
+            .IsVisible.ShouldBeFalse();
+
+        // La ligne d'historique, elle, est bien rendue : c'est la moitié qui doit rester.
+        window
+            .GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Any(block => block.Text == "Config lib 1.11.1")
+            .ShouldBeTrue();
 
         window.Close();
     }

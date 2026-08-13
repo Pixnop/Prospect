@@ -35,9 +35,12 @@
                   <Path Grid.Column="0" Width="16" Height="16" Margin="0,0,10,0" Stretch="Uniform" Data="{StaticResource Icon.download}"
                         Stroke="{DynamicResource Text2}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
                   <TextBlock Grid.Column="1" Text="{StaticResource Nav_Telechargements}" VerticalAlignment="Center" />
+                  <!-- Visible sur ce qui TOURNE, pas sur ce qui est affiché : depuis que le popover
+                       garde l'historique de la session, une visibilité liée aux lignes laisserait
+                       un « 0 » allumé longtemps après le dernier téléchargement. -->
                   <TextBlock Grid.Column="2" Text="{Binding Downloads.Count}" VerticalAlignment="Center"
                              FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}"
-                             IsVisible="{Binding Downloads.HasDownloads}" />
+                             IsVisible="{Binding Downloads.HasActive}" />
                 </Grid>
               </Button>
               <Button Classes="ghost navitem" Classes.active="{Binding SettingsNavItem.IsActive}" Command="{Binding SettingsNavItem.SelectCommand}">
@@ -166,7 +169,10 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
             </ScrollViewer>
-            <Border Classes="glassBand" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}" Padding="16,10">
+            <!-- Ce pied compte ce qui tourne et ce qui attend : sur un popover qui n'a plus que de
+                 l'historique, il n'a rien à dire et se retire au lieu de laisser une bande vide. -->
+            <Border Classes="glassBand" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}" Padding="16,10"
+                    IsVisible="{Binding Downloads.SummaryText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
               <TextBlock Text="{Binding Downloads.SummaryText}"
                          FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
             </Border>

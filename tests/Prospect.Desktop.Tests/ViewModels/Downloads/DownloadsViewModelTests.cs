@@ -77,6 +77,7 @@ public class DownloadsViewModelTests
         await WaitUntilAsync(() => viewModel.Items.Count == 1);
 
         viewModel.HasDownloads.ShouldBeTrue();
+        viewModel.HasActive.ShouldBeTrue();
         viewModel.Items[0].Name.ShouldBe("Vintage Story 1.22.6");
         viewModel.Items[0].IsFinished.ShouldBeFalse();
         viewModel.SummaryText.ShouldNotBeEmpty();
@@ -91,8 +92,13 @@ public class DownloadsViewModelTests
         item.StatText.ShouldBe("256 B");
         item.FinishedText.ShouldBe("à l'instant");
 
-        // La pastille de la barre latérale compte ce qui TOURNE, pas ce qui est archivé.
+        // La pastille de la barre latérale compte ce qui TOURNE, pas ce qui est archivé. Elle
+        // s'éteint donc au lieu d'afficher un zéro, et le pied du popover n'a plus rien à dire :
+        // les deux compteurs se retirent, la ligne d'historique reste.
         viewModel.Count.ShouldBe(0);
+        viewModel.HasActive.ShouldBeFalse();
+        viewModel.SummaryText.ShouldBeEmpty();
+        viewModel.HasDownloads.ShouldBeTrue();
         viewModel.HasFinished.ShouldBeTrue();
     }
 
