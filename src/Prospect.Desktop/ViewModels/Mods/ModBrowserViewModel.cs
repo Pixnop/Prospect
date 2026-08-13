@@ -64,9 +64,9 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     /// de mise en page : bien au-delà de ce qu'un défilement ordinaire atteint, et assez bas pour
     /// que le pire cas reste de l'ordre d'une centaine de mégaoctets (mesuré : 96 Mio d'arbre
     /// visuel, rendus dès qu'on quitte la page) plutôt que de plusieurs centaines qui ne
-    /// s'arrêtaient nulle part. C'est un plafond FRANC, dans l'esprit de celui d'<c>IModLogoCache</c> : au-delà,
-    /// l'écran ne rend plus rien de nouveau et le dit, plutôt que de retirer des cartes déjà
-    /// affichées sous le curseur de l'utilisateur.
+    /// s'arrêtaient nulle part. C'est un plafond FRANC, dans l'esprit de celui
+    /// d'<c>IModLogoCache</c> : au-delà, l'écran ne rend plus rien de nouveau et le dit, plutôt que
+    /// de retirer des cartes déjà affichées sous le curseur de l'utilisateur.
     /// </summary>
     public const int MaxRenderedResults = 5 * RenderWindowSize;
 
