@@ -13,7 +13,6 @@ using Prospect.Core.Common;
 using Prospect.Core.Diagnostics;
 using Prospect.Core.GameVersions;
 using Prospect.Core.ModDb;
-using Prospect.Core.Modpacks;
 using Prospect.Core.Runtime;
 using Prospect.Core.Settings;
 using Prospect.Core.Storage;
@@ -26,7 +25,6 @@ using Prospect.Desktop.ViewModels.FirstRun;
 using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Instance;
 using Prospect.Desktop.ViewModels.Migration;
-using Prospect.Desktop.ViewModels.Modpacks;
 using Prospect.Desktop.ViewModels.Mods;
 using Prospect.Desktop.ViewModels.Settings;
 using Prospect.Desktop.ViewModels.Shell;
@@ -1020,12 +1018,25 @@ public sealed class ResponsiveRegressionTests
 
     // ── Dialogues ────────────────────────────────────────────────────────────────────────────
 
-    [AvaloniaFact]
-    public async Task Dialogs_HoldTheirBoxes()
+    /// <summary>
+    /// Les dialogues du menu de la page de détail, aux trois tailles et DANS LES DEUX THÈMES.
+    /// </summary>
+    /// <remarks>
+    /// La liste portait aussi l'export et l'import de modpack, partis avec leur interface
+    /// (docs/architecture.md, « 5. Modpacks »). Ce qu'ils gardaient de particulier n'est pas perdu
+    /// pour autant : leur forme de panneau modal à étapes, avec son rapport final, reste couverte
+    /// par les deux gardes du dialogue d'adoption VS Launcher, qui l'a toujours reprise à
+    /// l'identique. Le thème clair, lui, n'était couvert sur aucun de ces dialogues et l'est
+    /// maintenant sur tous : le compte de scénarios ne baisse pas.
+    /// </remarks>
+    [AvaloniaTheory]
+    [InlineData("Dark")]
+    [InlineData("Light")]
+    public async Task Dialogs_HoldTheirBoxes(string variant)
     {
         using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
         provider.SeedInstalledVersion(fileSystem, "1.20.4");
-        var window = ResponsiveScenario.ShowWindow(provider);
+        var window = ResponsiveScenario.ShowWindow(provider, variant == "Light" ? ThemeVariant.Light : ThemeVariant.Dark);
         var shell = provider.GetRequiredService<ShellViewModel>();
         var home = provider.GetRequiredService<HomeViewModel>();
 
@@ -1035,25 +1046,11 @@ public sealed class ResponsiveRegressionTests
         await detail.InitializeCommand.ExecuteAsync(null);
         window.Settle();
 
-        // L'import ne passe pas par HomeViewModel.ImportModpackCommand : ce chemin commence par un
-        // sélecteur de fichier, qui n'existe pas en mode headless et rend null (annulation), donc
-        // aucun panneau ne s'ouvrirait. Le ViewModel se construit ici par la fabrique du conteneur,
-        // exactement celle qu'utilise la commande, avec une source qui n'existe pas : le dialogue
-        // s'affiche alors sur son étape « échec », celle qui porte le plus long texte.
-        var importFactory = provider.GetRequiredService<Func<string, ImportModpackViewModel>>();
-
         var dialogs = new (string Name, Action Open)[]
         {
             ("Renommer", () => detail.RenameCommand.Execute(null)),
             ("Dupliquer", () => detail.DuplicateCommand.Execute(null)),
             ("Supprimer", () => detail.DeleteCommand.Execute(null)),
-            ("Exporter un modpack", () => detail.ExportCommand.Execute(null)),
-            ("Importer un modpack", () =>
-            {
-                var import = importFactory("/import/pack-inexistant.json");
-                shell.Overlay.Show(import);
-                import.LoadPreviewCommand.Execute(null);
-            }),
         };
 
         foreach (var (name, open) in dialogs)
@@ -1061,30 +1058,10 @@ public sealed class ResponsiveRegressionTests
             open();
             window.Settle();
             shell.Overlay.Active.ShouldNotBeNull();
-            window.ShouldHoldLayoutInvariantsAtEverySize($"Dialogue « {name} »");
+            window.ShouldHoldLayoutInvariantsAtEverySize($"Dialogue « {name} » ({variant})");
             shell.Overlay.Close();
             window.Settle();
         }
-
-        window.Close();
-    }
-
-    [AvaloniaFact]
-    public async Task ImportModpackDialog_OnItsPreviewStep_HoldsItsBoxes()
-    {
-        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
-        provider.SeedInstalledVersion(fileSystem, "1.20.4");
-        var window = ResponsiveScenario.ShowWindow(provider);
-        var shell = provider.GetRequiredService<ShellViewModel>();
-
-        var source = await ResponsiveScenario.WriteModpackManifestAsync(fileSystem, "Pack de survie communautaire", "1.20.4");
-        var import = provider.GetRequiredService<Func<string, ImportModpackViewModel>>()(source);
-        shell.Overlay.Show(import);
-        await import.LoadPreviewCommand.ExecuteAsync(null);
-        window.Settle();
-        import.Step.ShouldBe(ImportModpackStep.Preview);
-
-        window.ShouldHoldLayoutInvariantsAtEverySize("Dialogue d'import de modpack, aperçu");
 
         window.Close();
     }

@@ -10,13 +10,11 @@ using Prospect.Core.Diagnostics;
 using Prospect.Core.Instances;
 using Prospect.Core.Launching;
 using Prospect.Core.ModDb;
-using Prospect.Core.Modpacks;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Formatting;
 using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.ViewModels.Dialogs;
-using Prospect.Desktop.ViewModels.Modpacks;
 using Prospect.Desktop.ViewModels.Mods;
 using Prospect.Desktop.ViewModels.Toasts;
 
@@ -46,8 +44,6 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     private readonly IToastService _toasts;
     private readonly IUiDispatcher _dispatcher;
     private readonly IClock _clock;
-    private readonly ModpackExportService _exportService;
-    private readonly IFilePickerService _filePicker;
 
     public InstanceDetailViewModel(
         string slug,
@@ -67,8 +63,6 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         IToastService toasts,
         IUiDispatcher dispatcher,
         IClock clock,
-        ModpackExportService exportService,
-        IFilePickerService filePicker,
         IExternalUrlOpener urlOpener,
         IModLogoCache logoCache)
     {
@@ -89,8 +83,6 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         ArgumentNullException.ThrowIfNull(toasts);
         ArgumentNullException.ThrowIfNull(dispatcher);
         ArgumentNullException.ThrowIfNull(clock);
-        ArgumentNullException.ThrowIfNull(exportService);
-        ArgumentNullException.ThrowIfNull(filePicker);
         ArgumentNullException.ThrowIfNull(urlOpener);
         ArgumentNullException.ThrowIfNull(logoCache);
 
@@ -108,8 +100,6 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         _toasts = toasts;
         _dispatcher = dispatcher;
         _clock = clock;
-        _exportService = exportService;
-        _filePicker = filePicker;
 
         Slug = slug;
         PathText = repository.GetDataDirectory(slug);
@@ -351,9 +341,6 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
 
     [RelayCommand]
     private void Duplicate() => _overlay.Show(new DuplicateDialogViewModel(_slug, Name, _instanceService, _overlay, OnDuplicatedAsync));
-
-    [RelayCommand]
-    private void Export() => _overlay.Show(new ExportModpackDialogViewModel(_slug, Name, _exportService, _filePicker, _overlay, _toasts));
 
     [RelayCommand]
     private void Delete() => _overlay.Show(new DeleteInstanceDialogViewModel(_slug, Name, _instanceService, _overlay, _dispatcher, OnDeletedAsync));

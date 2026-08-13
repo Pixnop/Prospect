@@ -28,6 +28,25 @@ public sealed record ModInstallItem(
     /// <summary>Vrai quand l'auteur n'a coché aucune version de cette série de jeu.</summary>
     public bool IsDeclaredIncompatible => Compatibility == ModReleaseCompatibility.NotDeclared;
 
+    /// <summary>
+    /// Chemin de l'archive que la PRÉPARATION a déjà ramenée dans <c>cache/downloads/</c>, ou
+    /// <see langword="null"/> pour un élément que rien n'a encore téléchargé (une dépendance, par
+    /// exemple : elle n'est ramenée qu'à l'application, et seulement si elle est cochée).
+    /// </summary>
+    /// <remarks>
+    /// Ce champ existe pour un défaut de terrain précis : chaque zip de mod partait DEUX fois à
+    /// l'installation, à deux secondes d'intervalle. La préparation télécharge l'archive parce que
+    /// c'est le seul moyen de lire son <c>modinfo.json</c> et donc ses dépendances ; l'application
+    /// relançait ensuite un téléchargement pour le même fichier. Le cache du
+    /// <see cref="Http.DownloadManager"/> évitait bien la deuxième traversée du réseau (le nom de
+    /// fichier cible est identique, donc <c>TryReuseAsync</c> retombait dessus), mais la deuxième
+    /// DEMANDE, elle, était bien engagée : une ligne de plus dans le popover Téléchargements et une
+    /// paire « démarré / terminé » de plus dans le journal, ce qui se lit exactement comme un
+    /// double téléchargement. Porter le chemin dans le plan supprime la demande elle-même plutôt
+    /// que ses octets.
+    /// </remarks>
+    public string? PreparedArchivePath { get; init; }
+
     /// <summary>Identifiant modinfo.json, celui que porte la release.</summary>
     public string ModIdString => Release.ModIdString;
 

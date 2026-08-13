@@ -7,7 +7,7 @@ namespace Prospect.Desktop.Services;
 
 /// <summary>
 /// Sélecteur de fichiers du système, pour les flux qui ont besoin d'un chemin choisi par
-/// l'utilisateur (export et import de modpack aujourd'hui). N'expose que des chemins simples :
+/// l'utilisateur (export des journaux, choix de dossier). N'expose que des chemins simples :
 /// aucun type Avalonia ne fuit au-delà de son implémentation, ce qui garde les ViewModels qui en
 /// dépendent testables sans fenêtre réelle.
 /// </summary>
@@ -22,15 +22,6 @@ public interface IFilePickerService
     /// <param name="cancellationToken">Annulation.</param>
     /// <returns>Le chemin local choisi, ou <see langword="null"/> si l'utilisateur a annulé.</returns>
     Task<string?> PickSaveFileAsync(string title, string suggestedFileName, string extension, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Ouvre un sélecteur « Ouvrir ».
-    /// </summary>
-    /// <param name="title">Titre de la fenêtre du sélecteur.</param>
-    /// <param name="extensions">Extensions acceptées (sans le point), pour le filtre de type.</param>
-    /// <param name="cancellationToken">Annulation.</param>
-    /// <returns>Le chemin local choisi, ou <see langword="null"/> si l'utilisateur a annulé.</returns>
-    Task<string?> PickOpenFileAsync(string title, IReadOnlyList<string> extensions, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Ouvre un sélecteur de DOSSIER (adoption VS Launcher, quand la détection automatique ne
@@ -52,7 +43,7 @@ public interface IFilePickerService
 /// <remarks>
 /// Prend une fabrique plutôt que la fenêtre elle-même : <see cref="MainWindow"/> dépend de
 /// <c>ShellViewModel</c>, qui dépend de <c>HomeViewModel</c>, qui dépend de ce service pour
-/// l'import de modpack. Résoudre <see cref="MainWindow"/> à la construction créerait un cycle ; la
+/// des journaux. Résoudre <see cref="MainWindow"/> à la construction créerait un cycle ; la
 /// fabrique (même pattern que <c>Func&lt;WizardViewModel&gt;</c> dans <see cref="CompositionRoot"/>)
 /// diffère la résolution jusqu'au premier appel, quand la fenêtre existe déjà.
 /// </remarks>
@@ -90,25 +81,6 @@ public sealed class AvaloniaFilePickerService : IFilePickerService
     }
 
     /// <inheritdoc />
-    public async Task<string?> PickOpenFileAsync(string title, IReadOnlyList<string> extensions, CancellationToken cancellationToken = default)
-    {
-        var provider = TopLevel.GetTopLevel(_windowFactory())?.StorageProvider;
-        if (provider is null)
-        {
-            return null;
-        }
-
-        var files = await provider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = title,
-            AllowMultiple = false,
-            FileTypeFilter = [FileType(extensions)],
-        }).ConfigureAwait(true);
-
-        return files.Count == 0 ? null : files[0].TryGetLocalPath();
-    }
-
-    /// <inheritdoc />
     public async Task<string?> PickFolderAsync(string title, CancellationToken cancellationToken = default)
     {
         var provider = TopLevel.GetTopLevel(_windowFactory())?.StorageProvider;
@@ -126,10 +98,8 @@ public sealed class AvaloniaFilePickerService : IFilePickerService
         return folders.Count == 0 ? null : folders[0].TryGetLocalPath();
     }
 
-    private static FilePickerFileType FileType(string extension) => FileType([extension]);
-
-    private static FilePickerFileType FileType(IReadOnlyList<string> extensions) => new(string.Join('/', extensions))
+    private static FilePickerFileType FileType(string extension) => new(extension)
     {
-        Patterns = extensions.Select(extension => $"*.{extension}").ToArray(),
+        Patterns = [$"*.{extension}"],
     };
 }

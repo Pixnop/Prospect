@@ -64,7 +64,6 @@ internal static class UiText
 
     internal static ModsText Mods => _table.Mods;
 
-    internal static ModpacksText Modpacks => _table.Modpacks;
 
     internal static MigrationText Migration => _table.Migration;
 

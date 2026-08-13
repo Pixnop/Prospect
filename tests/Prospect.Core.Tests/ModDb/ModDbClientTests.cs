@@ -460,6 +460,58 @@ public sealed class ModDbClientTests
         handler.Requests.ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// Le défaut de terrain : un lot dont RIEN n'est en retard répond
+    /// <c>{"statuscode":"200","updates":[]}</c>, parce que PHP encode une map associative vide en
+    /// tableau. La désérialisation attendait un objet, levait, et le client rendait « Le ModDB est
+    /// injoignable » entre deux téléchargements ModDB réussis.
+    /// </summary>
+    [Fact]
+    public async Task GetUpdatesAsync_NothingIsBehind_ReadsThePhpEmptyArrayAsAnEmptyMap()
+    {
+        using var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Text(ModDbSamples.UpdatesNoneBehind));
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+
+        var updates = await client.GetUpdatesAsync(
+            new Dictionary<string, ModVersion>
+            {
+                ["carryon"] = ModVersion.Parse("2.0.0-pre.8"),
+                ["carryonlib"] = ModVersion.Parse("1.0.0-pre.8"),
+                ["primitivesurvival"] = ModVersion.Parse("5.1.1"),
+            },
+            CancellationToken.None);
+
+        updates.ShouldBeEmpty();
+    }
+
+    /// <summary>Un tableau NON vide n'a pas de clés : rien n'en ferait une map, il reste refusé.</summary>
+    [Fact]
+    public async Task GetUpdatesAsync_ANonEmptyArrayWhereAMapBelongs_IsStillRefused()
+    {
+        using var handler = new FakeHttpMessageHandler(
+            _ => FakeHttpMessageHandler.Text("""{"statuscode":"200","updates":[{"releaseid":1}]}"""));
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+
+        await Should.ThrowAsync<ModDbUnavailableException>(() => client.GetUpdatesAsync(
+            new Dictionary<string, ModVersion> { ["configlib"] = ModVersion.Parse("1.0.0") },
+            CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetInstallInformationAsync_EmptyDataAndResolvedArrays_AreReadAsEmptyMaps()
+    {
+        // Même piège PHP sur v2 : `data` et `resolved` vides sortent en tableaux. Sans le
+        // convertisseur, la JsonException était avalée par le rattrapage de GetInstallInformationAsync
+        // et le croisement resolve-deps disparaissait en silence sur tout mod sans dépendance.
+        using var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Text(ModDbSamples.V2InstallInformationAllEmpty));
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+
+        var information = await client.GetInstallInformationAsync(["configlib"], GameVersion.Parse("1.22.0"), CancellationToken.None);
+
+        information.ShouldBeEmpty();
+        handler.Requests.ShouldNotBeEmpty();
+    }
+
     [Fact]
     public async Task GetUpdatesAsync_RejectedByTheServer_ThrowsRatherThanSilentlyReportingNoUpdates()
     {

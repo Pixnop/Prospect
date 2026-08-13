@@ -8,7 +8,7 @@ namespace Prospect.Desktop.Formatting;
 /// Traduit un <see cref="GameInstallProgress"/> en la ligne de détail affichée sous la barre.
 /// </summary>
 /// <remarks>
-/// Écrit une fois plutôt que trois : l'écran Versions, le wizard et l'import de modpack consomment
+/// Écrit une fois plutôt que trois : l'écran Versions, le wizard et l'adoption VS Launcher consomment
 /// le MÊME avancement et le rendaient chacun de leur côté, tous avec la même ligne
 /// « si téléchargement, le détail, sinon rien ». Ce « sinon rien » est précisément ce qui laissait
 /// la phase d'installation muette — une barre sans chiffre ni détail pendant l'extraction de

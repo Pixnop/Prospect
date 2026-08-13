@@ -2,7 +2,6 @@ using Prospect.Core.Diagnostics;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
 using Prospect.Core.ModDb;
-using Prospect.Core.Modpacks;
 using Prospect.Core.Settings;
 using Prospect.Desktop.Resources;
 
@@ -117,19 +116,6 @@ public sealed class EnglishUiTextTests
     public void Migration_DetectionSummary_AgreesInNumberOnBothHalves(int installations, int engines, string expected)
     {
         English.Migration.DetectionSummary(installations, engines).ShouldBe(expected);
-    }
-
-    [Theory]
-    [InlineData(ModpackModImportStatus.Installed, 1, "1 mod installed")]
-    [InlineData(ModpackModImportStatus.Installed, 2, "2 mods installed")]
-    [InlineData(ModpackModImportStatus.NotFound, 1, "1 mod not found on ModDB")]
-    [InlineData(ModpackModImportStatus.VersionMissing, 2, "2 versions unavailable")]
-    [InlineData(ModpackModImportStatus.Sha256Mismatch, 1, "1 checksum mismatch")]
-    [InlineData(ModpackModImportStatus.Sha256Mismatch, 3, "3 checksum mismatches")]
-    [InlineData(ModpackModImportStatus.NetworkFailure, 2, "2 network failures")]
-    public void Modpacks_ReportGroupTitle_AgreesInNumber(ModpackModImportStatus status, int count, string expected)
-    {
-        English.Modpacks.ReportGroupTitle(status, count).ShouldBe(expected);
     }
 
     // ── Décomptes et énumérations ────────────────────────────────────────────────────────────
@@ -295,23 +281,6 @@ public sealed class EnglishUiTextTests
 
         English.Instance.Doctor.ModIssueMessage(issue)
             .ShouldBe("“cartomap.zip” could not be identified (unreadable archive).");
-    }
-
-    [Fact]
-    public void Modpacks_ImportedToastDescription_ReadsAsEnglish()
-    {
-        English.Modpacks.ImportedToastDescription(0, 0).ShouldBe("No mod in this pack.");
-        English.Modpacks.ImportedToastDescription(4, 4).ShouldBe("4/4 mods installed.");
-        English.Modpacks.ImportedToastDescription(2, 4).ShouldBe("2/4 mods installed, see the report for the rest.");
-    }
-
-    [Fact]
-    public void Modpacks_ImportGameVersionWarning_MentionsTheSizeOnlyWhenThereIsOne()
-    {
-        English.Modpacks.ImportGameVersionWarning("1.21.3", string.Empty)
-            .ShouldBe("Game version 1.21.3 is not installed. It will be downloaded before the import.");
-        English.Modpacks.ImportGameVersionWarning("1.21.3", "590.5 MB")
-            .ShouldBe("Game version 1.21.3 is not installed: 590.5 MB to download before the import.");
     }
 
     [Fact]

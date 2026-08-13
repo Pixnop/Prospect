@@ -14,7 +14,8 @@ The MVP targets a short list of things Prism does well and VS Launcher never qui
 - multiple game versions installed side by side
 - launching through Vintage Story's native `--dataPath` flag rather than juggling a single shared install
 - a client for the official ModDB, for searching, installing, and updating mods
-- modpacks that export and import cleanly, with no absolute paths or signed URLs baked in
+
+Modpack export and import are built and tested in the core, but there is no way to reach them from the interface yet. Sharing a pack raises questions a button does not answer on its own, and those are better settled once the rest of the launcher is solid.
 
 VS Launcher, the launcher most of the community has relied on for years, was archived in June 2026. Prospect exists to give Vintage Story players somewhere to go next.
 

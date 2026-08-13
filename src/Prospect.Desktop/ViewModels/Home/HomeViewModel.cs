@@ -12,7 +12,6 @@ using Prospect.Desktop.Formatting;
 using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.ViewModels.FirstRun;
-using Prospect.Desktop.ViewModels.Modpacks;
 using Prospect.Desktop.ViewModels.Toasts;
 using Prospect.Desktop.ViewModels.Wizard;
 
@@ -47,9 +46,7 @@ public sealed partial class HomeViewModel : ObservableObject
     private readonly IOverlayService _overlay;
     private readonly IToastService _toasts;
     private readonly IUiDispatcher _dispatcher;
-    private readonly IFilePickerService _filePicker;
     private readonly Func<WizardViewModel> _wizardFactory;
-    private readonly Func<string, ImportModpackViewModel> _importFactory;
     private readonly List<InstanceCardViewModel> _allInstances = [];
     private readonly NewInstanceTileViewModel _newInstanceTile;
 
@@ -71,9 +68,7 @@ public sealed partial class HomeViewModel : ObservableObject
         IOverlayService overlay,
         IToastService toasts,
         IUiDispatcher dispatcher,
-        IFilePickerService filePicker,
         Func<WizardViewModel> wizardFactory,
-        Func<string, ImportModpackViewModel> importFactory,
         FirstRunViewModel firstRun)
     {
         ArgumentNullException.ThrowIfNull(instanceService);
@@ -85,9 +80,7 @@ public sealed partial class HomeViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(toasts);
         ArgumentNullException.ThrowIfNull(dispatcher);
-        ArgumentNullException.ThrowIfNull(filePicker);
         ArgumentNullException.ThrowIfNull(wizardFactory);
-        ArgumentNullException.ThrowIfNull(importFactory);
         ArgumentNullException.ThrowIfNull(firstRun);
 
         _instanceService = instanceService;
@@ -99,9 +92,7 @@ public sealed partial class HomeViewModel : ObservableObject
         _overlay = overlay;
         _toasts = toasts;
         _dispatcher = dispatcher;
-        _filePicker = filePicker;
         _wizardFactory = wizardFactory;
-        _importFactory = importFactory;
         _newInstanceTile = new NewInstanceTileViewModel(NewInstance);
 
         FirstRun = firstRun;
@@ -178,7 +169,7 @@ public sealed partial class HomeViewModel : ObservableObject
     /// Point d'entrée unique du rafraîchissement. Sérialise les scans via <see cref="_refreshGate"/>
     /// plutôt que de les laisser se chevaucher : depuis que <see cref="ViewModels.Shell.ShellViewModel"/>
     /// déclenche ce rafraîchissement tout seul au démarrage (l'angle mort corrigé — voir sa
-    /// docstring), un second appel (création d'instance, adoption VS Launcher, import de modpack)
+    /// docstring), un second appel (création d'instance, adoption VS Launcher)
     /// peut très bien arriver pendant que ce premier scan tourne encore. Deux scans VRAIMENT
     /// concurrents entrelaceraient leurs <c>Clear()</c>/<c>AddRange()</c> sur <see cref="_allInstances"/>
     /// (et disposeraient les mêmes cartes deux fois) — mais fusionner le second appel dans le
@@ -299,39 +290,8 @@ public sealed partial class HomeViewModel : ObservableObject
             UiText.Toasts.WithVersion(record.Metadata.Name, record.Metadata.GameVersion.ToString()));
     }
 
-    // Le sélecteur de fichier tranche avant même d'ouvrir le panneau modal (contrairement au
-    // wizard, qui s'ouvre puis charge) : un import n'a rien à montrer tant qu'aucune source n'a
-    // été choisie, et annuler le sélecteur ne doit laisser aucune trace.
-    [RelayCommand]
-    private async Task ImportModpackAsync()
-    {
-        var path = await _filePicker
-            .PickOpenFileAsync(UiText.Modpacks.ImportPickerTitle, ["zip", "json"])
-            .ConfigureAwait(true);
-
-        if (path is null)
-        {
-            return;
-        }
-
-        var import = _importFactory(path);
-        import.Imported += OnModpackImported;
-        _overlay.Show(import);
-        _ = import.LoadPreviewCommand.ExecuteAsync(null);
-    }
-
-    private void OnModpackImported(object? sender, InstanceRecord record)
-    {
-        if (sender is ImportModpackViewModel import)
-        {
-            import.Imported -= OnModpackImported;
-        }
-
-        _ = RefreshAsync(CancellationToken.None);
-    }
-
-    // Le toast de fin d'adoption est déjà affiché par AdoptVslViewModel lui-même (même partage des
-    // rôles que ModpackImportService / ImportModpackViewModel) : ce gestionnaire ne fait que
+    // Le toast de fin d'adoption est déjà affiché par AdoptVslViewModel lui-même (le service fait,
+    // le ViewModel raconte) : ce gestionnaire ne fait que
     // rafraîchir, pour que les instances tout juste créées apparaissent sans action supplémentaire.
     private void OnVslAdopted(object? sender, VslAdoptionOutcome outcome) => _ = RefreshAsync(CancellationToken.None);
 

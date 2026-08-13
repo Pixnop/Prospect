@@ -128,6 +128,27 @@ public sealed class ModUpdateCheckerTests
         report.CheckedUtc.ShouldBe(Noon);
     }
 
+    /// <summary>
+    /// La vérification bout en bout sur la réponse RÉELLE d'un lot dont rien n'est en retard :
+    /// <c>updates</c> arrive en tableau vide (PHP), et le verdict attendu est « tout à jour », pas
+    /// « Le ModDB est injoignable ». C'est le défaut vu dans le journal de l'utilisateur, entre deux
+    /// téléchargements ModDB réussis.
+    /// </summary>
+    [Fact]
+    public async Task CheckAsync_ServerSaysNothingIsBehindWithAnEmptyPhpArray_ReportsEverythingUpToDate()
+    {
+        var harness = Create("1.22.6");
+        SeedMod(harness, "carryon-2.0.0-pre.8.zip", ModInfo("carryon", "Carry On", "2.0.0-pre.8"), Provenance("carryon", "2.0.0-pre.8"));
+        SeedMod(harness, "carryonlib-1.0.0-pre.8.zip", ModInfo("carryonlib", "CarryOnLib", "1.0.0-pre.8"), Provenance("carryonlib", "1.0.0-pre.8"));
+        harness.Server.UpdatesJson = ModDbSamples.UpdatesNoneBehind;
+
+        var report = await harness.Checker.CheckAsync(Slug, cancellationToken: CancellationToken.None);
+
+        report.Mods.ShouldAllBe(result => result.Status == ModUpdateStatus.UpToDate);
+        report.HasUpdates.ShouldBeFalse();
+        harness.Log.Lines.ShouldNotContain(line => line.Level == AppLogLevel.Error);
+    }
+
     [Fact]
     public async Task CheckAsync_CallsTheUpdatesEndpointExactlyOnceRegardlessOfModCount()
     {

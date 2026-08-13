@@ -181,6 +181,20 @@ internal static class ModDbSamples
     }
     """;
 
+    /// <summary>
+    /// <c>GET /api/updates</c> sur un lot dont RIEN n'est en retard. Relevé mot pour mot en direct
+    /// sur <c>?mods=carryon@2.0.0-pre.8,carryonlib@1.0.0-pre.8,primitivesurvival@5.1.1</c> : la map
+    /// vide sort en <c>[]</c> et non en <c>{}</c>, parce que PHP n'a qu'un seul type pour la liste
+    /// et le dictionnaire et que <c>json_encode</c> ne peut plus les distinguer une fois la map
+    /// vidée. C'est le cas le plus banal de tous, et c'était le seul qui échouait.
+    /// </summary>
+    public const string UpdatesNoneBehind = """{"statuscode":"200","updates":[]}""";
+
+    /// <summary>Même piège côté v2 : <c>data</c> et <c>resolved</c> vides sortent en tableaux.</summary>
+    public const string V2InstallInformationAllEmpty = """
+    {"statuscode":"200","data":[],"resolved":[],"warnings":[]}
+    """;
+
     /// <summary><c>GET /api/tags</c> : noter le <c>tagid</c> en CHAÎNE, contrairement à /api/gameversions.</summary>
     public const string TagList = """
     {

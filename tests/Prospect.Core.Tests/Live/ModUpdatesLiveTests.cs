@@ -73,6 +73,42 @@ public sealed class ModUpdatesLiveTests(ITestOutputHelper output)
     }
 
     /// <summary>
+    /// Le lot dont RIEN n'est en retard, contre le vrai serveur : le cas le plus banal de tous, et
+    /// le seul qui échouait. PHP encode une map associative VIDE en <c>[]</c> et non en <c>{}</c>,
+    /// donc <c>/api/updates</c> répond littéralement <c>{"statuscode":"200","updates":[]}</c> quand
+    /// tout est à jour. La désérialisation levait, et « Vérifier les mises à jour » annonçait « Le
+    /// ModDB est injoignable » entre deux téléchargements ModDB parfaitement réussis.
+    /// </summary>
+    /// <remarks>
+    /// Le lot est CALIBRÉ plutôt qu'écrit en dur : un premier appel demande une version
+    /// délibérément ancienne pour apprendre ce que le serveur considère aujourd'hui comme la plus
+    /// récente, un second la redemande telle quelle. Un numéro de version figé ici serait faux à la
+    /// première publication de l'auteur, alors que la propriété testée (redemander exactement ce
+    /// que le serveur vient de nommer ne peut rien laisser en retard) reste vraie pour toujours.
+    /// Deux requêtes, espacées par <see cref="LiveModDb"/> comme tout l'étage.
+    /// </remarks>
+    [LiveFact]
+    public async Task Updates_WithABatchWhereNothingIsBehind_ReadsTheEmptyPhpArrayAndReportsEverythingUpToDate()
+    {
+        using var live = new LiveModDb();
+
+        var behind = await live.Client.GetUpdatesAsync(
+            new Dictionary<string, ModVersion>(StringComparer.OrdinalIgnoreCase) { [Outdated] = ModVersion.Parse("1.0.0") },
+            CancellationToken.None);
+
+        var newest = behind[Outdated].Version;
+        output.WriteLine($"Le serveur nomme {Outdated} {newest} comme la plus récente : on la lui redemande telle quelle.");
+
+        // Rien à signaler, donc une map vide, donc `[]` sur le fil. Avant le convertisseur, cette
+        // ligne levait ModDbUnavailableException.
+        var upToDate = await live.Client.GetUpdatesAsync(
+            new Dictionary<string, ModVersion>(StringComparer.OrdinalIgnoreCase) { [Outdated] = newest },
+            CancellationToken.None);
+
+        upToDate.ShouldBeEmpty($"« {Outdated} » {newest} est ce que le serveur vient de nommer : rien ne peut être en retard");
+    }
+
+    /// <summary>
     /// Le fait dont dépend le verdict « plus récente mais non déclarée » : la release renvoyée n'est
     /// pas filtrée par version de jeu, donc elle peut parfaitement ne porter AUCUN tag utile à
     /// l'instance qui pose la question.

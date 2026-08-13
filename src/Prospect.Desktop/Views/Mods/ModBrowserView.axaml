@@ -182,34 +182,39 @@
                   <!-- Même dispositif que la carte d'instance : un bouton sans chrome couvre la
                        zone d'ouverture de la fiche, la rangée d'actions reste en dehors pour que
                        « Installer » ne soit jamais avalé par le clic d'ouverture. -->
-                  <!-- La rangée de badges défile horizontalement plutôt que de pousser le bouton
-                       hors de la carte : compatibilité, côté et « Installé · 1.2.0 » peuvent
-                       coexister sur une carte étroite avec un nom long.
+                  <!-- La rangée de badges ne pousse jamais le bouton hors de la carte : elle
+                       écarte des pastilles. Compatibilité, côté et « Installé · 1.2.0 » demandent
+                       environ 330 points quand une carte de la grille fluide n'en offre que 200 à
+                       300, et ce qui ne rentre pas doit disparaître ENTIER.
 
-                       L'ORDRE est donc une décision, pas une mise en page : la rangée n'a de place
-                       visible que pour deux pastilles (une carte de la grille fluide donne entre
-                       200 et 300 points au défileur, les trois en demandent 330), et son défilement
-                       n'affiche aucune barre. Ce qui est en dernier n'est jamais vu. « Installé »
-                       passe donc en tête — c'est le fait que l'utilisateur venait chercher, celui
-                       qui explique que le bouton dise « Gérer » — et c'est le côté client/serveur
-                       qui sort du champ sur une carte déjà installée, là où l'onglet Mods de
-                       l'instance le donne de toute façon. -->
+                       La rangée défilait auparavant, barre masquée. Le résultat n'était pas un
+                       badge caché mais un badge COUPÉ EN PLEIN MOT contre le bouton « Gérer »
+                       (« cli », « client et »), ce qui se lit comme un défaut d'affichage et non
+                       comme un choix. PriorityRowPanel tranche donc à la pastille entière et
+                       n'affiche aucun glyphe tronqué, jamais.
+
+                       L'ORDRE est la priorité, et c'est une décision produit : « Installé ·
+                       version » d'abord (le fait que l'utilisateur venait chercher, celui qui
+                       explique que le bouton dise « Gérer »), la version de jeu ensuite, le côté
+                       client/serveur en dernier, là où l'onglet Mods de l'instance le donne de
+                       toute façon. Le dernier enfant est l'indicateur d'écart : il ne paraît que
+                       si quelque chose a été écarté, et sa place est réservée d'avance. -->
                   <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" Margin="0,12,0,0">
-                    <ScrollViewer Grid.Column="0" Classes="flush" VerticalScrollBarVisibility="Disabled"
-                                  HorizontalScrollBarVisibility="Hidden" VerticalAlignment="Center">
-                      <StackPanel Orientation="Horizontal" Spacing="6">
-                        <!-- Ce que l'instance ciblée contient déjà. Ton accent plutôt que stable :
-                             ce n'est pas un verdict de compatibilité, c'est un fait. -->
-                        <ContentControl Classes="badge accent" Content="{Binding InstalledText}" IsVisible="{Binding IsInstalled}"
-                                        VerticalAlignment="Center" />
-                        <ContentControl Classes="badge" Content="{Binding CompatibilityText}" IsVisible="{Binding ShowCompatibility}"
-                                        VerticalAlignment="Center"
-                                        Classes.stable="{Binding CompatibilityTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=stable}"
-                                        Classes.incompatible="{Binding CompatibilityTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=incompatible}" />
-                        <ContentControl Classes="badge" Content="{Binding SideText}" IsVisible="{Binding HasSide}"
-                                        VerticalAlignment="Center" />
-                      </StackPanel>
-                    </ScrollViewer>
+                    <layout:PriorityRowPanel Grid.Column="0" Spacing="6" VerticalAlignment="Center">
+                      <!-- Ce que l'instance ciblée contient déjà. Ton accent plutôt que stable :
+                           ce n'est pas un verdict de compatibilité, c'est un fait. -->
+                      <ContentControl Classes="badge accent" Content="{Binding InstalledText}" IsVisible="{Binding IsInstalled}"
+                                      VerticalAlignment="Center" />
+                      <ContentControl Classes="badge" Content="{Binding CompatibilityText}" IsVisible="{Binding ShowCompatibility}"
+                                      VerticalAlignment="Center"
+                                      Classes.stable="{Binding CompatibilityTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=stable}"
+                                      Classes.incompatible="{Binding CompatibilityTone, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=incompatible}" />
+                      <ContentControl Classes="badge" Content="{Binding SideText}" IsVisible="{Binding HasSide}"
+                                      VerticalAlignment="Center" />
+                      <ContentControl Classes="badge" Content="…" VerticalAlignment="Center"
+                                      layout:PriorityRowPanel.IsOverflowIndicator="True"
+                                      ToolTip.Tip="{StaticResource Mods_BadgesTruncated}" />
+                    </layout:PriorityRowPanel>
                     <Button Grid.Column="1" Classes="sm secondary" Margin="8,0,0,0" Command="{Binding InstallCommand}">
                       <StackPanel Orientation="Horizontal" Spacing="6">
                         <Path Width="13" Height="13" Stretch="Uniform" Data="{StaticResource Icon.download}"

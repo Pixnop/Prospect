@@ -518,6 +518,23 @@ Décrit plus haut avec le manifest. L'import réutilise tout l'existant (créati
 d'instance, installation de version, installation de mods) : c'est le test d'intégration
 naturel de l'ensemble du Core.
 
+**Machinerie Core en place, surface UI retirée en attendant la réflexion produit.**
+`Prospect.Core/Modpacks` reste entier et testé : manifeste, sérialiseur,
+`ModpackExportService`, `ModpackImportService`, leurs exceptions et leurs tests. Ce qui a
+été retiré est ce que l'utilisateur pouvait atteindre : le bouton « Importer un modpack »
+de l'accueil, l'action « Exporter » du détail d'instance, les deux dialogues
+(`ExportModpackDialogView`, `ImportModpackView`) et leurs ViewModels, leurs clés de
+chaînes dans les deux langues, et l'enregistrement des deux services Core dans
+`CompositionRoot`.
+
+La raison est produit, pas technique : on y réfléchira mieux plus tard, quand le launcher
+sera vraiment fonctionnel. Partager un pack pose des questions qu'aucun bouton ne tranche
+tout seul (que fait-on d'un mod retiré du ModDB, d'une version de jeu disparue, d'un pack
+dont l'auteur n'a jamais testé la combinaison), et il vaut mieux les poser une fois le
+reste solide. Remettre l'interface tiendra en quelques écrans branchés sur des services
+qui n'auront pas bougé ; c'est précisément pour ça que le Core reste là plutôt que d'être
+supprimé et réécrit.
+
 ### Transverse : téléchargements
 
 Un seul `DownloadManager` pour le jeu et les mods : file de téléchargements,

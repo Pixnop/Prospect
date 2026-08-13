@@ -15,7 +15,6 @@ using Prospect.Core.Instances.Migrations;
 using Prospect.Core.Launching;
 using Prospect.Core.Migration;
 using Prospect.Core.ModDb;
-using Prospect.Core.Modpacks;
 using Prospect.Core.Runtime;
 using Prospect.Core.Settings;
 using Prospect.Core.Settings.Migrations;
@@ -27,7 +26,6 @@ using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Instance;
 using Prospect.Desktop.ViewModels.Logs;
 using Prospect.Desktop.ViewModels.Migration;
-using Prospect.Desktop.ViewModels.Modpacks;
 using Prospect.Desktop.ViewModels.Mods;
 using Prospect.Desktop.ViewModels.Settings;
 using Prospect.Desktop.ViewModels.Shell;
@@ -102,7 +100,6 @@ public static class CompositionRoot
         AddGameVersions(services, httpMessageHandler);
         AddLaunching(services);
         AddModDb(services, httpMessageHandler);
-        AddModpacks(services);
         AddMigration(services);
 
         // Docteur d'instance (diagnostic local hors ligne) : composition pure de ce qu'AddGameVersions/
@@ -133,25 +130,16 @@ public static class CompositionRoot
         services.AddSingleton<IModLogoCache>(provider => new ModLogoCache(
             CreateHttpClient(httpMessageHandler, TimeSpan.FromSeconds(15))));
 
-        // Sélecteur de fichiers du système (export/import de modpack). Fabrique vers MainWindow
-        // plutôt que la fenêtre elle-même : voir la remarque d'AvaloniaFilePickerService sur le
-        // cycle que la résolution directe créerait avec ShellViewModel/HomeViewModel.
+        // Sélecteur de fichiers du système (export des journaux, choix de dossier des réglages).
+        // Fabrique vers MainWindow plutôt que la fenêtre elle-même : voir la remarque
+        // d'AvaloniaFilePickerService sur le cycle que la résolution directe créerait avec
+        // ShellViewModel/HomeViewModel.
         services.AddSingleton<Func<MainWindow>>(provider => provider.GetRequiredService<MainWindow>);
         services.AddSingleton<IFilePickerService, AvaloniaFilePickerService>();
 
-        // L'import de modpack est éphémère (un par fichier choisi) et paramétré par le chemin
-        // source, connu seulement à l'usage : même fabrique paramétrée que la page de détail
-        // d'instance ci-dessous, pour la même raison.
-        services.AddSingleton<Func<string, ImportModpackViewModel>>(provider => sourcePath => new ImportModpackViewModel(
-            sourcePath,
-            provider.GetRequiredService<ModpackImportService>(),
-            provider.GetRequiredService<IOverlayService>(),
-            provider.GetRequiredService<IToastService>(),
-            provider.GetRequiredService<IUiDispatcher>()));
-
         // Le dialogue d'adoption VS Launcher est éphémère (un par ouverture) et paramétré par le
         // résultat de détection, connu seulement à l'usage (Réglages ou rappel de premier
-        // lancement) : même fabrique paramétrée que l'import de modpack ci-dessus.
+        // lancement) : même fabrique paramétrée que la page de détail d'instance ci-dessous.
         services.AddSingleton<Func<VslDetectionResult, AdoptVslViewModel>>(provider => detection => new AdoptVslViewModel(
             detection,
             provider.GetRequiredService<VslAdoptionService>(),
@@ -203,8 +191,6 @@ public static class CompositionRoot
             provider.GetRequiredService<IToastService>(),
             provider.GetRequiredService<IUiDispatcher>(),
             provider.GetRequiredService<IClock>(),
-            provider.GetRequiredService<ModpackExportService>(),
-            provider.GetRequiredService<IFilePickerService>(),
             provider.GetRequiredService<IExternalUrlOpener>(),
             provider.GetRequiredService<IModLogoCache>()));
 
@@ -308,17 +294,8 @@ public static class CompositionRoot
         services.AddSingleton<ModUpdateChecker>();
     }
 
-    // Feature 5 (docs/architecture.md, « 5. Modpacks ») : aucun adaptateur propre à ce domaine,
-    // seulement une composition de ce qu'AddGameVersions/AddModDb/AddInstances ont déjà enregistré
-    // plus haut, résolue automatiquement par le conteneur sur la forme constructeur.
-    private static void AddModpacks(IServiceCollection services)
-    {
-        services.AddSingleton<ModpackExportService>();
-        services.AddSingleton<ModpackImportService>();
-    }
-
     // Adoption des installations VS Launcher (docs/research/vslauncher-et-distribution.md, section
-    // f) : comme AddModpacks, aucun adaptateur propre à ce domaine, seulement une composition de ce
+    // f) : aucun adaptateur propre à ce domaine, seulement une composition de ce
     // qu'AddGameVersions/AddInstances ont déjà enregistré plus haut.
     private static void AddMigration(IServiceCollection services)
     {

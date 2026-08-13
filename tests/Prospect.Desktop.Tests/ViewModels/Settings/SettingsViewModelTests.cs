@@ -9,7 +9,6 @@ using Prospect.Core.Instances.Migrations;
 using Prospect.Core.Launching;
 using Prospect.Core.Migration;
 using Prospect.Core.ModDb;
-using Prospect.Core.Modpacks;
 using Prospect.Core.Settings;
 using Prospect.Core.Settings.Migrations;
 using Prospect.Core.Storage;
@@ -80,9 +79,7 @@ public sealed class SettingsViewModelTests
             overlay,
             new RecordingToastService(),
             new ImmediateUiDispatcher(),
-            filePicker,
             () => throw new InvalidOperationException("Non exercé par ces tests."),
-            _ => throw new InvalidOperationException("Non exercé par ces tests."),
             firstRun);
         var firstRunScreen = new FirstRunScreenViewModel(settings, gameVersions, Paths, detector, firstRunAdoptFactory, overlay, AccountDoubles.SignedOut());
 

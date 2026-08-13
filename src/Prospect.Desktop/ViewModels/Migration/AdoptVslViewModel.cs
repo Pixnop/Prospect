@@ -16,15 +16,15 @@ namespace Prospect.Desktop.ViewModels.Migration;
 
 /// <summary>
 /// Dialogue de flux d'adoption VS Launcher (design : un seul panneau qui traverse
-/// <see cref="AdoptVslStep"/>, même construction qu'<c>ImportModpackViewModel</c>) : sélection des
+/// <see cref="AdoptVslStep"/>, un seul panneau du début à la fin) : sélection des
 /// installations et moteurs détectés par <see cref="VslDetector"/>, progression par élément,
 /// rapport final groupé par catégorie. Ouvert depuis les Réglages ou depuis le rappel de premier
 /// lancement de l'Accueil (voir <c>HomeViewModel.FirstRun</c>) une fois la détection déjà faite :
-/// contrairement à l'import de modpack, il n'y a pas d'étape de chargement, le
+/// il n'y a pas d'étape de chargement, le
 /// <see cref="VslDetectionResult"/> est déjà connu à la construction.
 /// </summary>
 /// <remarks>
-/// Comme <c>ImportModpackViewModel</c>, implémente <see cref="IProgress{T}"/> directement et
+/// Implémente <see cref="IProgress{T}"/> directement et
 /// repasse chaque mise à jour par <see cref="IUiDispatcher.Post"/> : <see cref="VslAdoptionService.AdoptAsync"/>
 /// tourne sur des continuations qui peuvent reprendre sur n'importe quel fil.
 /// </remarks>
@@ -209,7 +209,7 @@ public sealed partial class AdoptVslViewModel : ObservableObject, IProgress<VslA
     partial void OnStepChanged(AdoptVslStep value) => CancelAdoptionCommand.NotifyCanExecuteChanged();
 
     // Positifs d'abord (voix produit : mener par ce qui a marché), puis ignorées, puis échecs — le
-    // même ordre que le rapport d'import de modpack.
+    // ordre stable, du succès vers les échecs.
     private void BuildReport(VslAdoptionOutcome outcome)
     {
         ReportSummaryText = UiText.Migration.CompletedToastDescription(outcome.AdoptedInstallationCount, outcome.AdoptedEngineCount);
