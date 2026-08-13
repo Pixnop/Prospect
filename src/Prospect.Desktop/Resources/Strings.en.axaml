@@ -252,6 +252,7 @@
   <x:String x:Key="Mods_Tab_CancelUpdateAll">Cancel</x:String>
   <x:String x:Key="Mods_Row_UpdateAvailable">update</x:String>
   <x:String x:Key="Mods_Row_UnknownToModDb">unknown to ModDB</x:String>
+  <x:String x:Key="Mods_Row_UndeclaredUpdate">newer, not declared</x:String>
   <x:String x:Key="Mods_Row_Update">Update</x:String>
   <x:String x:Key="Mods_UpdatePlan_Confirm">Update</x:String>
 

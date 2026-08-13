@@ -300,8 +300,18 @@ public sealed class ModBrowserViewModelTests
         fixture.Toasts.Shown.ShouldContain(toast => toast.Title == "Choisis une instance");
     }
 
+    /// <summary>
+    /// Un mod sans release compatible n'est plus refusé d'un toast : le plan s'ouvre, avec son
+    /// avertissement et toutes ses versions, et rien n'est posé tant que rien n'est confirmé.
+    /// </summary>
+    /// <remarks>
+    /// La règle est la même partout depuis le défaut du docteur d'instance (voir
+    /// <c>ModInstallService.PrepareAsync</c>) : on n'oppose pas une fin de non-recevoir à une
+    /// compatibilité que l'auteur a simplement oublié de cocher, on ouvre en le disant. Ce qui
+    /// compte, et que ce test garde, c'est que l'ouverture n'installe rien.
+    /// </remarks>
     [Fact]
-    public async Task Install_ModWithoutACompatibleRelease_ReportsItWithoutInstallingAnything()
+    public async Task Install_ModWithoutACompatibleRelease_OpensThePlanWithItsWarningAndInstallsNothing()
     {
         // BetterRuins n'a de release taguée que pour 1.22.0 : rien pour l'instance en 1.21.3.
         var fixture = await CreateAsync();
@@ -309,7 +319,12 @@ public sealed class ModBrowserViewModelTests
 
         await fixture.Browser.Results.Single(card => card.Name == "BetterRuins").InstallCommand.ExecuteAsync(null);
 
-        fixture.Toasts.Shown.ShouldContain(toast => toast.Title == "Aucune version compatible");
+        var dialog = fixture.Overlay.Shown.OfType<ModInstallPlanDialogViewModel>().Last();
+        dialog.ShowsAllReleases.ShouldBeTrue();
+        dialog.ShowIncompatibleWarning.ShouldBeTrue();
+        dialog.IncompatibleWarning.ShouldContain("1.22.0");
+        dialog.SelectedRelease.ShouldNotBeNull();
+
         (await fixture.Mods.ScanAsync(fixture.Slug, CancellationToken.None)).ShouldBeEmpty();
     }
 

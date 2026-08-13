@@ -266,6 +266,7 @@
   <x:String x:Key="Mods_Tab_CancelUpdateAll">Annuler</x:String>
   <x:String x:Key="Mods_Row_UpdateAvailable">mise à jour</x:String>
   <x:String x:Key="Mods_Row_UnknownToModDb">inconnu du ModDB</x:String>
+  <x:String x:Key="Mods_Row_UndeclaredUpdate">plus récente non déclarée</x:String>
   <x:String x:Key="Mods_Row_Update">Mettre à jour</x:String>
   <x:String x:Key="Mods_UpdatePlan_Confirm">Mettre à jour</x:String>
 

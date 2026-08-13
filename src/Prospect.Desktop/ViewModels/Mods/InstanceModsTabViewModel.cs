@@ -116,6 +116,22 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
 
     public string UpdatesAvailableTitle => UiText.Mods.UpdatesAvailableTitle(AvailableUpdateCount);
 
+    /// <summary>
+    /// Verdict de la dernière vérification, en une phrase. Il existe pour une raison simple : sans
+    /// lui, une vérification qui ne trouve rien à proposer ne change RIEN à l'écran, et un bouton
+    /// qui ne change rien passe pour un bouton cassé. Vide tant qu'aucune vérification n'a eu lieu.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCheckVerdict))]
+    private string _checkVerdictText = string.Empty;
+
+    /// <summary>Vrai dès qu'une vérification a rendu un verdict à afficher.</summary>
+    public bool HasCheckVerdict => CheckVerdictText.Length > 0;
+
+    /// <summary>Nombre de mods dont la release plus récente n'est pas déclarée pour cette version de jeu.</summary>
+    [ObservableProperty]
+    private int _undeclaredUpdateCount;
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CheckUpdatesCommand))]
     [NotifyCanExecuteChangedFor(nameof(UpdateAllCommand))]
@@ -153,9 +169,18 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
 
     /// <summary>
     /// Appelle le ModDB en un seul appel (voir <see cref="ModUpdateChecker"/>) et rafraîchit les
-    /// badges de chaque ligne, le bandeau d'ensemble et l'horodatage. Aucune vérification
+    /// badges de chaque ligne, le bandeau d'ensemble, le verdict et l'horodatage. Aucune vérification
     /// automatique au démarrage en MVP (docs/architecture.md) : c'est toujours un clic explicite.
     /// </summary>
+    /// <remarks>
+    /// Le filtre de rattrapage est LARGE, et c'est délibéré. Il ne couvrait que les deux exceptions
+    /// du domaine ModDB ; tout le reste (instance devenue illisible, dossier <c>Mods/</c> refusé par
+    /// le système de fichiers, réponse d'API d'une forme inattendue) traversait la commande, et une
+    /// commande asynchrone qui laisse filer une exception ne montre rien : le bouton se réactivait
+    /// sans un mot. C'est très exactement ce que « ça ne marche pas » décrivait. Un échec dit
+    /// maintenant qu'il a échoué, et <see cref="ModUpdateChecker"/> en a déjà consigné la raison
+    /// dans le journal avant de la relancer.
+    /// </remarks>
     [RelayCommand(CanExecute = nameof(CanCheckUpdates))]
     public async Task CheckUpdatesAsync(CancellationToken cancellationToken = default)
     {
@@ -167,7 +192,11 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
             ApplyReport(report);
             await RefreshAsync(cancellationToken).ConfigureAwait(true);
         }
-        catch (Exception exception) when (exception is ModDbApiException or ModDbUnavailableException)
+        catch (OperationCanceledException)
+        {
+            // L'écran se ferme ou la page change : il n'y a rien à annoncer.
+        }
+        catch (Exception exception)
         {
             _toasts.Show(ToastTone.Error, UiText.Mods.CheckUpdatesFailedTitle, exception.Message);
         }
@@ -382,7 +411,11 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
     {
         _lastReport = report;
         AvailableUpdateCount = report?.UpdateCount ?? 0;
+        UndeclaredUpdateCount = report?.UndeclaredUpdateCount ?? 0;
         LastCheckedText = UiText.Mods.LastCheckedLabel(RelativeDateFormatter.Format(report?.CheckedUtc, _clock.UtcNow));
+        CheckVerdictText = report is null
+            ? string.Empty
+            : UiText.Mods.CheckVerdict(report.UpdateCount, report.UndeclaredUpdateCount, report.Mods.Count);
     }
 
     // Toute modification du dossier Mods (activation, retrait, mise à jour) rend le dernier résultat
@@ -451,6 +484,14 @@ public sealed partial class InstalledModRowViewModel : ObservableObject
 
         UpdateResult = updateResult;
         HasUpdateAvailable = updateResult?.HasUpdate ?? false;
+
+        HasUndeclaredUpdate = updateResult?.HasUndeclaredUpdate ?? false;
+        UndeclaredUpdateText = HasUndeclaredUpdate
+            ? UiText.Mods.UndeclaredUpdateReason(
+                updateResult!.AvailableRelease!.Version.ToString(),
+                updateResult.AvailableGameVersions)
+            : string.Empty;
+
         // « Non identifiable » recouvre exactement les mods déjà signalés IsUnidentified plus haut
         // (l'archive n'a pas pu être lue, la seule raison pour laquelle le vérificateur exclut un
         // mod de sa requête) : la maquette n'a donc rien de plus sobre à ajouter que ce badge déjà
@@ -495,6 +536,16 @@ public sealed partial class InstalledModRowViewModel : ObservableObject
 
     /// <summary>Vrai si une mise à jour compatible est disponible : montre le badge ochre et le bouton « Mettre à jour ».</summary>
     public bool HasUpdateAvailable { get; }
+
+    /// <summary>
+    /// Vrai quand une release plus récente existe sans être déclarée pour la version de jeu de
+    /// l'instance. Pas de bouton « Mettre à jour » : ce chemin-là passe par le dialogue
+    /// d'installation, qui porte l'avertissement et recueille le consentement.
+    /// </summary>
+    public bool HasUndeclaredUpdate { get; }
+
+    /// <summary>Ce que la ligne dit alors : la version disponible, et les versions de jeu réellement taguées.</summary>
+    public string UndeclaredUpdateText { get; }
 
     /// <summary>Vrai si la dernière vérification n'a pas pu confirmer que ce mod est connu du ModDB.</summary>
     public bool IsUnknownToModDb { get; }

@@ -716,6 +716,32 @@ internal sealed class EnglishModsText : ModsText
         _ => $"{count} updates available",
     };
 
+    internal override string CheckVerdict(int updateCount, int undeclaredCount, int modCount)
+    {
+        if (modCount == 0)
+        {
+            return "No mod to check.";
+        }
+
+        var found = (updateCount, undeclaredCount) switch
+        {
+            (0, 0) => "everything is up to date",
+            (0, 1) => "1 newer release exists, not declared for your game version",
+            (0, _) => $"{undeclaredCount} newer releases exist, not declared for your game version",
+            (1, 0) => "1 update available",
+            (_, 0) => $"{updateCount} updates available",
+            (1, 1) => "1 update available, and 1 newer release not declared",
+            (1, _) => $"1 update available, and {undeclaredCount} newer releases not declared",
+            (_, 1) => $"{updateCount} updates available, and 1 newer release not declared",
+            _ => $"{updateCount} updates available, and {undeclaredCount} newer releases not declared",
+        };
+
+        return modCount == 1 ? $"1 mod checked: {found}." : $"{modCount} mods checked: {found}.";
+    }
+
+    internal override string UndeclaredUpdateReason(string version, IReadOnlyList<string> taggedVersions)
+        => $"{version} is published, declared for {CompatibleVersions(taggedVersions)}";
+
     internal override string UpdatePlanTitle(string modName) => $"Update “{modName}”?";
 
     internal override string UpdatePlanMessage(string currentVersion, string targetVersion)

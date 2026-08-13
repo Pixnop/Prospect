@@ -27,7 +27,8 @@ public sealed class ModUpdateCheckerTests
         ModUpdateChecker Checker,
         IInstalledModRepository Repository,
         MockFileSystem FileSystem,
-        FakeUpdatesServer Server);
+        FakeUpdatesServer Server,
+        RecordingAppLog Log);
 
     private static Harness Create(string gameVersion = "1.21.3")
     {
@@ -54,7 +55,9 @@ public sealed class ModUpdateCheckerTests
 
         SeedInstance(fileSystem, gameVersion);
 
-        return new Harness(new ModUpdateChecker(client, repository, instances, clock), repository, fileSystem, server);
+        var log = new RecordingAppLog();
+
+        return new Harness(new ModUpdateChecker(client, repository, instances, clock, log), repository, fileSystem, server, log);
     }
 
     private static void SeedInstance(MockFileSystem fileSystem, string gameVersion)
@@ -181,8 +184,19 @@ public sealed class ModUpdateCheckerTests
         result.IsApproximateMatch.ShouldBeFalse();
     }
 
+    /// <summary>
+    /// Le défaut qui faisait passer « Vérifier les mises à jour » pour inopérant : une release plus
+    /// récente, signalée par le serveur, mais qu'aucun tag ne déclare pour la version de jeu de
+    /// l'instance. Elle était rendue « à jour ».
+    /// </summary>
+    /// <remarks>
+    /// Le verdict n'est pas cosmétique, c'est TOUT ce que l'utilisateur voit d'une vérification. Sur
+    /// une version de jeu récente, presque aucune release n'est encore cochée pour elle : chaque mod
+    /// retombait donc sur ce chemin, et le bouton rendait invariablement « tout est à jour » alors
+    /// que le serveur venait de répondre le contraire.
+    /// </remarks>
     [Fact]
-    public async Task CheckAsync_CandidateNotTaggedForTheExactVersion_StrictMode_IsNotOfferedAsAnUpdate()
+    public async Task CheckAsync_ANewerReleaseNotTaggedForThisVersion_IsNotPassedOffAsUpToDate()
     {
         var harness = Create("1.20.9"); // même série mineure (1.20) que la candidate, mais pas le patch exact
         SeedMod(harness, "configlib-1.0.0.zip", ModInfo("configlib", "Config lib", "1.0.0"));
@@ -190,8 +204,30 @@ public sealed class ModUpdateCheckerTests
 
         var report = await harness.Checker.CheckAsync(Slug, ModCompatibilityMode.ExactGameVersion, CancellationToken.None);
 
-        // Aucune release confirmée compatible : pas d'affirmation « à jour » à tort, mais rien
-        // d'actionnable non plus tant que le mode strict est en vigueur.
+        var result = report.Mods.ShouldHaveSingleItem();
+        result.Status.ShouldBe(ModUpdateStatus.UpdateNotDeclaredForThisVersion);
+        result.HasUpdate.ShouldBeFalse("elle ne s'installe pas d'un clic");
+        result.HasUndeclaredUpdate.ShouldBeTrue();
+
+        // La release est nommée, avec ses tags réels : c'est ce que l'écran doit pouvoir dire.
+        result.AvailableRelease.ShouldNotBeNull().Version.ShouldBe(ModVersion.Parse("1.12.0"));
+        result.AvailableGameVersions.ShouldBe(["1.20.4"]);
+        report.UndeclaredUpdateCount.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Le cas voisin, qui lui reste « à jour » : le serveur a répondu, mais sa candidate n'est PAS
+    /// plus récente que la copie installée. Rien de nouveau, tags ou pas.
+    /// </summary>
+    [Fact]
+    public async Task CheckAsync_AnUntaggedCandidateThatIsNotNewer_IsGenuinelyUpToDate()
+    {
+        var harness = Create("1.20.9");
+        SeedMod(harness, "configlib-1.12.0.zip", ModInfo("configlib", "Config lib", "1.12.0"), Provenance("configlib", "1.12.0"));
+        harness.Server.UpdatesJson = UpdatesJsonWithTags(["1.20.4"]); // candidate en 1.12.0, donc pas plus récente
+
+        var report = await harness.Checker.CheckAsync(Slug, ModCompatibilityMode.ExactGameVersion, CancellationToken.None);
+
         report.Mods.ShouldHaveSingleItem().Status.ShouldBe(ModUpdateStatus.UpToDate);
     }
 
@@ -209,6 +245,11 @@ public sealed class ModUpdateCheckerTests
         result.IsApproximateMatch.ShouldBeTrue();
     }
 
+    /// <summary>
+    /// Une candidate d'une TOUTE AUTRE série n'est jamais proposée en un clic, même en mode élargi :
+    /// l'élargissement s'arrête à la série mineure. Elle est en revanche rapportée pour ce qu'elle
+    /// est, une release plus récente non déclarée, et non pour ce qu'elle n'est pas.
+    /// </summary>
     [Fact]
     public async Task CheckAsync_CandidateFromACompletelyDifferentSeries_IsNeverOfferedEvenWidened()
     {
@@ -218,7 +259,10 @@ public sealed class ModUpdateCheckerTests
 
         var report = await harness.Checker.CheckAsync(Slug, ModCompatibilityMode.WidenToMinorSeries, CancellationToken.None);
 
-        report.Mods.ShouldHaveSingleItem().Status.ShouldBe(ModUpdateStatus.UpToDate);
+        var result = report.Mods.ShouldHaveSingleItem();
+        result.HasUpdate.ShouldBeFalse();
+        result.Status.ShouldBe(ModUpdateStatus.UpdateNotDeclaredForThisVersion);
+        result.AvailableGameVersions.ShouldBe(["1.19.0"]);
     }
 
     // ── Mods désactivés inclus, non identifiés exclus ────────────────────────────────
@@ -282,6 +326,126 @@ public sealed class ModUpdateCheckerTests
         harness.Server.LastModsParam.ShouldBe("configlib@1.0.0");
         report.Mods.Single(mod => mod.Mod.FileName == "configlib-1.0.0.zip").Status.ShouldBe(ModUpdateStatus.UpdateAvailable);
         report.Mods.Single(mod => mod.Mod.FileName == "configlib-1.12.0.zip").Status.ShouldBe(ModUpdateStatus.UpToDate);
+    }
+
+    // ── Topologie réelle de la session Linux ────────────────────────────────────────
+
+    /// <summary>
+    /// L'instance telle qu'elle existait sur la machine où « Vérifier les mises à jour » a été
+    /// rapporté comme inopérant : 1.22.6, avec Carry On, CarryOnLib (installé sans compatibilité
+    /// déclarée) et Primitive Survival.
+    /// </summary>
+    private static Harness RealLinuxInstance()
+    {
+        var harness = Create("1.22.6");
+
+        SeedMod(
+            harness,
+            "carryon-2.0.0-pre.8.zip",
+            ModInfo("carryon", "Carry On", "2.0.0-pre.8"),
+            Provenance("carryon", "2.0.0-pre.8"));
+
+        // Celui-ci a été posé par le dialogue de dépendance, sans compatibilité déclarée : sa
+        // provenance le dit, et sa release s'arrête à 1.22.4.
+        SeedMod(
+            harness,
+            "carryonlib-1.0.0-pre.8.zip",
+            ModInfo("carryonlib", "CarryOnLib", "1.0.0-pre.8"),
+            Provenance("carryonlib", "1.0.0-pre.8") with { DeclaredIncompatible = true });
+
+        SeedMod(
+            harness,
+            "primitivesurvival-5.1.1.zip",
+            ModInfo("primitivesurvival", "Primitive Survival", "5.1.1"),
+            Provenance("primitivesurvival", "5.1.1"));
+
+        return harness;
+    }
+
+    /// <summary>
+    /// Les trois mods entrent bien dans la requête, provenance sans compatibilité déclarée comprise.
+    /// Rien n'exclut ni ne fait trébucher le vérificateur sur ce cas.
+    /// </summary>
+    [Fact]
+    public async Task CheckAsync_TheRealLinuxInstance_QueriesEveryModIncludingTheIncompatibleOne()
+    {
+        var harness = RealLinuxInstance();
+
+        await harness.Checker.CheckAsync(Slug, cancellationToken: CancellationToken.None);
+
+        harness.Server.RequestCount.ShouldBe(1);
+        harness.Server.LastModsParam.ShouldNotBeNull()
+            .Split(',')
+            .ShouldBe(["carryon@2.0.0-pre.8", "carryonlib@1.0.0-pre.8", "primitivesurvival@5.1.1"], ignoreOrder: true);
+    }
+
+    /// <summary>
+    /// Le verdict que l'utilisateur voyait : une mise à jour de CarryOnLib existe, elle est taguée
+    /// jusqu'à 1.22.4, et l'instance est en 1.22.6. Elle ne doit plus disparaître dans « à jour ».
+    /// </summary>
+    [Fact]
+    public async Task CheckAsync_TheRealLinuxInstance_RendersAVerdictInsteadOfSayingEverythingIsUpToDate()
+    {
+        var harness = RealLinuxInstance();
+        harness.Server.UpdatesJson = """
+        {
+          "statuscode": "200",
+          "updates": {
+            "carryonlib": {
+              "releaseid": 51902, "fileid": 112004, "mainfile": "https://moddbcdn.vintagestory.at/carryonlib_1.0.0-pre.9.zip",
+              "filename": "carryonlib_1.0.0-pre.9.zip", "downloads": 12, "tags": ["1.22.0", "1.22.4"],
+              "modidstr": "carryonlib", "modversion": "1.0.0-pre.9", "changelog": null, "created": "2026-08-10 09:00:00"
+            }
+          }
+        }
+        """;
+
+        var report = await harness.Checker.CheckAsync(Slug, cancellationToken: CancellationToken.None);
+
+        var carryOnLib = report.Mods.Single(mod => mod.Mod.Identity == "carryonlib");
+        carryOnLib.Status.ShouldBe(ModUpdateStatus.UpdateNotDeclaredForThisVersion);
+        carryOnLib.AvailableRelease.ShouldNotBeNull().Version.ShouldBe(ModVersion.Parse("1.0.0-pre.9"));
+        carryOnLib.AvailableGameVersions.ShouldBe(["1.22.0", "1.22.4"]);
+
+        // Les deux autres n'ont rien été signalés et ont une provenance : à jour, franchement.
+        report.Mods.Single(mod => mod.Mod.Identity == "carryon").Status.ShouldBe(ModUpdateStatus.UpToDate);
+        report.Mods.Single(mod => mod.Mod.Identity == "primitivesurvival").Status.ShouldBe(ModUpdateStatus.UpToDate);
+
+        report.UndeclaredUpdateCount.ShouldBe(1);
+        report.UpdateCount.ShouldBe(0);
+    }
+
+    // ── Journal ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>Une vérification aboutie laisse son verdict COMPTÉ dans le journal.</summary>
+    [Fact]
+    public async Task CheckAsync_LogsTheRequestAndTheCountedVerdict()
+    {
+        var harness = RealLinuxInstance();
+
+        await harness.Checker.CheckAsync(Slug, cancellationToken: CancellationToken.None);
+
+        harness.Log.Lines.ShouldContain(line => line.Level == AppLogLevel.Info && line.Message.Contains("demandée"));
+
+        var verdict = harness.Log.Lines.Last(line => line.Level == AppLogLevel.Info).Message;
+        verdict.ShouldContain("1.22.6");
+        verdict.ShouldContain("3 mod(s)");
+    }
+
+    /// <summary>
+    /// Un échec laisse sa RAISON, et l'exception continue son chemin. C'est ce qui rend un
+    /// « ça ne marche pas » instruisible sans avoir la machine sous la main.
+    /// </summary>
+    [Fact]
+    public async Task CheckAsync_WhenTheModDbRejectsTheRequest_LogsTheReasonAndStillThrows()
+    {
+        var harness = RealLinuxInstance();
+        harness.Server.UpdatesJson = """{"statuscode":"400"}""";
+
+        await Should.ThrowAsync<ModDbApiException>(
+            () => harness.Checker.CheckAsync(Slug, cancellationToken: CancellationToken.None));
+
+        harness.Log.Lines.ShouldContain(line => line.Level == AppLogLevel.Error && line.Message.Contains("échec de la vérification"));
     }
 
     private static string UpdatesJsonWithTags(IReadOnlyList<string> tags)
