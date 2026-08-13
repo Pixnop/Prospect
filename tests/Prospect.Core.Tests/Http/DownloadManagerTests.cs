@@ -36,7 +36,7 @@ public sealed class DownloadManagerTests
             Paths,
             new FakeClock(Noon),
             new RetryPolicy(RetryOptions.NoDelay, (_, _) => Task.CompletedTask),
-            options ?? DownloadOptions.Default with { BufferSize = 128, ProgressStepBytes = 128 });
+            options ?? DownloadOptions.Default with { BufferSize = 128, ProgressInterval = TimeSpan.Zero });
 
     private static DownloadRequest Request(FakeDownloadServer server, params Uri[] mirrors)
         => new("Vintage Story 1.22.6", "vs_client_linux-x64_1.22.6.tar.gz", mirrors, server.Md5);

@@ -51,7 +51,7 @@ public sealed class GameInstallServiceTests
             Paths,
             new FakeClock(Noon),
             new RetryPolicy(RetryOptions.NoDelay, (_, _) => Task.CompletedTask),
-            DownloadOptions.Default with { BufferSize = 128, ProgressStepBytes = 128 });
+            DownloadOptions.Default with { BufferSize = 128, ProgressInterval = TimeSpan.Zero });
 
     [Fact]
     public async Task InstallAsync_HappyPath_ExtractsTheArchiveIntoTheVersionFolder()

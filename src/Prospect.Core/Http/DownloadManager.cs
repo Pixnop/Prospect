@@ -338,10 +338,10 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
     {
         var buffer = new byte[_options.BufferSize];
         var received = alreadyReceived;
-        var lastReported = received;
         var speed = new DownloadSpeedEstimator(_clock);
         speed.Start(received);
         Report(operation, progress, received, totalBytes, 0d);
+        var lastReportedAt = _clock.UtcNow;
 
         while (true)
         {
@@ -354,10 +354,14 @@ public sealed class DownloadManager : IDownloadManager, IDisposable
             await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
             received += read;
 
+            // L'estimateur est nourri à CHAQUE bloc, la publication est cadencée : la fenêtre
+            // glissante a besoin de tous les points pour être exacte, l'interface n'a besoin que de
+            // quelques rafraîchissements par seconde.
             var bytesPerSecond = speed.Update(received);
-            if (received - lastReported >= _options.ProgressStepBytes)
+            var now = _clock.UtcNow;
+            if (now - lastReportedAt >= _options.ProgressInterval)
             {
-                lastReported = received;
+                lastReportedAt = now;
                 Report(operation, progress, received, totalBytes, bytesPerSecond);
             }
         }
