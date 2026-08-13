@@ -12,24 +12,27 @@
 
   <UserControl.Styles>
     <!--
-      Grille de fonds. La vignette est un empilement de DEUX bordures, et c'est le seul moyen
-      d'obtenir le rendu du verre ici : l'image se pose dans une bordure qui la rogne aux coins,
-      la vitre (liseré + sheen) se pose PAR-DESSUS. Un BoxShadow inset porté par la bordure qui
-      contient l'image serait dessiné avant elle, donc caché sous elle.
+      ══ La grille de fonds (section Général) ══════════════════════════════════════════
 
-      La sélection ne change que des couleurs et des ombres, jamais une épaisseur ni une taille :
-      une bordure qui passerait de 1 à 2 points ferait sauter la vignette d'un point à chaque clic.
-    -->
-    <!--
-      Height="NaN" : exactement le piège déjà documenté sur Button.cardHit (Styles/Controls/
-      Button.axaml). Le ControlTheme Button impose 32 points de haut, pensés pour un bouton de
-      texte ; une vignette de 90 points plus son nom s'y ferait rogner, et il ne resterait qu'une
-      bande d'image sans légende. La hauteur repasse donc en automatique, comme pour n'importe
-      quel conteneur.
+      Height="NaN" sur la tuile : exactement le piège déjà documenté sur Button.cardHit
+      (Styles/Controls/Button.axaml). Le ControlTheme Button impose 32 points de haut, pensés
+      pour un bouton de texte ; une vignette de 90 points plus son nom s'y ferait rogner, et il
+      ne resterait qu'une bande d'image sans légende. La hauteur repasse donc en automatique,
+      comme pour n'importe quel conteneur.
     -->
     <Style Selector="Button.backdrop-choice">
       <Setter Property="Height" Value="NaN" />
     </Style>
+
+    <!--
+      La vignette elle-même est un empilement de DEUX bordures, et c'est le seul moyen d'obtenir
+      le rendu du verre ici : l'image se pose dans une bordure qui la rogne aux coins, la vitre
+      (liseré + sheen) se pose PAR-DESSUS. Un BoxShadow inset porté par la bordure qui contient
+      l'image serait dessiné avant elle, donc caché sous elle.
+
+      La sélection ne change que des couleurs et des ombres, jamais une épaisseur ni une taille :
+      une bordure qui passerait de 1 à 2 points ferait sauter la vignette d'un point à chaque clic.
+    -->
     <Style Selector="Border.backdrop-thumb">
       <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
       <Setter Property="ClipToBounds" Value="True" />
