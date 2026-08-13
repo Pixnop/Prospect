@@ -74,10 +74,15 @@ public sealed record UnresolvedModDependency(string ModIdString, ModDependencyRe
     /// </summary>
     /// <remarks>
     /// Refuser tout net serait plus faux qu'utile : les tags de compatibilité sont des cases
-    /// cochées à la main et prennent du retard. Le cas qui a motivé ceci est réel — CarryOnLib
+    /// cochées à la main et prennent du retard. Le cas qui a motivé ceci est réel : CarryOnLib
     /// 1.0.0-pre.8 s'arrête à 1.22.4 alors que Carry On 2.0.0-pre.8, qui en dépend, est tagué
-    /// jusqu'à 1.22.6. La ligne devient donc actionnable, mais l'option reste DÉCOCHÉE par défaut
-    /// et l'avertissement nomme les versions réellement taguées.
+    /// jusqu'à 1.22.6. La ligne devient donc actionnable, et elle est proposée COCHÉE d'office. Le
+    /// défaut se justifie par ce qu'est une dépendance déclarée : une librairie qu'un modinfo.json
+    /// nomme est NÉCESSAIRE au fonctionnement du mod, donc la laisser de côté produit une
+    /// installation qui a l'air d'avoir réussi et un jeu qui ne démarre pas. Le défaut doit être
+    /// « ça marchera ». Le consentement reste entier pour autant : la case se décoche,
+    /// l'avertissement qui nomme les versions réellement taguées reste attaché à la ligne, et
+    /// l'installation marque toujours la provenance <see cref="ModProvenance.DeclaredIncompatible"/>.
     /// </remarks>
     public ModInstallItem? BestAvailable { get; init; }
 
@@ -145,7 +150,10 @@ public sealed record ModInstallPlan(
 
     /// <summary>
     /// Dépendances qu'on peut proposer d'installer malgré l'absence de compatibilité déclarée,
-    /// chacune avec sa meilleure release publiée. Toujours DÉCOCHÉES par défaut.
+    /// chacune avec sa meilleure release publiée. Proposées COCHÉES d'office, pour la raison
+    /// détaillée sur <see cref="UnresolvedModDependency.BestAvailable"/> : une dépendance déclarée
+    /// est nécessaire au fonctionnement du mod, donc le défaut doit être « ça marchera ». Décochable
+    /// ligne à ligne, avertissement compris.
     /// </summary>
     public IReadOnlyList<UnresolvedModDependency> InstallableAnyway
         => [.. UnresolvedDependencies.Where(dependency => dependency.BestAvailable is not null)];
