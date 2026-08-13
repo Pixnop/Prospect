@@ -123,6 +123,9 @@ internal abstract class DialogsText
     /// <summary>Affiché pendant la suppression, qui prend des dizaines de secondes sur un gros dossier de mondes.</summary>
     internal abstract string DeleteInProgress { get; }
 
+    /// <summary>Avancement chiffré de la suppression, une fois le décompte des fichiers connu.</summary>
+    internal abstract string DeleteProgress(int deletedFiles, int totalFiles);
+
     /// <summary>La suppression n'est pas allée jusqu'au bout : le dossier restant est nommé.</summary>
     internal abstract string DeletePartialFailure(string directory);
 
@@ -251,6 +254,15 @@ internal abstract class VersionsText
     internal abstract string UninstallMessage(string version);
 
     internal abstract string UninstallDependents(IReadOnlyList<string> instanceNames);
+
+    /// <summary>Phrase d'attente avant le premier relevé de fichiers.</summary>
+    internal abstract string UninstallInProgress { get; }
+
+    /// <summary>Avancement chiffré de la désinstallation.</summary>
+    internal abstract string UninstallProgress(int deletedFiles, int totalFiles);
+
+    /// <summary>Il reste des fichiers dans le dossier de la version.</summary>
+    internal abstract string UninstallPartialFailure(string directory);
 
     /// <summary>Deux valeurs machine séparées par un point médian : aucun mot à traduire.</summary>
     [SuppressMessage(

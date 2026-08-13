@@ -163,7 +163,7 @@ public sealed partial class InstanceCardViewModel : ObservableObject, IDisposabl
     private void Duplicate() => _overlay.Show(new DuplicateDialogViewModel(Slug, Name, _instanceService, _overlay, () => _requestRefresh()));
 
     [RelayCommand]
-    private void Delete() => _overlay.Show(new DeleteInstanceDialogViewModel(Slug, Name, _instanceService, _overlay, () => _requestRefresh()));
+    private void Delete() => _overlay.Show(new DeleteInstanceDialogViewModel(Slug, Name, _instanceService, _overlay, _dispatcher, () => _requestRefresh()));
 
     private void OnTrackerStatusChanged(object? sender, RunningInstanceStatus status)
     {

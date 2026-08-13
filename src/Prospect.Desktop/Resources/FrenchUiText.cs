@@ -122,6 +122,9 @@ internal sealed class FrenchDialogsText : DialogsText
 
     internal override string DeleteInProgress => "Suppression en cours… Ça peut prendre un moment sur une instance avec de gros mondes.";
 
+    internal override string DeleteProgress(int deletedFiles, int totalFiles)
+        => totalFiles == 0 ? DeleteInProgress : $"Suppression des fichiers ({deletedFiles}/{totalFiles})";
+
     internal override string DeletePartialFailure(string directory)
         => $"La suppression n'a pas pu aller jusqu'au bout : il reste des fichiers dans « {directory} ». Ferme le jeu s'il tourne encore, puis réessaie.";
 
@@ -245,6 +248,14 @@ internal sealed class FrenchVersionsText : VersionsText
 
     internal override string UninstallMessage(string version)
         => $"Les fichiers de la version {version} seront supprimés du dossier partagé. Tu pourras la réinstaller depuis le catalogue.";
+
+    internal override string UninstallInProgress => "Désinstallation en cours…";
+
+    internal override string UninstallProgress(int deletedFiles, int totalFiles)
+        => totalFiles == 0 ? UninstallInProgress : $"Suppression des fichiers ({deletedFiles}/{totalFiles})";
+
+    internal override string UninstallPartialFailure(string directory)
+        => $"La désinstallation n'a pas pu aller jusqu'au bout : il reste des fichiers dans « {directory} ». Ferme le jeu s'il tourne encore, puis réessaie.";
 
     internal override string UninstallDependents(IReadOnlyList<string> instanceNames)
     {

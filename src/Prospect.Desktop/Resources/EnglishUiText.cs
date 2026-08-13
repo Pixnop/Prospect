@@ -124,6 +124,9 @@ internal sealed class EnglishDialogsText : DialogsText
 
     internal override string DeleteInProgress => "Deleting… This can take a while on an instance with large worlds.";
 
+    internal override string DeleteProgress(int deletedFiles, int totalFiles)
+        => totalFiles == 0 ? DeleteInProgress : $"Deleting files ({deletedFiles}/{totalFiles})";
+
     internal override string DeletePartialFailure(string directory)
         => $"The deletion could not finish: files are left in “{directory}”. Close the game if it is still running, then try again.";
 
@@ -249,6 +252,14 @@ internal sealed class EnglishVersionsText : VersionsText
 
     internal override string UninstallMessage(string version)
         => $"The files of version {version} will be removed from the shared folder. You can install it again from the catalog.";
+
+    internal override string UninstallInProgress => "Uninstalling…";
+
+    internal override string UninstallProgress(int deletedFiles, int totalFiles)
+        => totalFiles == 0 ? UninstallInProgress : $"Deleting files ({deletedFiles}/{totalFiles})";
+
+    internal override string UninstallPartialFailure(string directory)
+        => $"The uninstall could not finish: files are left in “{directory}”. Close the game if it is still running, then try again.";
 
     internal override string UninstallDependents(IReadOnlyList<string> instanceNames)
     {

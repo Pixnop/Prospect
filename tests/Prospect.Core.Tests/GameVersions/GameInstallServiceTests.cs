@@ -479,7 +479,7 @@ public sealed class GameInstallServiceTests
     }
 
     [Fact]
-    public void Uninstall_RemovesTheInstalledFolder()
+    public async Task Uninstall_RemovesTheInstalledFolderAndCountsItsFiles()
     {
         var fileSystem = new MockFileSystem();
         var repository = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
@@ -492,9 +492,14 @@ public sealed class GameInstallServiceTests
             repository,
             new FakeGameInstallStrategy(fileSystem), fileSystem, NullAppLog.Instance);
 
-        service.Uninstall(Version);
+        var reports = new List<DirectoryDeleteProgress>();
+        await service.UninstallAsync(Version, new SynchronousProgress<DirectoryDeleteProgress>(reports.Add), CancellationToken.None);
 
         repository.IsInstalled(Version).ShouldBeFalse();
+
+        // L'avancement est DÉTERMINÉ : les fichiers sont comptés avant d'être effacés.
+        reports.ShouldNotBeEmpty();
+        reports[^1].Ratio.ShouldBe(1d);
     }
 
     [Fact]

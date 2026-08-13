@@ -295,13 +295,18 @@ public sealed partial class VersionsViewModel : ObservableObject
         _overlay.Show(new UninstallVersionDialogViewModel(
             row.VersionText,
             dependents,
-            () => ConfirmUninstallAsync(row),
-            _overlay));
+            progress => ConfirmUninstallAsync(row, progress),
+            _overlay,
+            _dispatcher));
     }
 
-    private async Task ConfirmUninstallAsync(GameVersionRowViewModel row)
+    // Le dialogue reste ouvert le temps de la suppression et suit son avancement ; il ne se referme
+    // qu'une fois le dossier réellement parti. Un échec partiel remonte au dialogue, qui le dit,
+    // plutôt que d'être avalé ici.
+    private async Task ConfirmUninstallAsync(GameVersionRowViewModel row, IProgress<DirectoryDeleteProgress> progress)
     {
-        _installService.Uninstall(row.Version);
+        await _installService.UninstallAsync(row.Version, progress, CancellationToken.None).ConfigureAwait(true);
+
         _overlay.Close();
         _toasts.Show(ToastTone.Info, UiText.Toasts.VersionUninstalledTitle, row.VersionText);
         await RefreshAsync(CancellationToken.None).ConfigureAwait(true);

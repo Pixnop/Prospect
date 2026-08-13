@@ -36,14 +36,28 @@
                        FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
           </StackPanel>
         </Border>
+
+        <!-- Même dispositif que la suppression d'instance : le dialogue reste vivant, le travail est
+             déporté hors du thread d'interface (GameInstallService.UninstallAsync), la barre est
+             DÉTERMINÉE parce que les fichiers sont comptés avant d'être effacés, et rien n'est
+             annulable une fois commencé. -->
+        <StackPanel Spacing="8" IsVisible="{Binding IsBusy}">
+          <ProgressBar Value="{Binding ProgressPercent}" Minimum="0" Maximum="100" HorizontalAlignment="Stretch" />
+          <TextBlock Text="{Binding ProgressText}" TextWrapping="Wrap"
+                     FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+        </StackPanel>
+
+        <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" LineHeight="18"
+                   FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource DangerText}"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
       </StackPanel>
 
       <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}" Background="{DynamicResource GlassRowOdd}">
         <Grid ColumnDefinitions="*,Auto" Margin="22,16">
           <Button Grid.Column="0" Classes="ghost" Command="{Binding CancelCommand}" HorizontalAlignment="Left"
-                  Content="{StaticResource Dialog_Cancel}" />
+                  IsEnabled="{Binding !IsBusy}" Content="{StaticResource Dialog_Cancel}" />
           <Button Grid.Column="1" Classes="danger" Command="{Binding ConfirmCommand}"
-                  Content="{StaticResource Dialog_Uninstall_Confirm}" />
+                  IsEnabled="{Binding !IsBusy}" Content="{StaticResource Dialog_Uninstall_Confirm}" />
         </Grid>
       </Border>
     </StackPanel>

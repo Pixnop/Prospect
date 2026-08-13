@@ -99,8 +99,22 @@ public sealed class GameInstallService
             ?? throw new GameInstallFailedException($"L'installation de la version {version} s'est terminée sans laisser de dossier exploitable.");
     }
 
-    /// <summary>Supprime une version installée. Sans effet si elle ne l'est pas.</summary>
-    public void Uninstall(GameVersion version) => _repository.Remove(version);
+    /// <summary>
+    /// Supprime une version installée, hors du thread appelant et en rendant compte de son
+    /// avancement. Sans effet si elle ne l'est pas.
+    /// </summary>
+    /// <remarks>
+    /// Une installation pèse plusieurs centaines de mégaoctets : la version synchrone gelait
+    /// l'interface le temps d'un effacement récursif, exactement comme le faisait la suppression
+    /// d'instance avant sa correction. L'avancement est DÉTERMINÉ, parce qu'on peut compter les
+    /// fichiers avant de les effacer (voir <see cref="Storage.DirectoryDeleter"/>).
+    /// </remarks>
+    /// <exception cref="Storage.DirectoryDeleteFailedException">Il reste des fichiers sur le disque.</exception>
+    public Task UninstallAsync(
+        GameVersion version,
+        IProgress<Storage.DirectoryDeleteProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+        => _repository.RemoveAsync(version, progress, cancellationToken);
 
     /// <summary>
     /// Le fichier que cette machine installerait pour cette entrée du catalogue, ou

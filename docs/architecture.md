@@ -383,6 +383,25 @@ Linux et macOS, qui elle ne change pas). Faute de taille d'installeur lisible, i
 d'estimation du tout et la phase reste franchement indéterminée : inventer un dénominateur
 serait inventer un pourcentage.
 
+#### Désinstaller : hors du thread d'interface, et en comptant
+
+Effacer une installation (six cents mégaoctets) ou une instance (des gigaoctets de mondes) est
+une opération longue, et `System.IO.Abstractions` est synchrone de bout en bout : un `await` sur
+un appel synchrone ne déporte rien, il rend la main sur un travail déjà fait. Les deux chemins
+passent donc par un `Task.Run` assumé, et par le même `DirectoryDeleter` (`Storage/`), qui relève
+les fichiers AVANT de les effacer. Compter est rapide, effacer ne l'est pas : c'est ce qui donne
+un dénominateur, donc une barre déterminée plutôt qu'un rond qui tourne, publiée en
+`IProgress<DirectoryDeleteProgress>` comme le reste du Core.
+
+Les deux dialogues concernés restent ouverts et vivants pendant l'opération, leurs boutons hors
+service, sans annulation offerte : une version ou une instance à moitié supprimée est pire que
+les deux états francs. Un échec partiel remonte typé (`DirectoryDeleteFailedException`, retraduit
+en `InstanceDeleteFailedException` côté instances) et le dialogue nomme le dossier où il reste
+des fichiers.
+
+La désinstallation d'un MOD ne relève pas de ce dispositif et n'en a pas besoin : c'est la
+suppression d'un seul zip, qui rend la main immédiatement.
+
 macOS est traité comme une cible réelle dès le modèle (téléchargement et extraction des
 builds `mac-arm64`/`mac-x64` fonctionnels), même si le bouton « Jouer » mac attendra une
 vraie machine de test : VS Launcher a laissé ses utilisateurs mac des années avec un

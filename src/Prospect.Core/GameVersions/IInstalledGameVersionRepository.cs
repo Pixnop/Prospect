@@ -39,6 +39,19 @@ public interface IInstalledGameVersionRepository
     /// </summary>
     Task MarkCompleteAsync(GameVersion version, CancellationToken cancellationToken = default);
 
-    /// <summary>Supprime récursivement le dossier d'une version. Sans effet si elle n'existe pas.</summary>
+    /// <summary>
+    /// Supprime récursivement le dossier d'une version, sur le thread appelant. Sans effet si elle
+    /// n'existe pas. Réservé au nettoyage d'une installation avortée, où le dossier est encore
+    /// quasi vide : pour une désinstallation demandée par l'utilisateur, voir
+    /// <see cref="RemoveAsync"/>, qui déporte le travail et rend compte de son avancement.
+    /// </summary>
     void Remove(GameVersion version);
+
+    /// <summary>
+    /// Désinstalle une version : suppression hors du thread appelant, avec un avancement chiffré.
+    /// Rien n'est annulable une fois commencé — une version à moitié supprimée est pire que les
+    /// deux états francs.
+    /// </summary>
+    /// <exception cref="Storage.DirectoryDeleteFailedException">Il reste des fichiers sur le disque.</exception>
+    Task RemoveAsync(GameVersion version, IProgress<Storage.DirectoryDeleteProgress>? progress = null, CancellationToken cancellationToken = default);
 }

@@ -124,7 +124,7 @@ public sealed class DeleteAndRecreateHeadlessTests
         var overlay = new RecordingOverlayService();
         var record = await instances.CreateAsync("Homestead", SampleVersion);
 
-        var dialog = new DeleteInstanceDialogViewModel(record.Slug, "Homestead", instances, overlay, () => Task.CompletedTask)
+        var dialog = new DeleteInstanceDialogViewModel(record.Slug, "Homestead", instances, overlay, new ImmediateUiDispatcher(), () => Task.CompletedTask)
         {
             IsDeleting = true,
         };
@@ -142,5 +142,47 @@ public sealed class DeleteAndRecreateHeadlessTests
         overlay.Active.ShouldBeNull();
         dialog.ErrorMessage.ShouldBeNull();
         dialog.IsDeleting.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// La barre du dialogue de suppression est DÉTERMINÉE : elle suit les fichiers relevés par le
+    /// service. Elle n'avait qu'un état « en cours », c'est-à-dire un rond qui tourne pendant
+    /// quarante secondes sur une instance à gros mondes.
+    /// </summary>
+    [Fact]
+    public async Task DeleteDialog_WhileDeleting_CountsTheFilesItRemoves()
+    {
+        using var provider = TestServiceProviderFactory.Create(out var fileSystem);
+        var instances = provider.GetRequiredService<InstanceService>();
+        var repository = provider.GetRequiredService<IInstanceRepository>();
+        var overlay = new RecordingOverlayService();
+        var record = await instances.CreateAsync("Homestead", SampleVersion);
+
+        var saves = fileSystem.Path.Combine(repository.GetDataDirectory(record.Slug), "Saves");
+        for (var index = 0; index < 50; index++)
+        {
+            fileSystem.AddFile(
+                fileSystem.Path.Combine(saves, $"monde-{index}.vcdbs"),
+                new System.IO.Abstractions.TestingHelpers.MockFileData(new byte[64]));
+        }
+
+        var seen = new List<double>();
+        var dialog = new DeleteInstanceDialogViewModel(record.Slug, "Homestead", instances, overlay, new ImmediateUiDispatcher(), () => Task.CompletedTask);
+        dialog.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(DeleteInstanceDialogViewModel.ProgressPercent))
+            {
+                seen.Add(dialog.ProgressPercent);
+            }
+        };
+        overlay.Show(dialog);
+
+        await dialog.ConfirmCommand.ExecuteAsync(null);
+
+        seen.ShouldNotBeEmpty();
+        seen.ShouldBe(seen.Order().ToArray());
+        seen[^1].ShouldBe(100d);
+        dialog.ProgressText.ShouldStartWith("Suppression des fichiers");
+        overlay.Active.ShouldBeNull();
     }
 }

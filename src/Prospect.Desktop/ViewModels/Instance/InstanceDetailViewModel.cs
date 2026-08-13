@@ -353,7 +353,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     private void Export() => _overlay.Show(new ExportModpackDialogViewModel(_slug, Name, _exportService, _filePicker, _overlay, _toasts));
 
     [RelayCommand]
-    private void Delete() => _overlay.Show(new DeleteInstanceDialogViewModel(_slug, Name, _instanceService, _overlay, OnDeletedAsync));
+    private void Delete() => _overlay.Show(new DeleteInstanceDialogViewModel(_slug, Name, _instanceService, _overlay, _dispatcher, OnDeletedAsync));
 
     // Contrairement à Rename (dont le résultat se voit déjà dans l'en-tête rechargé), une
     // duplication ne change rien à la page affichée : la seule instance concernée par ce
