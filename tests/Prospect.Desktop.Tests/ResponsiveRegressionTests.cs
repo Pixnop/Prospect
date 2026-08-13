@@ -314,7 +314,7 @@ public sealed class ResponsiveRegressionTests
             [],
             new ModCompatibilityDoctorResult(0, 0, 0, 0),
             new DiskSpaceDoctorResult(100L * 1024 * 1024 * 1024, InstanceDoctor.LowDiskSpaceThresholdBytes));
-        shell.Overlay.Show(new InstanceDoctorDialogViewModel(report, () => { }, () => { }, shell.Overlay));
+        shell.Overlay.Show(new InstanceDoctorDialogViewModel(report, () => { }, () => { }, _ => Task.CompletedTask, shell.Overlay));
         window.Settle();
 
         window.ShouldHoldLayoutInvariantsAtEverySize("Dialogue du docteur d'instance, tout va bien");

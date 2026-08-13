@@ -316,6 +316,10 @@ internal sealed class EnglishDoctorText(ModsText mods) : DoctorText(mods)
 
     internal override string OpenModsAction => "See the mods";
 
+    internal override string InstallDependencyAction(string modIdString) => $"Install “{modIdString}”…";
+
+    internal override string UpdateDependencyAction(string modIdString) => $"Update “{modIdString}”…";
+
     internal override string AllClearTitle => "All clear";
 
     internal override string AllClearDescription => "Nothing wrong across the five local checks.";

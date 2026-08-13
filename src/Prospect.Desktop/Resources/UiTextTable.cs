@@ -327,6 +327,15 @@ internal abstract class DoctorText(ModsText mods)
 
     internal abstract string OpenModsAction { get; }
 
+    /// <summary>
+    /// Action d'une ligne de dépendance MANQUANTE : elle nomme le mod et se termine par des points
+    /// de suspension, parce qu'elle ouvre un plan à confirmer, jamais une installation directe.
+    /// </summary>
+    internal abstract string InstallDependencyAction(string modIdString);
+
+    /// <summary>Même action pour une dépendance présente mais trop ancienne.</summary>
+    internal abstract string UpdateDependencyAction(string modIdString);
+
     internal abstract string AllClearTitle { get; }
 
     internal abstract string AllClearDescription { get; }

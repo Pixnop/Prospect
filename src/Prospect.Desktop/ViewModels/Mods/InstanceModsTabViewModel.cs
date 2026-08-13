@@ -29,8 +29,11 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
     private readonly IClock _clock;
     private readonly IOverlayService _overlay;
     private readonly IToastService _toasts;
+    private readonly IExternalUrlOpener _urlOpener;
+    private readonly IModLogoCache _logoCache;
 
     private InstanceUpdateReport? _lastReport;
+    private string _instanceName;
 
     public InstanceModsTabViewModel(
         string slug,
@@ -40,7 +43,9 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
         IModUpdateCheckCache updateCache,
         IClock clock,
         IOverlayService overlay,
-        IToastService toasts)
+        IToastService toasts,
+        IExternalUrlOpener urlOpener,
+        IModLogoCache logoCache)
     {
         ArgumentException.ThrowIfNullOrEmpty(slug);
         ArgumentNullException.ThrowIfNull(repository);
@@ -50,6 +55,8 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(toasts);
+        ArgumentNullException.ThrowIfNull(urlOpener);
+        ArgumentNullException.ThrowIfNull(logoCache);
 
         _slug = slug;
         _repository = repository;
@@ -59,6 +66,9 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
         _clock = clock;
         _overlay = overlay;
         _toasts = toasts;
+        _urlOpener = urlOpener;
+        _logoCache = logoCache;
+        _instanceName = slug;
         ModsDirectoryText = repository.GetModsDirectory(slug);
 
         // Le dernier résultat connu cette session (voir IModUpdateCheckCache) est repris tel quel à
@@ -238,6 +248,75 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
 
         InvalidateUpdateState();
         await RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Nom affichable de l'instance, pour les dialogues qui la nomment. Posé par la page de détail
+    /// une fois l'instance chargée : à la construction de cet onglet, seul le slug est connu.
+    /// </summary>
+    public void SetInstanceName(string name) => _instanceName = string.IsNullOrWhiteSpace(name) ? _slug : name;
+
+    /// <summary>
+    /// Ouvre le dialogue de plan d'installation pour un mod désigné par son <c>modid</c>, dans cette
+    /// instance. C'est l'action des lignes de dépendance manquante du docteur.
+    /// </summary>
+    /// <remarks>
+    /// Rien de neuf en dessous : le plan est préparé par le MÊME
+    /// <see cref="ModInstallService.PrepareAsync(string, string, ModCompatibilityMode, int?, IProgress{DownloadProgress}?, CancellationToken)"/>
+    /// que le navigateur, avec le même dialogue et le même dévoilement « installer quand même ».
+    /// Le RÉSEAU n'intervient qu'ici, au clic, après que le diagnostic est refermé : le docteur
+    /// lui-même reste hors ligne par construction et n'a gagné aucune dépendance.
+    /// </remarks>
+    public async Task InstallByIdentifierAsync(string modIdString, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(modIdString);
+
+        try
+        {
+            var plan = await _installService
+                .PrepareAsync(_slug, modIdString, cancellationToken: cancellationToken)
+                .ConfigureAwait(true);
+
+            _overlay.Show(new ModInstallPlanDialogViewModel(
+                plan,
+                _instanceName,
+                (chosen, selection) => ApplyInstallAsync(chosen, selection),
+                releaseId => _installService.PrepareAsync(_slug, modIdString, releaseId: releaseId, cancellationToken: CancellationToken.None),
+                _overlay,
+                _urlOpener,
+                _logoCache));
+        }
+        catch (ModReleaseNotFoundException exception)
+        {
+            _toasts.Show(ToastTone.Error, UiText.Mods.NoCompatibleReleaseTitle, exception.Message);
+        }
+        catch (Exception exception) when (exception is ModDbApiException or ModDbUnavailableException or DownloadFailedException or ModInstallFailedException)
+        {
+            // Échec réseau au clic : message honnête, aucun plan ouvert, et surtout aucune fenêtre
+            // qui tombe. Le docteur, lui, avait déjà rendu son verdict sans réseau.
+            _toasts.Show(ToastTone.Error, UiText.Mods.InstallFailedTitle, exception.Message);
+        }
+    }
+
+    private async Task ApplyInstallAsync(ModInstallPlan plan, IReadOnlyCollection<string> selection)
+    {
+        try
+        {
+            var outcome = await _installService.ApplyAsync(_slug, plan, selection, cancellationToken: CancellationToken.None).ConfigureAwait(true);
+
+            _overlay.Close();
+            _toasts.Show(
+                ToastTone.Success,
+                UiText.Mods.InstalledTitle(plan.Primary.DisplayName),
+                UiText.Mods.InstalledMessage(outcome.Installed.Count, _instanceName));
+            InvalidateUpdateState();
+            await RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is DownloadFailedException or ModInstallFailedException)
+        {
+            _overlay.Close();
+            _toasts.Show(ToastTone.Error, UiText.Mods.InstallFailedTitle, exception.Message);
+        }
     }
 
     // La vérification inverse a lieu AVANT d'ouvrir la confirmation : elle en fournit le texte,

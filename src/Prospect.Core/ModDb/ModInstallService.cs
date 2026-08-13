@@ -128,18 +128,52 @@ public sealed class ModInstallService
     /// <exception cref="ModDbApiException">Mod inconnu du ModDB.</exception>
     /// <exception cref="ModDbUnavailableException">ModDB injoignable.</exception>
     /// <exception cref="DownloadFailedException">Téléchargement impossible.</exception>
-    public async Task<ModInstallPlan> PrepareAsync(
+    public Task<ModInstallPlan> PrepareAsync(
         string slug,
         int modDbModId,
         ModCompatibilityMode mode = ModCompatibilityMode.ExactGameVersion,
         int? releaseId = null,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken cancellationToken = default)
+        => PrepareAsync(
+            slug,
+            modDbModId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            mode,
+            releaseId,
+            progress,
+            cancellationToken);
+
+    /// <summary>
+    /// Même préparation, à partir de l'identifiant TEXTUEL d'un modinfo.json plutôt que de
+    /// l'identifiant numérique de la fiche.
+    /// </summary>
+    /// <remarks>
+    /// L'endpoint détail résout indifféremment les deux, ce que le domaine exploitait déjà pour
+    /// résoudre les dépendances déclarées (voir <c>ResolveDependencyItemsAsync</c>). Cette surcharge
+    /// ne fait qu'ouvrir la même porte à l'appelant : c'est ce qui permet au docteur d'instance, qui
+    /// ne connaît d'une dépendance manquante que son <c>modid</c>, de proposer de l'installer sans
+    /// qu'un second chemin d'installation existe quelque part.
+    /// </remarks>
+    /// <param name="slug">Instance cible.</param>
+    /// <param name="modIdentifier">Identifiant numérique OU <c>modid</c> textuel de la fiche.</param>
+    /// <param name="mode">Politique de compatibilité.</param>
+    /// <param name="releaseId">Release imposée, ou <see langword="null"/> pour la sélection automatique.</param>
+    /// <param name="progress">Avancement du téléchargement.</param>
+    /// <param name="cancellationToken">Annulation.</param>
+    public async Task<ModInstallPlan> PrepareAsync(
+        string slug,
+        string modIdentifier,
+        ModCompatibilityMode mode = ModCompatibilityMode.ExactGameVersion,
+        int? releaseId = null,
+        IProgress<DownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(modIdentifier);
+
         var instance = await _instances.LoadAsync(slug, cancellationToken).ConfigureAwait(false);
         var gameVersion = instance.Metadata.GameVersion;
 
-        var detail = await _client.GetModAsync(modDbModId.ToString(System.Globalization.CultureInfo.InvariantCulture), cancellationToken).ConfigureAwait(false);
+        var detail = await _client.GetModAsync(modIdentifier, cancellationToken).ConfigureAwait(false);
 
         // La liste porte TOUTES les releases, chacune avec son verdict : le dialogue n'en montre
         // que les compatibles tant qu'on ne lui demande pas le contraire, mais le choix explicite

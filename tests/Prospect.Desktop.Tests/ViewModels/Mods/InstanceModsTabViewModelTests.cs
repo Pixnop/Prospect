@@ -46,7 +46,7 @@ public sealed class InstanceModsTabViewModelTests
         var toasts = new RecordingToastService();
 
         return new Fixture(
-            new InstanceModsTabViewModel(record.Slug, mods, installService, updateChecker, updateCache, clock, overlay, toasts),
+            new InstanceModsTabViewModel(record.Slug, mods, installService, updateChecker, updateCache, clock, overlay, toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()),
             mods,
             handler,
             updateCache,
@@ -432,13 +432,13 @@ public sealed class InstanceModsTabViewModelTests
         var updateCache = new ModUpdateCheckCache();
         var clock = new FakeClock(Now);
 
-        Should.Throw<ArgumentException>(() => new InstanceModsTabViewModel(string.Empty, mods, installService, updateChecker, updateCache, clock, fixture.Overlay, fixture.Toasts));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", null!, installService, updateChecker, updateCache, clock, fixture.Overlay, fixture.Toasts));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, null!, updateChecker, updateCache, clock, fixture.Overlay, fixture.Toasts));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, null!, updateCache, clock, fixture.Overlay, fixture.Toasts));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, updateChecker, null!, clock, fixture.Overlay, fixture.Toasts));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, updateChecker, updateCache, null!, fixture.Overlay, fixture.Toasts));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, updateChecker, updateCache, clock, null!, fixture.Toasts));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, updateChecker, updateCache, clock, fixture.Overlay, null!));
+        Should.Throw<ArgumentException>(() => new InstanceModsTabViewModel(string.Empty, mods, installService, updateChecker, updateCache, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", null!, installService, updateChecker, updateCache, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, null!, updateChecker, updateCache, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, null!, updateCache, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, updateChecker, null!, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, updateChecker, updateCache, null!, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, updateChecker, updateCache, clock, null!, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, updateChecker, updateCache, clock, fixture.Overlay, null!, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
     }
 }

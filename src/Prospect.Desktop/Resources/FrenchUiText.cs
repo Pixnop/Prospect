@@ -312,6 +312,10 @@ internal sealed class FrenchDoctorText(ModsText mods) : DoctorText(mods)
 
     internal override string OpenModsAction => "Voir les mods";
 
+    internal override string InstallDependencyAction(string modIdString) => $"Installer « {modIdString} »…";
+
+    internal override string UpdateDependencyAction(string modIdString) => $"Mettre à jour « {modIdString} »…";
+
     internal override string AllClearTitle => "Tout est en ordre";
 
     internal override string AllClearDescription => "Aucun problème détecté sur les cinq vérifications locales.";

@@ -68,7 +68,9 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         IUiDispatcher dispatcher,
         IClock clock,
         ModpackExportService exportService,
-        IFilePickerService filePicker)
+        IFilePickerService filePicker,
+        IExternalUrlOpener urlOpener,
+        IModLogoCache logoCache)
     {
         ArgumentException.ThrowIfNullOrEmpty(slug);
         ArgumentNullException.ThrowIfNull(instanceService);
@@ -89,6 +91,8 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(exportService);
         ArgumentNullException.ThrowIfNull(filePicker);
+        ArgumentNullException.ThrowIfNull(urlOpener);
+        ArgumentNullException.ThrowIfNull(logoCache);
 
         _slug = slug;
         _instanceService = instanceService;
@@ -125,7 +129,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
             instanceService, backupService, appEnvironment, overlay, clock, toasts);
         _isRunning = tracker.IsRunning(slug);
 
-        ModsTab = new InstanceModsTabViewModel(slug, mods, modInstallService, updateChecker, updateCache, clock, overlay, toasts);
+        ModsTab = new InstanceModsTabViewModel(slug, mods, modInstallService, updateChecker, updateCache, clock, overlay, toasts, urlOpener, logoCache);
         ModsTab.BrowseRequested += (_, instanceSlug) => BrowseModsRequested?.Invoke(this, instanceSlug);
 
         _tracker.StatusChanged += OnTrackerStatusChanged;
@@ -326,6 +330,16 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                 _overlay.Close();
                 SelectTab(InstanceDetailTab.Mods);
             },
+            // Le diagnostic se referme AVANT que le réseau n'entre en jeu : InstanceDoctor reste
+            // hors ligne par construction, et c'est ce clic-ci qui ouvre la machinerie
+            // d'installation, exactement celle du navigateur de mods.
+            installMod: modIdString =>
+            {
+                _overlay.Close();
+                SelectTab(InstanceDetailTab.Mods);
+
+                return ModsTab.InstallByIdentifierAsync(modIdString);
+            },
             _overlay));
     }
 
@@ -368,6 +382,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     private void ApplyRecord(InstanceRecord record)
     {
         Name = record.Metadata.Name;
+        ModsTab.SetInstanceName(record.Metadata.Name);
         VersionText = record.Metadata.GameVersion.ToString();
         ChannelBadgeTone = ChannelBadgePresentation.ToBadgeTone(record.Metadata.GameVersion.Channel);
         IconKey = InstanceIconKeyResolver.Resolve(record.Metadata.Icon);
