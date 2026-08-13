@@ -55,13 +55,13 @@ public sealed partial class ShellViewModel : ObservableObject
         Toasts = toasts;
         UseCustomTitlebar = ResolveUseCustomTitlebar(appEnvironment.CurrentOperatingSystem);
         Home.InstanceOpenRequested += (_, slug) => ShowInstanceDetail(slug);
-        Settings.FirstRun.NavigateToVersionsRequested += (_, _) => Navigate(Versions);
+        Settings.FirstRun.NavigateToVersionsRequested += (_, _) => ShowVersions();
         Settings.FirstRun.NavigateToAccountSettingsRequested += (_, _) => ShowAccountSettings();
         Settings.FirstRun.VslAdopted += (_, _) => Home.RefreshCommand.Execute(null);
 
         var homeNavItem = new NavItemViewModel("layers", UiText.Shell.NavHome, home, Navigate);
         var modsNavItem = new NavItemViewModel("package", UiText.Shell.NavMods, modBrowser, ShowModBrowser);
-        var versionsNavItem = new NavItemViewModel("hard-drive", UiText.Shell.NavVersions, versions, Navigate);
+        var versionsNavItem = new NavItemViewModel("hard-drive", UiText.Shell.NavVersions, versions, ShowVersions);
         SettingsNavItem = new NavItemViewModel("settings", UiText.Shell.NavSettings, settings, ShowSettings);
 
         LibraryNavItems = [homeNavItem, modsNavItem, versionsNavItem];
@@ -177,7 +177,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         var detail = _instanceDetailFactory(slug);
         detail.BackRequested += (_, _) => ShowHome();
-        detail.NavigateToVersionsRequested += (_, _) => Navigate(Versions);
+        detail.NavigateToVersionsRequested += (_, _) => ShowVersions();
         detail.BrowseModsRequested += (_, instanceSlug) => ShowModBrowser(instanceSlug);
 
         Navigate(detail);
@@ -212,6 +212,34 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         Navigate(page);
         _ = Settings.InitializeCommand.ExecuteAsync(null);
+    }
+
+    /// <summary>
+    /// Ouvre l'écran Versions ET déclenche son chargement, comme <see cref="ShowModBrowser(object)"/>
+    /// et <see cref="ShowSettings"/> le font pour les leurs.
+    /// </summary>
+    /// <remarks>
+    /// Exactement l'angle mort déjà corrigé sur l'Accueil, et il avait survécu ici : l'écran Versions
+    /// a TROIS entrées (l'item de la sidebar, la checklist de premier lancement, l'action
+    /// « Installer » du docteur d'instance via le détail d'instance) et les trois se contentaient de
+    /// <see cref="Navigate"/>. RIEN n'appelait donc jamais son chargement, et la seule façon de
+    /// remplir l'écran était le bouton « Vérifier les nouveautés ». Les tests headless appelaient
+    /// tous <c>RefreshCommand</c> à la main juste après avoir navigué : la navigation était réelle,
+    /// le rafraîchissement manuel masquait l'absence de déclencheur — le même masquage, mot pour mot,
+    /// que celui qui avait caché le défaut de l'Accueil.
+    ///
+    /// Rechargement à CHAQUE entrée plutôt qu'une seule fois, comme le navigateur de mods : le scan
+    /// du disque est local et doit rester frais (une version peut avoir été installée depuis le
+    /// wizard entre deux visites), et le catalogue distant a son propre cache, donc l'appel ne coûte
+    /// aucune requête tant qu'il est frais. Fire-and-forget, et jamais deux chargements concurrents :
+    /// <see cref="VersionsViewModel"/> les met en file (voir son sémaphore).
+    /// </remarks>
+    public void ShowVersions() => ShowVersions(Versions);
+
+    private void ShowVersions(object page)
+    {
+        Navigate(page);
+        _ = Versions.RefreshCommand.ExecuteAsync(null);
     }
 
     // Dispose la page sortante si elle en a besoin (InstanceDetailViewModel se désabonne de
