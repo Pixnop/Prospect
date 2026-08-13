@@ -71,7 +71,7 @@ public sealed class ModLogoCache : IModLogoCache, IDisposable
     /// le défilement et les frappes de recherche redemandent sans arrêt, donc ceux qu'il faut
     /// vraiment mémoriser. Vingt-quatre mégaoctets couvrent plus de cinq cents vignettes de
     /// 128 × 85 : au-delà de ce que le plafond d'entrées laisse entrer, donc jamais le facteur
-    /// limitant pour une vignette de forme ordinaire — ce budget est là pour les formes extrêmes
+    /// limitant pour une vignette de forme ordinaire. Ce budget est là pour les formes extrêmes
     /// (une bannière très haute réduite à 128 de large pèse encore un mégaoctet).
     /// </summary>
     public const long MaxCachedThumbnailBytes = 24L * 1024 * 1024;
@@ -229,7 +229,7 @@ public sealed class ModLogoCache : IModLogoCache, IDisposable
         var size = bitmap.PixelSize;
 
         // Quatre octets par point : c'est le format de surface du moteur de rendu, quelle que soit
-        // la compression du fichier d'origine — c'est bien la taille DÉCODÉE qui pèse en mémoire.
+        // la compression du fichier d'origine : c'est bien la taille DÉCODÉE qui pèse en mémoire.
         var cost = (long)size.Width * size.Height * 4;
         var isThumbnail = maxWidth <= MaxLogoWidth;
 

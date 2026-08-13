@@ -72,7 +72,7 @@ public sealed class ModLogoCacheTests
     /// </summary>
     /// <remarks>
     /// Deux propriétés vérifiées d'un coup, parce qu'elles ne valent qu'ensemble : le budget des
-    /// illustrations est tenu, ET une vignette reste mémorisable après lui — un budget COMMUN
+    /// illustrations est tenu, ET une vignette reste mémorisable après lui : un budget COMMUN
     /// aurait tenu la première et perdu la seconde, en laissant les illustrations affamer la strate
     /// que le défilement redemande sans arrêt.
     /// </remarks>
