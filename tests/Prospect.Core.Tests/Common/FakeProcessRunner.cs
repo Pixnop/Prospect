@@ -25,6 +25,12 @@ internal sealed class FakeProcessRunner : IProcessRunner
     public Exception? Failure { get; set; }
 
     /// <summary>
+    /// Effet de bord joué avant de rendre la main, pour simuler ce que le vrai processus aurait
+    /// écrit sur le disque (typiquement l'installeur Windows qui pose <c>Vintagestory.exe</c>).
+    /// </summary>
+    public Action<ProcessRunRequest>? OnRun { get; set; }
+
+    /// <summary>
     /// Processus rendu par <see cref="Start"/>. Un test qui a besoin de contrôler plusieurs
     /// lancements successifs peut réassigner cette fabrique entre deux appels.
     /// </summary>
@@ -33,6 +39,7 @@ internal sealed class FakeProcessRunner : IProcessRunner
     public Task<ProcessRunResult> RunAsync(ProcessRunRequest request, CancellationToken cancellationToken = default)
     {
         Requests.Add(request);
+        OnRun?.Invoke(request);
 
         return Failure is null
             ? Task.FromResult(new ProcessRunResult(ExitCode, StandardOutput, StandardError))

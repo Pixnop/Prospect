@@ -187,6 +187,11 @@ internal sealed class FrenchVersionsText : VersionsText
     internal override string UnavailableCatalog
         => "Le catalogue est injoignable. Seules les versions déjà installées sont affichées.";
 
+    internal override string InstallLandedElsewhere(string targetDirectory)
+        => $"L'installeur s'est terminé sans erreur, mais le jeu n'est pas dans « {targetDirectory} ». "
+            + "Il a probablement été installé par-dessus une installation existante de Vintage Story. "
+            + "Rien n'a été marqué comme installé.";
+
     internal override string Subtitle(int installedCount, string totalSize) => installedCount switch
     {
         0 => "Aucune version installée · dossier partagé entre les instances",

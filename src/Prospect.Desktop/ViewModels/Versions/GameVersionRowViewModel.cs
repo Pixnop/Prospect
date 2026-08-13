@@ -122,6 +122,13 @@ public sealed partial class GameVersionRowViewModel : ObservableObject, IProgres
         {
             ErrorMessage = null;
         }
+        catch (GameInstallIncompleteException exception)
+        {
+            // Le seul échec d'installation dont le message du domaine ne suffit pas : ce qui compte
+            // pour l'utilisateur n'est pas « aucun exécutable attendu », c'est OÙ Prospect
+            // l'attendait et pourquoi il n'y est pas. Traduit, donc, contrairement aux autres.
+            ErrorMessage = UiText.Versions.InstallLandedElsewhere(exception.TargetDirectory);
+        }
         catch (Exception exception) when (exception is GameVersionNotAvailableException or GameInstallFailedException or DownloadFailedException)
         {
             ErrorMessage = exception.Message;

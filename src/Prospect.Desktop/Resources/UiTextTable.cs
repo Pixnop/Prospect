@@ -208,6 +208,13 @@ internal abstract class VersionsText
 
     internal abstract string BrokenReason(GameInstallBrokenReason reason);
 
+    /// <summary>
+    /// L'installeur s'est terminé sans erreur mais le jeu n'est pas dans le dossier de la version.
+    /// Le message NOMME le dossier attendu : c'est la seule information qui permette à quelqu'un de
+    /// comprendre qu'une installation système a capté l'installation, et d'aller vérifier.
+    /// </summary>
+    internal abstract string InstallLandedElsewhere(string targetDirectory);
+
     internal abstract string UninstallTitle(string version);
 
     internal abstract string UninstallMessage(string version);

@@ -1,3 +1,5 @@
+using System.IO.Abstractions;
+
 using Prospect.Core.Common;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Http;
@@ -59,7 +61,16 @@ internal sealed class FakeGameVersionCatalog : IGameVersionCatalog
 /// </summary>
 internal sealed class FakeGameInstallStrategy : IGameInstallStrategy
 {
+    private readonly IFileSystem _fileSystem;
+
+    public FakeGameInstallStrategy(IFileSystem fileSystem) => _fileSystem = fileSystem;
+
     public IReadOnlyList<string> PlatformKeys { get; set; } = [GamePlatforms.Linux, GamePlatforms.Windows, GamePlatforms.MacArm64];
+
+    public IReadOnlyList<GameExecutableLocation> ExpectedExecutables { get; set; } = [GameExecutableLocation.Of("Vintagestory")];
+
+    /// <summary>Vrai (défaut) : une installation réussie laisse vraiment un exécutable dans la cible.</summary>
+    public bool ProducesExecutable { get; set; } = true;
 
     public List<string> Installs { get; } = [];
 
@@ -79,6 +90,12 @@ internal sealed class FakeGameInstallStrategy : IGameInstallStrategy
         foreach (var report in ScriptedProgress)
         {
             progress?.Report(report);
+        }
+
+        if (ProducesExecutable && Failure is null)
+        {
+            _fileSystem.Directory.CreateDirectory(targetDirectory);
+            _fileSystem.File.WriteAllText(ExpectedExecutables[0].ResolveIn(_fileSystem, targetDirectory), "#!/bin/sh");
         }
 
         return Failure is null ? Task.CompletedTask : Task.FromException(Failure);

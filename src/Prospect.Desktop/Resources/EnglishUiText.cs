@@ -189,6 +189,11 @@ internal sealed class EnglishVersionsText : VersionsText
     internal override string UnavailableCatalog
         => "The catalog is unreachable. Only versions already installed are shown.";
 
+    internal override string InstallLandedElsewhere(string targetDirectory)
+        => $"The installer finished without an error, but the game is not in “{targetDirectory}”. "
+            + "It was most likely installed over an existing Vintage Story install. "
+            + "Nothing was marked as installed.";
+
     internal override string Subtitle(int installedCount, string totalSize) => installedCount switch
     {
         0 => "No version installed · folder shared by every instance",

@@ -1,3 +1,5 @@
+using System.IO.Abstractions;
+
 using Prospect.Core.Common;
 using Prospect.Core.Http;
 
@@ -15,6 +17,8 @@ public sealed class GameInstallService
     private readonly IDownloadManager _downloads;
     private readonly IInstalledGameVersionRepository _repository;
     private readonly IGameInstallStrategy _strategy;
+    private readonly IFileSystem _fileSystem;
+    private readonly IAppLog _log;
 
     /// <summary>
     /// Construit le service.
@@ -27,21 +31,33 @@ public sealed class GameInstallService
     /// <see cref="GameInstallStrategySelector"/>). Le service ignore complètement sur quel système
     /// il tourne.
     /// </param>
+    /// <param name="fileSystem">
+    /// Système de fichiers abstrait, pour la seule vérification que ce service fait lui-même :
+    /// constater qu'un exécutable du jeu est bien arrivé dans le dossier de la version avant d'y
+    /// poser la sentinelle de complétude.
+    /// </param>
+    /// <param name="log">Journal de diagnostic.</param>
     public GameInstallService(
         IGameVersionCatalog catalog,
         IDownloadManager downloads,
         IInstalledGameVersionRepository repository,
-        IGameInstallStrategy strategy)
+        IGameInstallStrategy strategy,
+        IFileSystem fileSystem,
+        IAppLog log)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(downloads);
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(strategy);
+        ArgumentNullException.ThrowIfNull(fileSystem);
+        ArgumentNullException.ThrowIfNull(log);
 
         _catalog = catalog;
         _downloads = downloads;
         _repository = repository;
         _strategy = strategy;
+        _fileSystem = fileSystem;
+        _log = log;
     }
 
     /// <summary>
@@ -57,6 +73,7 @@ public sealed class GameInstallService
     /// <exception cref="GameVersionNotAvailableException">Version inconnue du catalogue, ou sans build pour cette plateforme.</exception>
     /// <exception cref="DownloadFailedException">Téléchargement impossible ou empreinte incorrecte.</exception>
     /// <exception cref="GameInstallFailedException">Extraction ou installeur en échec.</exception>
+    /// <exception cref="GameInstallIncompleteException">Installation terminée sans erreur mais sans exécutable dans la cible.</exception>
     public async Task<InstalledGameVersion> InstallAsync(
         GameVersion version,
         IProgress<GameInstallProgress>? progress = null,
@@ -110,7 +127,11 @@ public sealed class GameInstallService
 
     // Le fichier sentinelle est écrit en dernier, et le dossier est effacé si quoi que ce soit
     // échoue en route : c'est ce qui garantit qu'un dossier de versions/ porteur de la sentinelle
-    // est toujours une installation complète.
+    // est toujours une installation complète. Entre les deux, une vérification de RÉSULTAT : la
+    // stratégie a rendu la main sans erreur, encore faut-il qu'un exécutable du jeu soit vraiment
+    // là. Sans elle, une installation partie ailleurs (installeur Windows retombé sur une
+    // installation système) ou une extraction vide se marquait complète, et la fausse réussite ne
+    // se découvrait qu'au premier « Jouer ».
     private async Task InstallArchiveAsync(
         GameVersion version,
         string archivePath,
@@ -119,10 +140,12 @@ public sealed class GameInstallService
     {
         _repository.PrepareDirectory(version);
 
+        var targetDirectory = _repository.GetVersionDirectory(version);
         var completed = false;
         try
         {
-            await _strategy.InstallAsync(archivePath, _repository.GetVersionDirectory(version), progress, cancellationToken).ConfigureAwait(false);
+            await _strategy.InstallAsync(archivePath, targetDirectory, progress, cancellationToken).ConfigureAwait(false);
+            VerifyExecutablePresent(version, targetDirectory);
             await _repository.MarkCompleteAsync(version, cancellationToken).ConfigureAwait(false);
             completed = true;
         }
@@ -133,6 +156,23 @@ public sealed class GameInstallService
                 _repository.Remove(version);
             }
         }
+    }
+
+    private void VerifyExecutablePresent(GameVersion version, string targetDirectory)
+    {
+        var expected = _strategy.ExpectedExecutables;
+        var found = expected.FirstOrDefault(location => _fileSystem.File.Exists(location.ResolveIn(_fileSystem, targetDirectory)));
+
+        if (found is null)
+        {
+            _log.Write(
+                AppLogLevel.Error,
+                $"Version {version} : aucun exécutable attendu ({string.Join(", ", expected)}) dans « {targetDirectory} » après installation.");
+
+            throw GameInstallIncompleteException.For(version, targetDirectory, expected);
+        }
+
+        _log.Write(AppLogLevel.Info, $"Version {version} installée : « {found.ResolveIn(_fileSystem, targetDirectory)} » présent.");
     }
 
     private sealed class DownloadProgressAdapter : IProgress<DownloadProgress>

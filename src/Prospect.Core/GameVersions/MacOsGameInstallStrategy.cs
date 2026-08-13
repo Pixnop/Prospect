@@ -28,6 +28,18 @@ public sealed class MacOsGameInstallStrategy : IGameInstallStrategy
     public IReadOnlyList<string> PlatformKeys { get; } = [GamePlatforms.MacArm64, GamePlatforms.MacX64];
 
     /// <inheritdoc />
+    /// <remarks>
+    /// L'archive mac livre un bundle : le binaire vit sous <c>Vintagestory.app/Contents/MacOS/</c>.
+    /// Le binaire nu à la racine est gardé en repli parce que rien ne garantit la forme du bundle
+    /// sur toutes les versions publiées, et qu'un lancement mac reste à écrire de toute façon.
+    /// </remarks>
+    public IReadOnlyList<GameExecutableLocation> ExpectedExecutables { get; } =
+    [
+        GameExecutableLocation.Of("Vintagestory.app", "Contents", "MacOS", "Vintagestory"),
+        GameExecutableLocation.Of("Vintagestory"),
+    ];
+
+    /// <inheritdoc />
     public Task InstallAsync(
         string archivePath,
         string targetDirectory,

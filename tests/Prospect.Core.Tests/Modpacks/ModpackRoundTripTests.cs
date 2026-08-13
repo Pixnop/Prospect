@@ -69,9 +69,9 @@ public sealed class ModpackRoundTripTests
         var downloads = new DownloadManager(new HttpClient(handler), fileSystem, Paths, clock);
 
         var gameVersionRepository = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
-        var strategy = new FakeGameInstallStrategy();
+        var strategy = new FakeGameInstallStrategy(fileSystem);
         var gameCatalog = new FakeGameVersionCatalog(ModpackTestServer.BuildGameCatalog());
-        var gameInstall = new GameInstallService(gameCatalog, downloads, gameVersionRepository, strategy);
+        var gameInstall = new GameInstallService(gameCatalog, downloads, gameVersionRepository, strategy, fileSystem, NullAppLog.Instance);
 
         var exportService = new ModpackExportService(instanceRepository, modsRepository, fileSystem);
         var importService = new ModpackImportService(

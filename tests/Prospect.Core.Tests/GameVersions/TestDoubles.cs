@@ -1,4 +1,5 @@
 using System.Formats.Tar;
+using System.IO.Abstractions;
 using System.IO.Compression;
 
 using Prospect.Core.Common;
@@ -30,9 +31,24 @@ internal sealed class FakeGameVersionCatalog : IGameVersionCatalog
 }
 
 /// <summary>Double de test d'<see cref="IGameInstallStrategy"/> : note ce qu'on lui demande, échoue sur commande.</summary>
+/// <remarks>
+/// Il POSE l'exécutable attendu par défaut, parce que c'est ce qu'une installation réussie fait et
+/// que <see cref="GameInstallService"/> le vérifie désormais avant d'écrire la sentinelle.
+/// <see cref="ProducesExecutable"/> à faux simule exactement le défaut de terrain : un installeur
+/// qui rend la main sans erreur après avoir posé le jeu ailleurs.
+/// </remarks>
 internal sealed class FakeGameInstallStrategy : IGameInstallStrategy
 {
+    private readonly IFileSystem _fileSystem;
+
+    public FakeGameInstallStrategy(IFileSystem fileSystem) => _fileSystem = fileSystem;
+
     public IReadOnlyList<string> PlatformKeys { get; set; } = [GamePlatforms.Linux];
+
+    public IReadOnlyList<GameExecutableLocation> ExpectedExecutables { get; set; } = [GameExecutableLocation.Of("Vintagestory")];
+
+    /// <summary>Vrai (défaut) pour qu'une installation réussie laisse vraiment un exécutable dans la cible.</summary>
+    public bool ProducesExecutable { get; set; } = true;
 
     public List<(string ArchivePath, string TargetDirectory)> Installs { get; } = [];
 
@@ -54,6 +70,12 @@ internal sealed class FakeGameInstallStrategy : IGameInstallStrategy
         foreach (var report in ScriptedProgress)
         {
             progress?.Report(report);
+        }
+
+        if (ProducesExecutable && Failure is null)
+        {
+            _fileSystem.Directory.CreateDirectory(targetDirectory);
+            _fileSystem.File.WriteAllText(ExpectedExecutables[0].ResolveIn(_fileSystem, targetDirectory), "#!/bin/sh");
         }
 
         BeforeReturning?.Invoke(targetDirectory);

@@ -73,6 +73,11 @@ public static class CompositionRoot
         services.AddSingleton<AppPaths>();
         services.AddSingleton<JsonFileStore>();
 
+        // Journal de diagnostic partagé (logs/prospect.log). Il n'existe pas pour tracer le
+        // développement mais pour qu'un rapport de terrain soit arbitrable sur pièce : la ligne de
+        // commande exacte de l'installeur du jeu, et le verdict de la vérification qui suit.
+        services.AddSingleton<IAppLog, FileAppLog>();
+
         // Domaine Instances. InstanceMetadataV1ToV2Migration (chantier Sauvegardes) est la
         // première vraie migration enregistrée : IEnumerable<IInstanceMetadataMigration> ne
         // donnait qu'une séquence vide jusqu'ici, le schéma v1 étant le premier schéma réel.

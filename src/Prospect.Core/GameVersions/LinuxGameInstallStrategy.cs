@@ -20,6 +20,18 @@ public sealed class LinuxGameInstallStrategy : IGameInstallStrategy
     public IReadOnlyList<string> PlatformKeys { get; } = [GamePlatforms.Linux];
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Le binaire natif d'abord, exactement comme <c>Launching.LinuxGameLaunchStrategy</c> le
+    /// cherche, puis l'ancien build .NET Framework en <c>.exe</c> que les archives d'avant la
+    /// bascule native contiennent encore (docs/research/vslauncher-et-distribution.md, point d).
+    /// </remarks>
+    public IReadOnlyList<GameExecutableLocation> ExpectedExecutables { get; } =
+    [
+        GameExecutableLocation.Of("Vintagestory"),
+        GameExecutableLocation.Of("Vintagestory.exe"),
+    ];
+
+    /// <inheritdoc />
     public Task InstallAsync(
         string archivePath,
         string targetDirectory,
