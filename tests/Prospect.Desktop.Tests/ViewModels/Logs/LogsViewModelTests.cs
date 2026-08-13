@@ -27,7 +27,56 @@ public sealed class LogsViewModelTests
         MockFileSystem FileSystem,
         FakeFilePickerService FilePicker,
         RecordingToastService Toasts,
-        FileAppLog Log);
+        FileAppLog Log,
+        ManualBeat Beat);
+
+    /// <summary>
+    /// Battement piloté à la main, en lieu et place de <see cref="Task.Delay(TimeSpan, CancellationToken)"/>.
+    /// Chaque <see cref="TickAsync"/> libère exactement une attente, ce qui rend la relecture
+    /// périodique observable tour par tour sans qu'aucune seconde réelle ne s'écoule.
+    /// </summary>
+    private sealed class ManualBeat
+    {
+        private TaskCompletionSource? _pending;
+
+        public int Waits { get; private set; }
+
+        public Task WaitAsync(TimeSpan interval, CancellationToken cancellationToken)
+        {
+            Waits++;
+            _pending = new TaskCompletionSource();
+            cancellationToken.Register(() => _pending?.TrySetCanceled(cancellationToken));
+
+            return _pending.Task;
+        }
+
+        /// <summary>
+        /// Libère l'attente en cours et ne rend la main qu'une fois la relecture faite.
+        /// </summary>
+        /// <remarks>
+        /// La barrière est le RETOUR de la boucle à l'attente suivante : quand <see cref="Waits"/> a
+        /// augmenté, c'est que le tour est bouclé, donc que la relecture a eu lieu. Attendre ça
+        /// plutôt qu'un nombre arbitraire de <see cref="Task.Yield"/> est ce qui rend ces tests
+        /// insensibles à l'ordonnancement.
+        /// </remarks>
+        public async Task TickAsync()
+        {
+            var pending = _pending ?? throw new InvalidOperationException("Aucune attente en cours à libérer.");
+            var before = Waits;
+            _pending = null;
+            pending.TrySetResult();
+
+            for (var attempt = 0; attempt < 100 && Waits == before; attempt++)
+            {
+                await Task.Yield();
+            }
+
+            if (Waits == before)
+            {
+                throw new InvalidOperationException("La boucle de relecture n'a pas redemandé de battement.");
+            }
+        }
+    }
 
     private static Harness Create()
     {
@@ -35,13 +84,15 @@ public sealed class LogsViewModelTests
         var picker = new FakeFilePickerService();
         var toasts = new RecordingToastService();
         var service = new AppLogService(fileSystem, Paths);
+        var beat = new ManualBeat();
 
         return new Harness(
-            new LogsViewModel(service, picker, toasts),
+            new LogsViewModel(service, picker, toasts, beat.WaitAsync),
             fileSystem,
             picker,
             toasts,
-            new FileAppLog(fileSystem, Paths, new FakeClock(Noon)));
+            new FileAppLog(fileSystem, Paths, new FakeClock(Noon)),
+            beat);
     }
 
     [Fact]
@@ -160,5 +211,124 @@ public sealed class LogsViewModelTests
         Should.Throw<ArgumentNullException>(() => new LogsViewModel(null!, new FakeFilePickerService(), new RecordingToastService()));
         Should.Throw<ArgumentNullException>(() => new LogsViewModel(service, null!, new RecordingToastService()));
         Should.Throw<ArgumentNullException>(() => new LogsViewModel(service, new FakeFilePickerService(), null!));
+    }
+
+    // ── Relecture périodique tant que la page est affichée ───────────────────────────
+
+    /// <summary>
+    /// Entrer sur la page lit TOUT DE SUITE : c'est cette lecture qui remplace l'appel explicite que
+    /// le shell faisait à chaque navigation.
+    /// </summary>
+    [Fact]
+    public void StartLiveRefresh_ReadsImmediatelyAndGoesLive()
+    {
+        var harness = Create();
+        harness.Log.Write(AppLogLevel.Info, "Première ligne.");
+
+        harness.ViewModel.StartLiveRefresh();
+
+        harness.ViewModel.IsLive.ShouldBeTrue();
+        harness.ViewModel.Lines.ShouldHaveSingleItem().Text.ShouldContain("Première ligne.");
+    }
+
+    /// <summary>Le cœur de l'affaire : une ligne écrite après coup arrive sans qu'on clique.</summary>
+    [Fact]
+    public async Task WhileLive_ALineWrittenAfterwards_AppearsWithoutAnyClick()
+    {
+        var harness = Create();
+        harness.ViewModel.StartLiveRefresh();
+        harness.ViewModel.Lines.ShouldBeEmpty();
+
+        harness.Log.Write(AppLogLevel.Warning, "Quelque chose est arrivé.");
+        await harness.Beat.TickAsync();
+
+        harness.ViewModel.Lines.ShouldHaveSingleItem().Text.ShouldContain("Quelque chose est arrivé.");
+    }
+
+    /// <summary>Quitter la page arrête la boucle : plus aucune relecture ensuite.</summary>
+    [Fact]
+    public async Task StopLiveRefresh_EndsTheLoopAndStopsReading()
+    {
+        var harness = Create();
+        harness.ViewModel.StartLiveRefresh();
+
+        harness.Log.Write(AppLogLevel.Info, "Avant l'arrêt.");
+        await harness.Beat.TickAsync();
+        harness.ViewModel.Lines.Count.ShouldBe(1);
+
+        harness.ViewModel.StopLiveRefresh();
+        harness.ViewModel.IsLive.ShouldBeFalse();
+
+        var waitsAtStop = harness.Beat.Waits;
+        harness.Log.Write(AppLogLevel.Info, "Après l'arrêt.");
+
+        // Plus personne n'attend : la boucle ne redemandera pas de battement, et rien n'a été relu.
+        harness.Beat.Waits.ShouldBe(waitsAtStop);
+        harness.ViewModel.Lines.Count.ShouldBe(1);
+    }
+
+    /// <summary>Redémarrable : la page est un singleton du conteneur, on y revient.</summary>
+    [Fact]
+    public async Task StartingAgainAfterStopping_WorksBecauseThePageIsReused()
+    {
+        var harness = Create();
+        harness.ViewModel.StartLiveRefresh();
+        harness.ViewModel.StopLiveRefresh();
+
+        harness.Log.Write(AppLogLevel.Info, "Pendant l'absence.");
+        harness.ViewModel.StartLiveRefresh();
+
+        harness.ViewModel.IsLive.ShouldBeTrue();
+        harness.ViewModel.Lines.Count.ShouldBe(1);
+
+        harness.Log.Write(AppLogLevel.Info, "Et après le retour.");
+        await harness.Beat.TickAsync();
+        harness.ViewModel.Lines.Count.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// Un battement qui ne trouve rien de neuf ne reconstruit PAS la liste. Sans cette garde, la page
+    /// perdrait sa position de défilement et toute sélection de texte toutes les deux secondes.
+    /// </summary>
+    [Fact]
+    public async Task ABeatWithNothingNew_LeavesTheDisplayedLinesUntouched()
+    {
+        var harness = Create();
+        harness.Log.Write(AppLogLevel.Info, "Une ligne stable.");
+        harness.ViewModel.StartLiveRefresh();
+
+        var before = harness.ViewModel.Lines.Single();
+
+        await harness.Beat.TickAsync();
+        await harness.Beat.TickAsync();
+
+        harness.ViewModel.Lines.Single().ShouldBeSameAs(before);
+    }
+
+    /// <summary>Le bouton Rafraîchir reste : il n'a pas été remplacé, il a été doublé.</summary>
+    [Fact]
+    public void TheRefreshButton_StillWorksWhileLive()
+    {
+        var harness = Create();
+        harness.ViewModel.StartLiveRefresh();
+
+        harness.Log.Write(AppLogLevel.Info, "Sans attendre le battement.");
+        harness.ViewModel.RefreshCommand.Execute(null);
+
+        harness.ViewModel.Lines.ShouldHaveSingleItem();
+    }
+
+    /// <summary>Disposer ne fait rien de plus qu'arrêter : le shell dispose les pages sortantes.</summary>
+    [Fact]
+    public void Dispose_StopsTheLoopAndLeavesThePageUsable()
+    {
+        var harness = Create();
+        harness.ViewModel.StartLiveRefresh();
+
+        harness.ViewModel.Dispose();
+
+        harness.ViewModel.IsLive.ShouldBeFalse();
+        harness.ViewModel.StartLiveRefresh();
+        harness.ViewModel.IsLive.ShouldBeTrue();
     }
 }

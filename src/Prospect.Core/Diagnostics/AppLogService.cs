@@ -18,10 +18,12 @@ namespace Prospect.Core.Diagnostics;
 /// une réponse) là où l'écriture doit rester silencieuse.
 /// </para>
 /// <para>
-/// La lecture est un instantané, pas un suivi : aucune surveillance de fichier, aucun
-/// rafraîchissement automatique. Un <c>tail -f</c> demanderait un observateur de système de
-/// fichiers, une politique de débit et une gestion de la troncature du journal ; la page le dit
-/// franchement et propose un bouton plutôt que de faire semblant.
+/// Chaque lecture est un INSTANTANÉ complet, et ce service n'en orchestre aucun suivi : pas
+/// d'observateur de système de fichiers, pas de lecture incrémentale, pas de gestion de troncature.
+/// C'est la page qui décide à quelle fréquence relire (voir <c>LogsViewModel</c>, qui la rappelle
+/// périodiquement tant qu'elle est affichée), et cette répartition est délibérée : relire un fichier
+/// plafonné à <see cref="FileAppLog.MaxSizeBytes"/> coûte assez peu pour qu'une boucle suffise, là
+/// où un vrai <c>tail -f</c> demanderait les trois mécanismes ci-dessus pour le même résultat.
 /// </para>
 /// </remarks>
 public sealed class AppLogService

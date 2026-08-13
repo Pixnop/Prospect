@@ -120,6 +120,37 @@ public class ShellHeadlessTests
         window.Close();
     }
 
+    /// <summary>
+    /// La page Journaux est VIVANTE tant qu'elle est affichée, et cesse de l'être dès qu'on la
+    /// quitte. C'est la navigation qui le décide, pas la page : rien ne doit relire un fichier que
+    /// personne ne regarde.
+    /// </summary>
+    [AvaloniaFact]
+    public void LeavingTheLogsPage_StopsItsPeriodicReread()
+    {
+        using var provider = TestServiceProviderFactory.Create(out _);
+        var window = provider.GetRequiredService<MainWindow>();
+        var shellViewModel = provider.GetRequiredService<ShellViewModel>();
+        window.Show();
+        window.Settle();
+
+        shellViewModel.LogsNavItem.SelectCommand.Execute(null);
+        window.Settle();
+        shellViewModel.Logs.IsLive.ShouldBeTrue();
+
+        shellViewModel.SettingsNavItem.SelectCommand.Execute(null);
+        window.Settle();
+        shellViewModel.Logs.IsLive.ShouldBeFalse();
+
+        // Et y revenir la relance : la page est un singleton du conteneur, donc c'est bien la MÊME
+        // instance qui doit repartir.
+        shellViewModel.LogsNavItem.SelectCommand.Execute(null);
+        window.Settle();
+        shellViewModel.Logs.IsLive.ShouldBeTrue();
+
+        window.Close();
+    }
+
     [AvaloniaFact]
     public void ToggleDownloadsPopover_OpensAndClosesWithoutChangingCurrentPage()
     {

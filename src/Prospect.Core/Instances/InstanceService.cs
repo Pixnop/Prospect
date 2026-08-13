@@ -33,7 +33,14 @@ public sealed class InstanceService
     /// </summary>
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _deleting = new(StringComparer.OrdinalIgnoreCase);
 
-    public InstanceService(IInstanceRepository repository, IFileSystem fileSystem, IClock clock)
+    private readonly IAppLog _log;
+
+    /// <summary>Construit le service.</summary>
+    /// <param name="repository">Dépôt des instances.</param>
+    /// <param name="fileSystem">Système de fichiers abstrait.</param>
+    /// <param name="clock">Horloge.</param>
+    /// <param name="log">Journal de diagnostic ; optionnel, voir la remarque d'<see cref="IAppLog"/>.</param>
+    public InstanceService(IInstanceRepository repository, IFileSystem fileSystem, IClock clock, IAppLog? log = null)
     {
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(fileSystem);
@@ -42,6 +49,7 @@ public sealed class InstanceService
         _repository = repository;
         _fileSystem = fileSystem;
         _clock = clock;
+        _log = log ?? NullAppLog.Instance;
     }
 
     /// <summary>
@@ -78,6 +86,8 @@ public sealed class InstanceService
 
         _fileSystem.Directory.CreateDirectory(_repository.GetDataDirectory(slug));
         await _repository.SaveAsync(record, cancellationToken).ConfigureAwait(false);
+
+        _log.Write(AppLogLevel.Info, $"Instance créée : « {slug} » ({name}) en {gameVersion}.");
 
         return record;
     }
@@ -160,11 +170,13 @@ public sealed class InstanceService
                 });
 
             await _repository.SaveAsync(duplicated, cancellationToken).ConfigureAwait(false);
+            _log.Write(AppLogLevel.Info, $"Instance dupliquée : « {sourceSlug} » vers « {targetSlug} » ({newName}).");
 
             return duplicated;
         }
-        catch
+        catch (Exception exception)
         {
+            _log.Write(AppLogLevel.Error, $"Instance : échec de la duplication de « {sourceSlug} » vers « {targetSlug} » ({exception.GetType().Name}) : {exception.Message}");
             RemoveDirectoryIfExists(_repository.GetInstanceDirectory(targetSlug));
             throw;
         }
@@ -295,6 +307,13 @@ public sealed class InstanceService
         try
         {
             await Task.Run(() => DeleteDirectoryTree(slug, directory, progress), CancellationToken.None).ConfigureAwait(false);
+            _log.Write(AppLogLevel.Info, $"Instance supprimée : « {slug} » ({directory}).");
+        }
+        catch (Exception exception)
+        {
+            _log.Write(AppLogLevel.Error, $"Instance : échec de la suppression de « {slug} » ({exception.GetType().Name}) : {exception.Message}");
+
+            throw;
         }
         finally
         {

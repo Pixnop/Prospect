@@ -71,6 +71,7 @@ public sealed class ModInstallService
     private readonly ModArchiveReader _archiveReader;
     private readonly IFileSystem _fileSystem;
     private readonly IClock _clock;
+    private readonly IAppLog _log;
 
     /// <summary>Construit le service.</summary>
     /// <param name="client">Client ModDB.</param>
@@ -87,7 +88,8 @@ public sealed class ModInstallService
         IInstanceRepository instances,
         ModArchiveReader archiveReader,
         IFileSystem fileSystem,
-        IClock clock)
+        IClock clock,
+        IAppLog? log = null)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(downloads);
@@ -104,6 +106,7 @@ public sealed class ModInstallService
         _archiveReader = archiveReader;
         _fileSystem = fileSystem;
         _clock = clock;
+        _log = log ?? NullAppLog.Instance;
     }
 
     /// <summary>
@@ -716,7 +719,13 @@ public sealed class ModInstallService
         _fileSystem.Directory.CreateDirectory(modsDirectory);
 
         var target = _fileSystem.Path.Combine(modsDirectory, item.TargetFileName);
+        var replaces = _fileSystem.File.Exists(target);
         _fileSystem.File.Copy(archivePath, target, overwrite: true);
+
+        _log.Write(
+            AppLogLevel.Info,
+            $"Mod {(replaces ? "remplacé" : "installé")} : « {item.ModIdString} » {item.Version} dans « {slug} »"
+            + $"{(item.IsDeclaredIncompatible ? ", sans compatibilité déclarée" : string.Empty)}.");
 
         await _repository.SaveProvenanceAsync(
             slug,

@@ -35,6 +35,7 @@ public sealed class HttpGameVersionCatalog : IGameVersionCatalog, IDisposable
     private readonly IClock _clock;
     private readonly RetryPolicy _retryPolicy;
     private readonly TimeSpan _timeToLive;
+    private readonly IAppLog _log;
     private readonly SemaphoreSlim _mutex = new(1, 1);
 
     private GameVersionCatalog? _memoryCache;
@@ -54,7 +55,8 @@ public sealed class HttpGameVersionCatalog : IGameVersionCatalog, IDisposable
         AppPaths appPaths,
         IClock clock,
         RetryPolicy? retryPolicy = null,
-        TimeSpan? timeToLive = null)
+        TimeSpan? timeToLive = null,
+        IAppLog? log = null)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(jsonFileStore);
@@ -67,6 +69,7 @@ public sealed class HttpGameVersionCatalog : IGameVersionCatalog, IDisposable
         _clock = clock;
         _retryPolicy = retryPolicy ?? new RetryPolicy(RetryOptions.Default);
         _timeToLive = timeToLive ?? TimeSpan.FromHours(6);
+        _log = log ?? NullAppLog.Instance;
     }
 
     /// <summary>Chemin du fichier de cache disque.</summary>
@@ -109,11 +112,23 @@ public sealed class HttpGameVersionCatalog : IGameVersionCatalog, IDisposable
 
         try
         {
-            return await FetchAsync(cancellationToken).ConfigureAwait(false);
+            var fetched = await FetchAsync(cancellationToken).ConfigureAwait(false);
+            _log.Write(AppLogLevel.Info, $"Catalogue du jeu actualisé : {fetched.Versions.Count} version(s).");
+
+            return fetched;
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException or TimeoutException or JsonException)
         {
             var stale = onDisk is null ? null : Convert(onDisk, GameCatalogFreshness.Stale);
+
+            // Le repli sur un cache périmé est une DÉGRADATION, pas un échec : l'écran continue de
+            // montrer des versions, et rien ne dit à l'utilisateur qu'elles datent d'hier. C'est
+            // exactement le genre de fait qu'un rapport de terrain ne peut pas deviner.
+            _log.Write(
+                stale is null ? AppLogLevel.Error : AppLogLevel.Warning,
+                stale is null
+                    ? $"Catalogue du jeu injoignable et aucun cache à servir ({exception.GetType().Name}) : {exception.Message}"
+                    : $"Catalogue du jeu injoignable ({exception.GetType().Name}) : {exception.Message}. Cache périmé servi à la place.");
 
             return stale ?? throw GameCatalogUnavailableException.FromNetworkFailure(exception);
         }
