@@ -199,6 +199,13 @@ internal abstract class VersionsText
 
     internal abstract string PhaseLabel(GameInstallPhase phase);
 
+    /// <summary>
+    /// Détail de la phase d'installation, quand la stratégie sait se mesurer : elle nomme le
+    /// travail en cours (extraction de l'archive), là où le seul mot « Installation » ne disait pas
+    /// si quelque chose avançait encore.
+    /// </summary>
+    internal abstract string InstallDetail(int percent);
+
     internal abstract string BrokenReason(GameInstallBrokenReason reason);
 
     internal abstract string UninstallTitle(string version);
@@ -445,7 +452,17 @@ internal abstract class ModsText
 
     internal abstract string DependencyReason(ModDependencyIssue? issue);
 
-    internal abstract string UnresolvedDependencies(IReadOnlyList<string> identifiers);
+    /// <summary>
+    /// Dépendances dont le ModDB ne publie AUCUNE fiche. Le seul cas où « introuvable » est vrai.
+    /// </summary>
+    internal abstract string DependenciesNotOnModDb(IReadOnlyList<string> identifiers);
+
+    /// <summary>
+    /// Dépendances dont la fiche existe, mais dont aucune release n'est déclarée compatible avec la
+    /// version de jeu de l'instance. Verdict distinct du précédent : dire « introuvable » ici
+    /// envoyait l'utilisateur chercher sur le ModDB un mod qui y est bel et bien publié.
+    /// </summary>
+    internal abstract string DependenciesWithoutCompatibleRelease(IReadOnlyList<string> names, string gameVersion);
 
     internal abstract string DisabledDependencies(IReadOnlyList<string> identifiers);
 

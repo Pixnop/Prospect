@@ -41,7 +41,26 @@
   <StreamGeometry x:Key="Icon.chevron-left">m15 18-6-6 6-6</StreamGeometry>
   <StreamGeometry x:Key="Icon.check">M20 6 9 17l-5-5</StreamGeometry>
   <StreamGeometry x:Key="Icon.x">M18 6 6 18M6 6l12 12</StreamGeometry>
-  <StreamGeometry x:Key="Icon.minus">M5 12h14</StreamGeometry>
+  <!--
+    Seule icône du jeu dont le tracé Lucide (« M5 12h14 ») est PUREMENT 1-D : sa boîte englobante
+    mesure 14 x 0. Un Stretch divise par les deux dimensions de cette boîte, et Avalonia, faute de
+    pouvoir diviser par zéro, laisse le facteur vertical à 0 ; en Uniform il retient ensuite le PLUS
+    PETIT des deux, donc 0, et toute la géométrie s'écrase sur un point (mesuré : boîte rendue
+    0 x 0, une pastille du diamètre du trait). C'est ce qui vidait le bouton Réduire de la barre
+    de titre.
+
+    Elle est donc décrite par son EMPREINTE PEINTE plutôt que par son axe : la pilule que couvre un
+    trait d'épaisseur 1.75 à bouts ronds tiré de (5,12) à (19,12), soit (4.125, 11.125) →
+    (19.875, 12.875), toujours dans la boîte nominale 24x24 du jeu Lucide. Le rendu est identique au
+    pixel près, mais la boîte n'est plus dégénérée : n'importe quel Stretch la met à l'échelle sans
+    l'annuler, et la boîte du Path COÏNCIDE avec l'encre, ce qui centre le trait exactement au lieu
+    de le coller en haut de son cadre.
+
+    C'est la seule dérogation du fichier à la règle « icônes de trait » : elle se consomme en Fill,
+    jamais en Stroke (voir TitlebarView). Toute future icône d'un seul trait droit doit suivre le
+    même chemin — la garde en est IconGeometryTests, qui refuse toute géométrie de côté nul.
+  -->
+  <RectangleGeometry x:Key="Icon.minus" Rect="4.125,11.125,15.75,1.75" RadiusX="0.875" RadiusY="0.875" />
   <StreamGeometry x:Key="Icon.square">M4 4h16v16H4z</StreamGeometry>
   <StreamGeometry x:Key="Icon.alert">M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z</StreamGeometry>
   <StreamGeometry x:Key="Icon.info">M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16v-4M12 8h.01</StreamGeometry>

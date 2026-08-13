@@ -36,28 +36,47 @@ internal sealed class TarGzGameInstaller
         _permissions = permissions;
     }
 
-    public async Task InstallAsync(string archivePath, string targetDirectory, CancellationToken cancellationToken)
+    public async Task InstallAsync(
+        string archivePath,
+        string targetDirectory,
+        IProgress<GameInstallProgress>? progress,
+        CancellationToken cancellationToken)
     {
         var root = _fileSystem.Path.GetFullPath(targetDirectory);
         _fileSystem.Directory.CreateDirectory(root);
 
         try
         {
-            await ExtractAsync(archivePath, root, cancellationToken).ConfigureAwait(false);
+            await ExtractAsync(archivePath, root, progress, cancellationToken).ConfigureAwait(false);
         }
         catch (InvalidDataException exception)
         {
             throw GameInstallFailedException.ForArchive(archivePath, exception);
         }
 
+        // L'extraction est finie, la pose des bits d'exécution commence : elle parcourt tout ce qui
+        // vient d'être écrit et n'est pas instantanée sur une installation complète. La barre reste
+        // donc pleine plutôt que de retomber à l'indéterminé, ce qui se lirait comme un incident.
+        progress?.Report(GameInstallProgress.ForInstalling(1d));
         ApplyExecutableBits(root);
     }
 
-    private async Task ExtractAsync(string archivePath, string root, CancellationToken cancellationToken)
+    /// <remarks>
+    /// Le tar est lu EN FLUX : le nombre d'entrées n'est pas connu d'avance, et le compter
+    /// demanderait une première passe complète sur plusieurs centaines de mégaoctets. La position
+    /// dans l'archive compressée est le seul repère disponible sans ce coût — monotone, bornée par
+    /// la taille du fichier, et un peu en avance sur ce qui est réellement écrit puisque
+    /// <see cref="GZipStream"/> lit par blocs. C'est un repère de progression, pas une mesure
+    /// d'octets posés sur le disque, et c'est pourquoi seul son RAPPORT est publié.
+    /// </remarks>
+    private async Task ExtractAsync(string archivePath, string root, IProgress<GameInstallProgress>? progress, CancellationToken cancellationToken)
     {
         var archive = _fileSystem.File.OpenRead(archivePath);
         await using (archive.ConfigureAwait(false))
         {
+            var total = archive.CanSeek ? archive.Length : 0L;
+            var lastPercent = -1;
+
             var decompressed = new GZipStream(archive, CompressionMode.Decompress);
             await using (decompressed.ConfigureAwait(false))
             {
@@ -67,6 +86,22 @@ internal sealed class TarGzGameInstaller
                     while (await reader.GetNextEntryAsync(copyData: false, cancellationToken).ConfigureAwait(false) is { } entry)
                     {
                         await WriteEntryAsync(entry, root, cancellationToken).ConfigureAwait(false);
+
+                        if (progress is null || total <= 0)
+                        {
+                            continue;
+                        }
+
+                        // Un rapport par point de pourcentage : une archive du jeu contient des
+                        // dizaines de milliers d'entrées, et chaque consommateur repasse par le
+                        // dispatcher de l'interface. Cent messages suffisent à remplir une barre.
+                        var ratio = Math.Clamp((double)archive.Position / total, 0d, 1d);
+                        var percent = (int)(ratio * 100d);
+                        if (percent != lastPercent)
+                        {
+                            lastPercent = percent;
+                            progress.Report(GameInstallProgress.ForInstalling(ratio));
+                        }
                     }
                 }
             }

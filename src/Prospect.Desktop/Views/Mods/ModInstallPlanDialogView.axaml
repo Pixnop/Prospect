@@ -82,8 +82,16 @@
                        FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
           </Border>
 
+          <!-- Deux bandeaux et non un : « introuvable sur le ModDB » et « publié mais sans version
+               pour ce jeu » sont deux faits différents, dont l'utilisateur ne fait pas la même
+               chose. Les confondre accusait le ModDB de ne pas connaître un mod qu'il publie. -->
           <Border Classes="alert warning" IsVisible="{Binding HasUnresolved}">
             <TextBlock Text="{Binding UnresolvedMessage}" TextWrapping="Wrap" LineHeight="18"
+                       FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+          </Border>
+
+          <Border Classes="alert warning" IsVisible="{Binding HasNoCompatibleRelease}">
+            <TextBlock Text="{Binding NoCompatibleReleaseMessage}" TextWrapping="Wrap" LineHeight="18"
                        FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
           </Border>
         </StackPanel>

@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Prospect.Core.Common;
 using Prospect.Core.ModDb;
 using Prospect.Desktop.Resources;
 using Prospect.Desktop.Services;
@@ -55,8 +56,11 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject
             .ToArray();
         HasDependencies = Dependencies.Count > 0;
 
-        UnresolvedMessage = UiText.Mods.UnresolvedDependencies(plan.UnresolvedDependencies);
-        HasUnresolved = plan.UnresolvedDependencies.Count > 0;
+        var (notOnModDb, withoutRelease) = UnresolvedDependencyMessages.Build(plan.UnresolvedDependencies, plan.GameVersion);
+        UnresolvedMessage = notOnModDb;
+        HasUnresolved = notOnModDb.Length > 0;
+        NoCompatibleReleaseMessage = withoutRelease;
+        HasNoCompatibleRelease = withoutRelease.Length > 0;
 
         var disabled = plan.Issues.Where(issue => issue.Status == ModDependencyStatus.Disabled).Select(issue => issue.ModIdString).ToArray();
         DisabledMessage = UiText.Mods.DisabledDependencies(disabled);
@@ -78,9 +82,15 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject
 
     public bool HasDependencies { get; }
 
+    /// <summary>Dépendances dont le ModDB ne publie aucune fiche : le seul cas « introuvable ».</summary>
     public string UnresolvedMessage { get; }
 
     public bool HasUnresolved { get; }
+
+    /// <summary>Dépendances publiées sur le ModDB, mais sans release pour cette version du jeu.</summary>
+    public string NoCompatibleReleaseMessage { get; }
+
+    public bool HasNoCompatibleRelease { get; }
 
     public string DisabledMessage { get; }
 
@@ -113,6 +123,35 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject
 
     /// <summary>Plan sous-jacent, exposé pour les tests et pour le rappel de la version cible.</summary>
     public ModInstallPlan Plan => _plan;
+}
+
+/// <summary>
+/// Rend les deux verdicts de <see cref="UnresolvedModDependency"/> en deux phrases distinctes,
+/// partagées par le dialogue d'installation et celui de mise à jour. « Introuvable sur le ModDB »
+/// n'est dit que d'une dépendance dont la fiche n'existe VRAIMENT pas ; une fiche publiée dont
+/// aucune release ne cible la version de jeu de l'instance a son propre texte, et se nomme par le
+/// nom de sa fiche puisqu'on l'a.
+/// </summary>
+internal static class UnresolvedDependencyMessages
+{
+    public static (string NotOnModDb, string WithoutCompatibleRelease) Build(
+        IReadOnlyList<UnresolvedModDependency> unresolved,
+        GameVersion gameVersion)
+    {
+        var missing = unresolved
+            .Where(dependency => dependency.Reason == ModDependencyResolution.NotOnModDb)
+            .Select(dependency => dependency.ModIdString)
+            .ToArray();
+
+        var incompatible = unresolved
+            .Where(dependency => dependency.Reason == ModDependencyResolution.NoCompatibleRelease)
+            .Select(dependency => dependency.DisplayName)
+            .ToArray();
+
+        return (
+            UiText.Mods.DependenciesNotOnModDb(missing),
+            UiText.Mods.DependenciesWithoutCompatibleRelease(incompatible, gameVersion.ToString()));
+    }
 }
 
 /// <summary>Une dépendance manquante, cochable, dans le dialogue de confirmation.</summary>

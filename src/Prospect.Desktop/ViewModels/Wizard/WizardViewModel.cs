@@ -240,11 +240,7 @@ public sealed partial class WizardViewModel : ObservableObject, IProgress<GameIn
             InstallPhaseText = UiText.Versions.PhaseLabel(value.Phase);
             IsInstallIndeterminate = value.Ratio is null;
             InstallProgressPercent = (value.Ratio ?? 0d) * 100d;
-            InstallDetailText = value.Phase == GameInstallPhase.Downloading
-                ? UiText.Versions.DownloadDetail(
-                    ByteSizeFormatter.FormatProgress(value.ReceivedBytes, value.TotalBytes),
-                    ByteSizeFormatter.FormatSpeed(value.BytesPerSecond))
-                : string.Empty;
+            InstallDetailText = GameInstallProgressPresenter.DetailText(value);
         });
     }
 

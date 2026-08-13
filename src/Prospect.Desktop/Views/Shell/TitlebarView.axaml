@@ -41,8 +41,11 @@
       <StackPanel Grid.Column="2" Orientation="Horizontal">
         <Button Classes="icon" Width="44" Height="{StaticResource TitlebarH}" CornerRadius="0"
                 Click="OnMinimizeClick" ToolTip.Tip="{StaticResource Titlebar_Minimize}">
-          <Path Width="14" Height="14" Stretch="Uniform" Data="{StaticResource Icon.minus}"
-                Stroke="{DynamicResource Text3}" StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+          <!-- Icon.minus est une empreinte PLEINE (voir Styles/Icons.axaml) : Fill, et une boîte à
+               la taille du trait pour qu'il tombe au centre du bouton. En Stroke avec une boîte
+               carrée, la géométrie s'écrasait sur un point et le bouton paraissait vide. -->
+          <Path Width="14" Height="1.75" Stretch="Fill" Data="{StaticResource Icon.minus}"
+                Fill="{DynamicResource Text3}" />
         </Button>
         <Button Classes="icon" Width="44" Height="{StaticResource TitlebarH}" CornerRadius="0"
                 Click="OnToggleMaximizeClick" ToolTip.Tip="{StaticResource Titlebar_Maximize}">

@@ -122,6 +122,81 @@ public sealed class GameInstallServiceTests
         phases.IndexOf(GameInstallPhase.Installing).ShouldBeGreaterThan(phases.IndexOf(GameInstallPhase.Verifying));
     }
 
+    /// <summary>
+    /// La phase d'installation n'annonçait qu'UNE chose, et avant d'avoir commencé : « Installation »,
+    /// sans avancement, puis plus rien jusqu'à la fin. Sur plusieurs centaines de mégaoctets à
+    /// extraire, la barre restait figée sans que rien ne distingue le travail d'un blocage. La
+    /// stratégie qui sait se mesurer publie désormais un avancement chiffré, croissant, borné à 1.
+    /// </summary>
+    [Fact]
+    public async Task InstallAsync_TarGzStrategy_ReportsAMeasuredRatioWhileExtracting()
+    {
+        var server = new FakeDownloadServer(SampleArchive());
+        using var handler = new FakeHttpMessageHandler(server.Handle);
+        var fileSystem = new MockFileSystem();
+        using var downloads = CreateDownloads(handler, fileSystem);
+        var reports = new List<GameInstallProgress>();
+        var service = new GameInstallService(
+            new FakeGameVersionCatalog(CatalogFor(server)),
+            downloads,
+            new FileSystemInstalledGameVersionRepository(fileSystem, Paths),
+            new LinuxGameInstallStrategy(fileSystem, new RecordingUnixFilePermissions()));
+
+        await service.InstallAsync(
+            Version,
+            new SynchronousProgress<GameInstallProgress>(reports.Add),
+            CancellationToken.None);
+
+        var installing = reports.Where(report => report.Phase == GameInstallPhase.Installing).ToArray();
+
+        // Le premier rapport de la phase reste indéterminé (le service annonce l'entrée en phase),
+        // puis la stratégie prend le relais avec des rapports chiffrés.
+        installing.Length.ShouldBeGreaterThan(1);
+        installing[0].Ratio.ShouldBeNull();
+
+        var measured = installing.Skip(1).ToArray();
+        measured.ShouldNotBeEmpty("l'extraction doit publier son avancement, pas seulement son début");
+        measured.ShouldAllBe(report => report.Ratio != null && report.Ratio >= 0d && report.Ratio <= 1d);
+
+        // Monotone, et terminée à 1 : la barre ne recule jamais et ne reste pas coincée avant la fin.
+        var ratios = measured.Select(report => report.Ratio!.Value).ToArray();
+        ratios.ShouldBe(ratios.Order().ToArray());
+        ratios[^1].ShouldBe(1d);
+
+        // Les compteurs d'octets restent ceux du téléchargement : la phase d'installation mesure
+        // une progression, pas des octets écrits, et ne prétend pas le contraire.
+        measured.ShouldAllBe(report => report.ReceivedBytes == 0L && report.TotalBytes == null);
+    }
+
+    /// <summary>
+    /// L'installeur Inno silencieux ne rend la main qu'une fois terminé : rien à chiffrer, et c'est
+    /// un fait de l'outil. La phase doit donc rester proprement indéterminée plutôt que d'inventer
+    /// un pourcentage — l'interface sait afficher une barre indéterminée.
+    /// </summary>
+    [Fact]
+    public async Task InstallAsync_WindowsInstaller_KeepsTheInstallPhaseHonestlyIndeterminate()
+    {
+        var server = new FakeDownloadServer(SampleArchive());
+        using var handler = new FakeHttpMessageHandler(server.Handle);
+        var fileSystem = new MockFileSystem();
+        using var downloads = CreateDownloads(handler, fileSystem);
+        var reports = new List<GameInstallProgress>();
+        var repository = new FileSystemInstalledGameVersionRepository(fileSystem, Paths);
+        var service = new GameInstallService(
+            new FakeGameVersionCatalog(CatalogFor(server, GamePlatforms.Windows)),
+            downloads,
+            repository,
+            new WindowsGameInstallStrategy(fileSystem, new FakeProcessRunner()));
+
+        await service.InstallAsync(
+            Version,
+            new SynchronousProgress<GameInstallProgress>(reports.Add),
+            CancellationToken.None);
+
+        var installing = reports.Where(report => report.Phase == GameInstallPhase.Installing).ToArray();
+        installing.ShouldHaveSingleItem().Ratio.ShouldBeNull();
+    }
+
     [Fact]
     public async Task InstallAsync_VersionAbsentFromTheCatalog_ThrowsTheTypedFailure()
     {

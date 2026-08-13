@@ -65,9 +65,21 @@ internal sealed class FakeGameInstallStrategy : IGameInstallStrategy
 
     public Exception? Failure { get; set; }
 
-    public Task InstallAsync(string archivePath, string targetDirectory, CancellationToken cancellationToken = default)
+    /// <summary>Avancements que la stratégie publie avant de rendre la main, comme le fait l'extraction réelle.</summary>
+    public List<GameInstallProgress> ScriptedProgress { get; } = [];
+
+    public Task InstallAsync(
+        string archivePath,
+        string targetDirectory,
+        IProgress<GameInstallProgress>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         Installs.Add(targetDirectory);
+
+        foreach (var report in ScriptedProgress)
+        {
+            progress?.Report(report);
+        }
 
         return Failure is null ? Task.CompletedTask : Task.FromException(Failure);
     }

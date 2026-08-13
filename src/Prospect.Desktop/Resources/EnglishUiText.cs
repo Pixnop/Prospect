@@ -208,6 +208,11 @@ internal sealed class EnglishVersionsText : VersionsText
         _ => string.Empty,
     };
 
+    // Le séparateur et le format du pourcentage suivent DownloadDetail, dans les deux langues ;
+    // seul l'espace avant le signe change, parce que le français en met un et pas l'anglais.
+    internal override string InstallDetail(int percent)
+        => $"extracting · {percent.ToString(CultureInfo.InvariantCulture)}%";
+
     internal override string BrokenReason(GameInstallBrokenReason reason) => reason switch
     {
         GameInstallBrokenReason.MissingCompletionMarker => "install cut short, needs reinstalling",
@@ -507,7 +512,7 @@ internal sealed class EnglishModsText : ModsText
         _ => string.Empty,
     };
 
-    internal override string UnresolvedDependencies(IReadOnlyList<string> identifiers)
+    internal override string DependenciesNotOnModDb(IReadOnlyList<string> identifiers)
     {
         if (identifiers.Count == 0)
         {
@@ -517,6 +522,19 @@ internal sealed class EnglishModsText : ModsText
         var pronoun = identifiers.Count > 1 ? "them" : "it";
 
         return $"Not found on ModDB: {string.Join(", ", identifiers)}. Install {pronoun} by hand if the mod turns out to need {pronoun}.";
+    }
+
+    internal override string DependenciesWithoutCompatibleRelease(IReadOnlyList<string> names, string gameVersion)
+    {
+        if (names.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var author = names.Count > 1 ? "Their authors have" : "Its author has";
+
+        return $"On ModDB, but with no release for Vintage Story {gameVersion}: {string.Join(", ", names)}. "
+            + $"{author} published nothing for this game version, so install by hand or wait it out.";
     }
 
     internal override string DisabledDependencies(IReadOnlyList<string> identifiers)

@@ -446,8 +446,12 @@ public class WizardViewModelTests
         harness.ViewModel.InstallDetailText.ShouldBe("500.0 KB / 1.0 MB · 250.0 KB/s");
     }
 
+    /// <summary>
+    /// L'installeur Windows ne sait pas se mesurer : la phase reste indéterminée, et sans détail
+    /// chiffré — mieux vaut une barre qui s'assume qu'un pourcentage inventé.
+    /// </summary>
     [Fact]
-    public void Report_InstallPhase_HasNoMeasurableRatio()
+    public void Report_InstallPhaseThatCannotMeasureItself_StaysIndeterminate()
     {
         var harness = CreateHarness();
 
@@ -456,5 +460,23 @@ public class WizardViewModelTests
         harness.ViewModel.InstallPhaseText.ShouldBe("Installation");
         harness.ViewModel.IsInstallIndeterminate.ShouldBeTrue();
         harness.ViewModel.InstallDetailText.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// L'extraction, elle, se mesure : la barre se remplit et le détail nomme le travail en cours.
+    /// Sans ça, la phase la plus longue d'une installation de plusieurs centaines de mégaoctets
+    /// n'affichait qu'un mot immobile.
+    /// </summary>
+    [Fact]
+    public void Report_InstallPhaseWithAMeasuredRatio_FillsTheBarAndNamesTheWork()
+    {
+        var harness = CreateHarness();
+
+        harness.ViewModel.Report(GameInstallProgress.ForInstalling(0.42d));
+
+        harness.ViewModel.InstallPhaseText.ShouldBe("Installation");
+        harness.ViewModel.IsInstallIndeterminate.ShouldBeFalse();
+        harness.ViewModel.InstallProgressPercent.ShouldBe(42d);
+        harness.ViewModel.InstallDetailText.ShouldBe("extraction · 42 %");
     }
 }

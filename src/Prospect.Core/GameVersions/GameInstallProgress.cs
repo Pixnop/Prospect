@@ -34,8 +34,18 @@ public sealed record GameInstallProgress(
     long? TotalBytes,
     double BytesPerSecond)
 {
-    /// <summary>Passage à une étape dont l'avancement n'est pas chiffrable (extraction, installeur).</summary>
+    /// <summary>Passage à une étape dont l'avancement n'est pas chiffrable (installeur silencieux).</summary>
     public static GameInstallProgress ForPhase(GameInstallPhase phase) => new(phase, null, 0L, null, 0d);
+
+    /// <summary>
+    /// Avancement CHIFFRÉ de la phase d'installation, pour une stratégie qui sait se mesurer
+    /// (l'extraction d'un <c>.tar.gz</c>). Les compteurs d'octets restent à zéro : ce sont ceux du
+    /// téléchargement, et les reprendre ici pour publier une autre grandeur les rendrait
+    /// mensongers.
+    /// </summary>
+    /// <param name="ratio">Avancement entre 0 et 1.</param>
+    public static GameInstallProgress ForInstalling(double ratio)
+        => new(GameInstallPhase.Installing, Math.Clamp(ratio, 0d, 1d), 0L, null, 0d);
 
     /// <summary>Traduit un avancement de téléchargement en avancement d'installation.</summary>
     public static GameInstallProgress FromDownload(DownloadProgress progress)

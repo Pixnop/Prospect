@@ -210,10 +210,14 @@ public sealed class EnglishUiTextTests
     [Fact]
     public void Mods_UnresolvedAndDisabledDependencies_AgreeTheirPronoun()
     {
-        English.Mods.UnresolvedDependencies(["configlib"])
+        English.Mods.DependenciesNotOnModDb(["configlib"])
             .ShouldBe("Not found on ModDB: configlib. Install it by hand if the mod turns out to need it.");
-        English.Mods.UnresolvedDependencies(["configlib", "vsimgui"])
+        English.Mods.DependenciesNotOnModDb(["configlib", "vsimgui"])
             .ShouldBe("Not found on ModDB: configlib, vsimgui. Install them by hand if the mod turns out to need them.");
+        English.Mods.DependenciesWithoutCompatibleRelease(["CarryOnLib"], "1.22.6")
+            .ShouldBe("On ModDB, but with no release for Vintage Story 1.22.6: CarryOnLib. Its author has published nothing for this game version, so install by hand or wait it out.");
+        English.Mods.DependenciesWithoutCompatibleRelease(["CarryOnLib", "Config lib"], "1.22.6")
+            .ShouldBe("On ModDB, but with no release for Vintage Story 1.22.6: CarryOnLib, Config lib. Their authors have published nothing for this game version, so install by hand or wait it out.");
         English.Mods.DisabledDependencies(["configlib"])
             .ShouldBe("There but disabled: configlib. Turn it back on from the instance's Mods tab.");
         English.Mods.DisabledDependencies(["configlib", "vsimgui"])
@@ -367,5 +371,19 @@ public sealed class EnglishUiTextTests
         English.Versions.DownloadDetail("230.1 MB / 590.5 MB", "4.2 MB/s")
             .ShouldBe(french.Versions.DownloadDetail("230.1 MB / 590.5 MB", "4.2 MB/s"));
         English.Mods.BulkUpdateProgress(1, 4, "configlib").ShouldBe(french.Mods.BulkUpdateProgress(1, 4, "configlib"));
+    }
+
+    /// <summary>
+    /// Le détail de la phase d'installation porte un mot, donc il se traduit — et le pourcentage
+    /// suit la convention typographique de chaque langue : le français met une espace avant le
+    /// signe, l'anglais non. C'est exactement le genre d'écart qu'on rate en traduisant.
+    /// </summary>
+    [Fact]
+    public void Versions_InstallDetail_FollowsEachLanguagePercentConvention()
+    {
+        var french = UiText.TableFor(ProspectSettings.French);
+
+        English.Versions.InstallDetail(42).ShouldBe("extracting · 42%");
+        french.Versions.InstallDetail(42).ShouldBe("extraction · 42 %");
     }
 }

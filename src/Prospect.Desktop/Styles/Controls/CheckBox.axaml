@@ -10,9 +10,14 @@
     <Setter Property="FontFamily" Value="{DynamicResource FontSans}" />
     <Setter Property="FontSize" Value="{StaticResource FsBodySm}" />
     <Setter Property="Cursor" Value="Hand" />
+    <!-- Fond TRANSPARENT sur la racine du template, jamais nul : un fond nul n'est pas testé au
+         pointeur, et la case ne répondait alors qu'à ses deux zones peintes (le carré, les glyphes
+         du libellé). Ni l'espace de 8 entre les deux, ni la largeur restante de la colonne « * »
+         ne cochaient quoi que ce soit, alors que le curseur y affiche déjà la main. -->
+    <Setter Property="Background" Value="Transparent" />
     <Setter Property="Template">
       <ControlTemplate TargetType="CheckBox">
-        <Grid ColumnDefinitions="Auto,*">
+        <Grid ColumnDefinitions="Auto,*" Background="{TemplateBinding Background}">
           <Border Name="PART_Box"
                   Grid.Column="0"
                   Width="16" Height="16"

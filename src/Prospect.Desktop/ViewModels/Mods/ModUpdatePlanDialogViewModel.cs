@@ -55,8 +55,11 @@ public sealed partial class ModUpdatePlanDialogViewModel : ObservableObject
             .ToArray();
         HasDependencies = Dependencies.Count > 0;
 
-        UnresolvedMessage = UiText.Mods.UnresolvedDependencies(plan.UnresolvedDependencies);
-        HasUnresolved = plan.UnresolvedDependencies.Count > 0;
+        var (notOnModDb, withoutRelease) = UnresolvedDependencyMessages.Build(plan.UnresolvedDependencies, plan.GameVersion);
+        UnresolvedMessage = notOnModDb;
+        HasUnresolved = notOnModDb.Length > 0;
+        NoCompatibleReleaseMessage = withoutRelease;
+        HasNoCompatibleRelease = withoutRelease.Length > 0;
 
         var disabled = plan.Issues.Where(issue => issue.Status == ModDependencyStatus.Disabled).Select(issue => issue.ModIdString).ToArray();
         DisabledMessage = UiText.Mods.DisabledDependencies(disabled);
@@ -81,9 +84,15 @@ public sealed partial class ModUpdatePlanDialogViewModel : ObservableObject
 
     public bool HasDependencies { get; }
 
+    /// <summary>Dépendances dont le ModDB ne publie aucune fiche : le seul cas « introuvable ».</summary>
     public string UnresolvedMessage { get; }
 
     public bool HasUnresolved { get; }
+
+    /// <summary>Dépendances publiées sur le ModDB, mais sans release pour cette version du jeu.</summary>
+    public string NoCompatibleReleaseMessage { get; }
+
+    public bool HasNoCompatibleRelease { get; }
 
     public string DisabledMessage { get; }
 

@@ -464,25 +464,33 @@ public sealed class ModInstallService
             .ToArray();
     }
 
-    private async Task<(IReadOnlyList<ModInstallItem> Items, IReadOnlyList<string> Unresolved)> ResolveDependencyItemsAsync(
+    /// <remarks>
+    /// Les deux façons d'échouer sont RAPPORTÉES SÉPARÉMENT, et c'est tout l'objet de cette
+    /// méthode. Elles étaient auparavant versées dans une même liste d'identifiants, que l'interface
+    /// annonçait invariablement comme « introuvable sur le ModDB » — un mensonge dès que la fiche
+    /// existait. Le cas qui l'a révélé : installer <c>carryon</c> 2.0.0-pre.8 (tagué jusqu'à 1.22.6)
+    /// sur une instance en 1.22.6 déclarait <c>carryonlib</c> introuvable, alors que sa fiche existe
+    /// (modid 4687) et que seules ses RELEASES s'arrêtent à 1.22.4. Vérifié en direct, et gardé par
+    /// le test live du même nom.
+    /// </remarks>
+    private async Task<(IReadOnlyList<ModInstallItem> Items, IReadOnlyList<UnresolvedModDependency> Unresolved)> ResolveDependencyItemsAsync(
         IReadOnlyList<ModDependencyIssue> issues,
         GameVersion gameVersion,
         ModCompatibilityMode mode,
         CancellationToken cancellationToken)
     {
         var items = new List<ModInstallItem>();
-        var unresolved = new List<string>();
+        var unresolved = new List<UnresolvedModDependency>();
 
         foreach (var issue in issues.Where(issue => issue.NeedsInstall))
         {
-            ModInstallItem? item = null;
+            ModDbModDetail? detail = null;
             try
             {
                 // L'endpoint détail résout indifféremment l'identifiant numérique et le modidstr
                 // d'un modinfo.json, ce qui permet de partir d'une dépendance déclarée sans avoir
                 // à deviner d'identifiant numérique.
-                var detail = await _client.GetModAsync(issue.ModIdString, cancellationToken).ConfigureAwait(false);
-                item = await BuildItemAsync(detail, gameVersion, mode, cancellationToken).ConfigureAwait(false);
+                detail = await _client.GetModAsync(issue.ModIdString, cancellationToken).ConfigureAwait(false);
             }
             catch (ModDbApiException)
             {
@@ -490,9 +498,19 @@ public sealed class ModInstallService
                 // trompé d'identifiant. Rien à installer, mais l'utilisateur doit le savoir.
             }
 
+            if (detail is null)
+            {
+                unresolved.Add(new UnresolvedModDependency(issue.ModIdString, ModDependencyResolution.NotOnModDb));
+                continue;
+            }
+
+            // La fiche existe. Si rien n'en sort, ce n'est donc PAS qu'elle est introuvable : c'est
+            // qu'aucune de ses releases ne porte le tag de cette version de jeu. Verdict distinct,
+            // et on sait même nommer le mod dont il s'agit.
+            var item = await BuildItemAsync(detail, gameVersion, mode, cancellationToken).ConfigureAwait(false);
             if (item is null)
             {
-                unresolved.Add(issue.ModIdString);
+                unresolved.Add(new UnresolvedModDependency(issue.ModIdString, ModDependencyResolution.NoCompatibleRelease, detail.Name));
             }
             else
             {

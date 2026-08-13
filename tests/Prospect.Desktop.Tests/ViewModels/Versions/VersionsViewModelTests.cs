@@ -230,6 +230,37 @@ public class VersionsViewModelTests
         harness.Toasts.Shown.ShouldContain(toast => toast.Title == "Version installée");
     }
 
+    /// <summary>
+    /// L'écran Versions affichait bien une barre pendant le TÉLÉCHARGEMENT, puis plus rien de
+    /// mesurable pendant l'installation elle-même — extraction ou installeur — qui dure pourtant des
+    /// secondes bien visibles sur plusieurs centaines de mégaoctets. La rangée reflète maintenant
+    /// l'avancement que la stratégie publie : barre chiffrée, et un détail qui nomme le travail.
+    /// </summary>
+    [Fact]
+    public async Task Install_WhileTheStrategyExtracts_ShowsAMeasuredInstallPhaseOnTheRow()
+    {
+        var harness = await CreateLoadedHarnessAsync();
+        var seen = new List<(string Phase, double Percent, bool Indeterminate, string Detail)>();
+        harness.Strategy.ScriptedProgress.Add(GameInstallProgress.ForInstalling(0.25d));
+        harness.Strategy.ScriptedProgress.Add(GameInstallProgress.ForInstalling(1d));
+
+        var row = harness.ViewModel.Available.First(candidate => candidate.VersionText == "1.21.3");
+        row.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(GameVersionRowViewModel.PhaseDetailText))
+            {
+                seen.Add((row.PhaseText, row.ProgressPercent, row.IsIndeterminate, row.PhaseDetailText));
+            }
+        };
+
+        await row.InstallCommand.ExecuteAsync(null);
+
+        var installing = seen.Where(entry => entry.Phase == "Installation").ToArray();
+        installing.ShouldNotBeEmpty("la phase d'installation doit se voir sur la rangée, pas seulement le téléchargement");
+        installing.ShouldContain(entry => entry.Percent == 25d && !entry.Indeterminate && entry.Detail == "extraction · 25 %");
+        installing.ShouldContain(entry => entry.Percent == 100d && entry.Detail == "extraction · 100 %");
+    }
+
     [Fact]
     public async Task Install_Fails_ShowsTheReasonOnTheRow()
     {

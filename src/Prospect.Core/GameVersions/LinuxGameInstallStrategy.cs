@@ -20,6 +20,10 @@ public sealed class LinuxGameInstallStrategy : IGameInstallStrategy
     public IReadOnlyList<string> PlatformKeys { get; } = [GamePlatforms.Linux];
 
     /// <inheritdoc />
-    public Task InstallAsync(string archivePath, string targetDirectory, CancellationToken cancellationToken = default)
-        => _installer.InstallAsync(archivePath, targetDirectory, cancellationToken);
+    public Task InstallAsync(
+        string archivePath,
+        string targetDirectory,
+        IProgress<GameInstallProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+        => _installer.InstallAsync(archivePath, targetDirectory, progress, cancellationToken);
 }

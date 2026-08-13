@@ -150,6 +150,11 @@
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
       <StackPanel Spacing="20" Margin="28,20,28,28">
 
+        <!-- Même repère de chargement que le navigateur de mods : depuis que l'entrée sur la page
+             déclenche le scan toute seule, l'écran s'ouvre pendant que le disque et le catalogue
+             sont lus, et un écran nu sans indication se lit comme « rien à installer ». -->
+        <ProgressBar IsIndeterminate="True" Height="3" IsVisible="{Binding IsLoading}" />
+
         <Border CornerRadius="{StaticResource RadiusSm}" BorderThickness="1" Padding="14,10"
                 Background="{DynamicResource GlassItem}" BorderBrush="{DynamicResource GlassEdge}"
                 IsVisible="{Binding CatalogWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">

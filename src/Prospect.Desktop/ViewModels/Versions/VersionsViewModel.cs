@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -23,6 +24,14 @@ namespace Prospect.Desktop.ViewModels.Versions;
 /// <see cref="IGameVersionCatalog"/> et les mutations par <see cref="GameInstallService"/> : ce
 /// ViewModel ne fait que les appeler.
 /// </summary>
+[SuppressMessage(
+    "Design",
+    "CA1001:Types that own disposable fields should be disposable",
+    Justification = "Même raison qu'HomeViewModel, dont ce ViewModel reprend le sémaphore : VersionsViewModel est un " +
+        "singleton pour toute la durée de l'application (voir CompositionRoot), et ShellViewModel.Navigate dispose la " +
+        "page SORTANTE quand elle implémente IDisposable. Le rendre IDisposable couperait donc _loadGate dès la " +
+        "première navigation quittant l'écran, cassant tout chargement ultérieur d'un écran qu'on revisite. WaitAsync " +
+        "n'alloue jamais le AvailableWaitHandle sous-jacent, donc ce sémaphore ne détient aucune ressource système.")]
 public sealed partial class VersionsViewModel : ObservableObject
 {
     private readonly IGameVersionCatalog _catalog;
@@ -35,6 +44,16 @@ public sealed partial class VersionsViewModel : ObservableObject
 
     private IReadOnlyList<InstalledGameVersion> _installedVersions = [];
     private IReadOnlyList<GameVersionCatalogEntry> _catalogVersions = [];
+
+    // Sérialise les chargements, comme le fait HomeViewModel pour ses scans. Ce n'était pas
+    // nécessaire tant que seul un clic sur « Vérifier les nouveautés » pouvait en déclencher un ;
+    // depuis que l'entrée sur la page en déclenche un toute seule, un second appel (retour sur
+    // l'écran, fin d'installation, fin de désinstallation) peut très bien arriver pendant que le
+    // premier tourne encore, et deux chargements vraiment concurrents entrelaceraient leurs
+    // Clear()/Add() sur BrokenInstalls et leurs affectations de _installedVersions. La file
+    // d'attente plutôt que la fusion : un appel qui arrive APRÈS une mutation (version tout juste
+    // installée) doit voir un scan qui la trouve, pas le résultat d'un scan parti avant elle.
+    private readonly SemaphoreSlim _loadGate = new(1, 1);
 
     public VersionsViewModel(
         IGameVersionCatalog catalog,
@@ -129,6 +148,19 @@ public sealed partial class VersionsViewModel : ObservableObject
     private void ClearSearch() => SearchText = string.Empty;
 
     private async Task LoadAsync(bool forceRefresh, CancellationToken cancellationToken)
+    {
+        await _loadGate.WaitAsync(cancellationToken).ConfigureAwait(true);
+        try
+        {
+            await LoadCoreAsync(forceRefresh, cancellationToken).ConfigureAwait(true);
+        }
+        finally
+        {
+            _loadGate.Release();
+        }
+    }
+
+    private async Task LoadCoreAsync(bool forceRefresh, CancellationToken cancellationToken)
     {
         IsLoading = true;
         try

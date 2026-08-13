@@ -19,6 +19,20 @@ public interface IGameInstallStrategy
     /// s'occupe ni du téléchargement, ni du fichier sentinelle : elle ne fait que produire le
     /// contenu.
     /// </summary>
+    /// <param name="archivePath">Fichier reçu du CDN.</param>
+    /// <param name="targetDirectory">Dossier de la version, déjà préparé par l'appelant.</param>
+    /// <param name="progress">
+    /// Avancement de la phase <see cref="GameInstallPhase.Installing"/>. Une stratégie qui sait se
+    /// mesurer publie un <see cref="GameInstallProgress.Ratio"/> ; une stratégie qui ne le peut pas
+    /// (l'installeur Inno silencieux ne rend la main qu'une fois terminé) ne publie rien, et
+    /// l'interface reste sur son état indéterminé — mieux vaut une barre qui s'assume indéterminée
+    /// qu'une barre chiffrée inventée.
+    /// </param>
+    /// <param name="cancellationToken">Annulation.</param>
     /// <exception cref="GameInstallFailedException">L'installation a échoué.</exception>
-    Task InstallAsync(string archivePath, string targetDirectory, CancellationToken cancellationToken = default);
+    Task InstallAsync(
+        string archivePath,
+        string targetDirectory,
+        IProgress<GameInstallProgress>? progress = null,
+        CancellationToken cancellationToken = default);
 }
