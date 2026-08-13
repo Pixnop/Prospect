@@ -25,6 +25,39 @@ public sealed record ModInstallItem(
 }
 
 /// <summary>
+/// Pourquoi une dépendance manquante n'a pas pu être ramenée à une release installable. Les deux
+/// verdicts sont des faits DIFFÉRENTS et l'utilisateur n'en fait pas la même chose : les confondre
+/// revenait à accuser le ModDB de ne pas connaître un mod qu'il publie.
+/// </summary>
+public enum ModDependencyResolution
+{
+    /// <summary>Le ModDB ne publie aucune fiche sous cet identifiant. Rien à en attendre.</summary>
+    NotOnModDb,
+
+    /// <summary>
+    /// La fiche existe, mais aucune de ses releases n'est déclarée compatible avec la version de
+    /// jeu de l'instance. Cas réel qui a motivé la distinction : <c>carryonlib</c> (fiche 4687)
+    /// s'arrête à 1.22.4 alors que <c>carryon</c> 2.0.0-pre.8, qui en dépend, est tagué jusqu'à
+    /// 1.22.6 ; installer ce dernier sur une instance en 1.22.6 annonçait « Introuvable sur le
+    /// ModDB : carryonlib », ce qui est faux.
+    /// </summary>
+    NoCompatibleRelease,
+}
+
+/// <summary>Une dépendance manquante que la résolution n'a pas su ramener à une release.</summary>
+/// <param name="ModIdString">Identifiant déclaré dans le <c>modinfo.json</c> du mod demandeur.</param>
+/// <param name="Reason">Fiche absente, ou fiche présente sans release compatible.</param>
+/// <param name="ModName">
+/// Nom publié de la fiche quand elle existe, <see langword="null"/> quand elle n'existe pas — on ne
+/// peut pas nommer ce qu'on n'a pas trouvé.
+/// </param>
+public sealed record UnresolvedModDependency(string ModIdString, ModDependencyResolution Reason, string? ModName = null)
+{
+    /// <summary>Comment la nommer à l'écran : le nom de la fiche si on l'a, son identifiant sinon.</summary>
+    public string DisplayName => string.IsNullOrWhiteSpace(ModName) ? ModIdString : ModName;
+}
+
+/// <summary>
 /// Ce que Prospect propose de faire pour installer un mod. Rien n'est encore posé dans l'instance à
 /// ce stade : le plan est montré à l'utilisateur, qui coche ce qu'il veut, et
 /// <see cref="ModInstallService.ApplyAsync"/> exécute ensuite. Aucune dépendance n'est jamais
@@ -36,13 +69,16 @@ public sealed record ModInstallItem(
 /// Toutes les dépendances problématiques, y compris celles que la résolution n'a pas su ramener à
 /// une release (mod inconnu du ModDB, aucune release compatible) et celles simplement désactivées.
 /// </param>
-/// <param name="UnresolvedDependencies">Identifiants pour lesquels aucune release installable n'a été trouvée.</param>
+/// <param name="UnresolvedDependencies">
+/// Dépendances pour lesquelles aucune release installable n'a été trouvée, chacune avec la RAISON
+/// exacte (voir <see cref="ModDependencyResolution"/>).
+/// </param>
 /// <param name="GameVersion">Version de jeu de l'instance visée.</param>
 public sealed record ModInstallPlan(
     ModInstallItem Primary,
     IReadOnlyList<ModInstallItem> MissingDependencies,
     IReadOnlyList<ModDependencyIssue> Issues,
-    IReadOnlyList<string> UnresolvedDependencies,
+    IReadOnlyList<UnresolvedModDependency> UnresolvedDependencies,
     GameVersion GameVersion)
 {
     /// <summary>Vrai s'il y a quoi que ce soit à montrer avant d'installer.</summary>

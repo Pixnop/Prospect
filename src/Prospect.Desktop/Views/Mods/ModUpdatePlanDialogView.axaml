@@ -90,8 +90,14 @@
                        FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
           </Border>
 
+          <!-- Voir ModInstallPlanDialogView : deux verdicts distincts, deux bandeaux. -->
           <Border Classes="alert warning" IsVisible="{Binding HasUnresolved}">
             <TextBlock Text="{Binding UnresolvedMessage}" TextWrapping="Wrap" LineHeight="18"
+                       FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
+          </Border>
+
+          <Border Classes="alert warning" IsVisible="{Binding HasNoCompatibleRelease}">
+            <TextBlock Text="{Binding NoCompatibleReleaseMessage}" TextWrapping="Wrap" LineHeight="18"
                        FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
           </Border>
         </StackPanel>

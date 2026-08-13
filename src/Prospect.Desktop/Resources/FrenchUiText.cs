@@ -505,10 +505,16 @@ internal sealed class FrenchModsText : ModsText
         _ => string.Empty,
     };
 
-    internal override string UnresolvedDependencies(IReadOnlyList<string> identifiers)
+    internal override string DependenciesNotOnModDb(IReadOnlyList<string> identifiers)
         => identifiers.Count == 0
             ? string.Empty
             : $"Introuvable{(identifiers.Count > 1 ? "s" : string.Empty)} sur le ModDB : {string.Join(", ", identifiers)}. À installer à la main si le mod en a besoin.";
+
+    internal override string DependenciesWithoutCompatibleRelease(IReadOnlyList<string> names, string gameVersion)
+        => names.Count == 0
+            ? string.Empty
+            : $"Publié{(names.Count > 1 ? "s" : string.Empty)} sur le ModDB, mais sans version pour Vintage Story {gameVersion} : {string.Join(", ", names)}. "
+                + $"{(names.Count > 1 ? "Leurs auteurs n'ont" : "Son auteur n'a")} rien publié pour cette version du jeu : à installer à la main, ou à attendre.";
 
     internal override string DisabledDependencies(IReadOnlyList<string> identifiers)
         => identifiers.Count == 0

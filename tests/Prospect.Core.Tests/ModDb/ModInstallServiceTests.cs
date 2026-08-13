@@ -251,8 +251,57 @@ public sealed class ModInstallServiceTests
         var plan = await harness.Service.PrepareAsync(Slug, 1783, cancellationToken: CancellationToken.None);
 
         plan.MissingDependencies.ShouldBeEmpty();
-        plan.UnresolvedDependencies.ShouldBe(["vsimgui"]);
+        var unresolved = plan.UnresolvedDependencies.ShouldHaveSingleItem();
+        unresolved.ModIdString.ShouldBe("vsimgui");
+        unresolved.Reason.ShouldBe(ModDependencyResolution.NotOnModDb);
+
+        // Pas de fiche, donc pas de nom : on ne peut pas nommer ce qu'on n'a pas trouvé.
+        unresolved.ModName.ShouldBeNull();
+        unresolved.DisplayName.ShouldBe("vsimgui");
         plan.NeedsConfirmation.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Le cas réel de la session de test Windows, reproduit sur la topologie exacte du ModDB :
+    /// installer « Carry On » 2.0.0-pre.8 (tagué jusqu'à 1.22.6) sur une instance en 1.22.6, alors
+    /// que sa dépendance <c>carryonlib</c> a bien une fiche mais dont la dernière release s'arrête à
+    /// 1.22.4. Le plan annonçait « Introuvable sur le ModDB : carryonlib », ce qui est faux : la
+    /// fiche existe (modid 4687), seules ses RELEASES manquent pour cette version du jeu.
+    /// </summary>
+    [Fact]
+    public async Task PrepareAsync_DependencyOnTheModDbWithNoReleaseForThisGameVersion_IsNotCalledMissing()
+    {
+        var harness = Create(gameVersion: "1.22.6");
+
+        var plan = await harness.Service.PrepareAsync(Slug, 890, cancellationToken: CancellationToken.None);
+
+        plan.MissingDependencies.ShouldBeEmpty();
+        var unresolved = plan.UnresolvedDependencies.ShouldHaveSingleItem();
+        unresolved.ModIdString.ShouldBe("carryonlib");
+        unresolved.Reason.ShouldBe(ModDependencyResolution.NoCompatibleRelease);
+
+        // La fiche a été trouvée : on sait donc la NOMMER, ce qui est déjà la preuve qu'elle existe.
+        unresolved.ModName.ShouldBe("CarryOnLib");
+        unresolved.DisplayName.ShouldBe("CarryOnLib");
+        plan.NeedsConfirmation.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Le contrôle négatif du test précédent : sur une instance dont la version EST couverte par les
+    /// tags de <c>carryonlib</c>, la même dépendance se résout normalement. Sans lui, le test
+    /// ci-dessus passerait tout aussi bien si la résolution était cassée pour de bon.
+    /// </summary>
+    [Fact]
+    public async Task PrepareAsync_SameDependencyOnAGameVersionItDoesCover_ResolvesNormally()
+    {
+        var harness = Create(gameVersion: "1.22.4");
+
+        var plan = await harness.Service.PrepareAsync(Slug, 890, cancellationToken: CancellationToken.None);
+
+        plan.UnresolvedDependencies.ShouldBeEmpty();
+        var dependency = plan.MissingDependencies.ShouldHaveSingleItem();
+        dependency.ModIdString.ShouldBe("carryonlib");
+        dependency.Version.ToString().ShouldBe("1.0.0-pre.8");
     }
 
     [Fact]
@@ -395,6 +444,19 @@ public sealed class ModInstallServiceTests
         { "type": "code", "name": "VS ImGui", "modid": "vsimgui", "version": "1.3.0", "authors": ["Maltiez"] }
         """);
 
+        /// <summary>
+        /// Topologie du cas réel remonté par la session de test Windows : « Carry On » 2.0.0-pre.8
+        /// dépend de <c>carryonlib</c>, dont la fiche EXISTE sur le ModDB (modid 4687, vérifié en
+        /// direct) mais dont aucune release ne porte le tag 1.22.6.
+        /// </summary>
+        public static readonly byte[] CarryOnArchive = ModInfoSamples.BuildArchive("""
+        {
+            "type": "code", "name": "Carry On", "modid": "carryon", "version": "2.0.0-pre.8",
+            "authors": ["NerdScurvy"],
+            "dependencies": { "game": "1.22.0", "carryonlib": "1.0.0" }
+        }
+        """);
+
         /// <summary>Faux pour simuler une dépendance déclarée que le ModDB ne connaît pas.</summary>
         public bool KnownDependency { get; set; } = true;
 
@@ -418,6 +480,8 @@ public sealed class ModInstallServiceTests
                 "/api/mod/1783" or "/api/mod/configlib" => FakeHttpMessageHandler.Text(ConfigLibJson),
                 "/api/mod/4400" or "/api/mod/extrainfo" => FakeHttpMessageHandler.Text(ExtraInfoJson),
                 "/api/mod/vsimgui" when KnownDependency => FakeHttpMessageHandler.Text(VsImGuiJson),
+                "/api/mod/890" or "/api/mod/carryon" => FakeHttpMessageHandler.Text(CarryOnJson),
+                "/api/mod/4687" or "/api/mod/carryonlib" => FakeHttpMessageHandler.Text(CarryOnLibJson),
                 "/api/v2/mods/install-information" => FakeHttpMessageHandler.Text(InstallInformationJson(url.Query)),
                 _ => FakeHttpMessageHandler.Text(ModDbSamples.NotFound),
             };
@@ -430,6 +494,7 @@ public sealed class ModInstallServiceTests
                 "/configlib_1.11.1.zip" => ConfigLibArchive,
                 "/extrainfo_2.2.1.zip" => ExtraInfoArchive,
                 "/vsimgui_1.3.0.zip" => VsImGuiArchive,
+                "/carryon_2.0.0-pre.8.zip" => CarryOnArchive,
                 _ => null,
             };
 
@@ -495,6 +560,43 @@ public sealed class ModInstallServiceTests
               { "releaseid": 40100, "fileid": 90000, "mainfile": "https://moddbcdn.vintagestory.at/extrainfo_2.2.1.zip",
                 "filename": "ExtraInfo-v2.2.1.zip", "downloads": 1, "tags": ["1.22.0"], "modidstr": "extrainfo",
                 "modversion": "2.2.1", "changelog": null, "created": "2026-04-01 10:00:00" }
+            ]
+          }
+        }
+        """;
+
+        // Les tags de release sont ceux relevés en direct le 2026-08-13 : carryon va jusqu'à 1.22.6,
+        // carryonlib s'arrête à 1.22.4. C'est cet écart, et lui seul, qui rendait carryonlib
+        // « introuvable » sur une instance en 1.22.6.
+        private const string CarryOnJson = """
+        {
+          "statuscode": "200",
+          "mod": {
+            "modid": 890, "assetid": 559, "name": "Carry On", "text": "<p>carry</p>", "author": "NerdScurvy",
+            "urlalias": "carryon", "logofile": null, "downloads": 1200000, "side": "both", "type": "mod",
+            "tags": ["QoL"], "lastreleased": "2026-07-22 09:31:34",
+            "releases": [
+              { "releaseid": 50130, "fileid": 109190, "mainfile": "https://moddbcdn.vintagestory.at/carryon_2.0.0-pre.8.zip",
+                "filename": "CarryOn-2.0.0-pre.8.zip", "downloads": 1,
+                "tags": ["1.22.0", "1.22.1", "1.22.2", "1.22.3", "1.22.4", "1.22.5", "1.22.6"],
+                "modidstr": "carryon", "modversion": "2.0.0-pre.8", "changelog": null, "created": "2026-07-22 09:31:34" }
+            ]
+          }
+        }
+        """;
+
+        private const string CarryOnLibJson = """
+        {
+          "statuscode": "200",
+          "mod": {
+            "modid": 4687, "assetid": 27960, "name": "CarryOnLib", "text": "<p>lib</p>", "author": "NerdScurvy",
+            "urlalias": "carryonlib", "logofile": null, "downloads": 59306, "side": "both", "type": "mod",
+            "tags": ["Library"], "lastreleased": "2026-07-22 09:31:34",
+            "releases": [
+              { "releaseid": 50129, "fileid": 109189, "mainfile": "https://moddbcdn.vintagestory.at/carryonlib_1.0.0-pre.8.zip",
+                "filename": "CarryOnLib-1.22.0_v1.0.0-pre.8.zip", "downloads": 1,
+                "tags": ["1.22.0", "1.22.1", "1.22.2", "1.22.3", "1.22.4"],
+                "modidstr": "carryonlib", "modversion": "1.0.0-pre.8", "changelog": null, "created": "2026-07-22 09:31:34" }
             ]
           }
         }

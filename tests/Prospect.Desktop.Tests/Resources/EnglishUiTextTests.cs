@@ -210,10 +210,14 @@ public sealed class EnglishUiTextTests
     [Fact]
     public void Mods_UnresolvedAndDisabledDependencies_AgreeTheirPronoun()
     {
-        English.Mods.UnresolvedDependencies(["configlib"])
+        English.Mods.DependenciesNotOnModDb(["configlib"])
             .ShouldBe("Not found on ModDB: configlib. Install it by hand if the mod turns out to need it.");
-        English.Mods.UnresolvedDependencies(["configlib", "vsimgui"])
+        English.Mods.DependenciesNotOnModDb(["configlib", "vsimgui"])
             .ShouldBe("Not found on ModDB: configlib, vsimgui. Install them by hand if the mod turns out to need them.");
+        English.Mods.DependenciesWithoutCompatibleRelease(["CarryOnLib"], "1.22.6")
+            .ShouldBe("On ModDB, but with no release for Vintage Story 1.22.6: CarryOnLib. Its author has published nothing for this game version, so install by hand or wait it out.");
+        English.Mods.DependenciesWithoutCompatibleRelease(["CarryOnLib", "Config lib"], "1.22.6")
+            .ShouldBe("On ModDB, but with no release for Vintage Story 1.22.6: CarryOnLib, Config lib. Their authors have published nothing for this game version, so install by hand or wait it out.");
         English.Mods.DisabledDependencies(["configlib"])
             .ShouldBe("There but disabled: configlib. Turn it back on from the instance's Mods tab.");
         English.Mods.DisabledDependencies(["configlib", "vsimgui"])

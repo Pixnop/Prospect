@@ -15,7 +15,10 @@ namespace Prospect.Core.ModDb;
 /// de celles de l'ancienne version, d'où une résolution refaite à neuf plutôt que réutilisée.
 /// </param>
 /// <param name="Issues">Diagnostic complet des dépendances de la nouvelle version.</param>
-/// <param name="UnresolvedDependencies">Dépendances sans release installable trouvée.</param>
+/// <param name="UnresolvedDependencies">
+/// Dépendances sans release installable trouvée, chacune avec la RAISON exacte (voir
+/// <see cref="ModDependencyResolution"/>).
+/// </param>
 /// <param name="Dependents">
 /// Mods installés qui déclarent dépendre de celui qu'on met à jour : INFORMATIF, jamais bloquant.
 /// Monter la version de <see cref="Previous"/> ne peut mathématiquement pas violer une contrainte
@@ -29,7 +32,7 @@ public sealed record ModUpdatePlan(
     ModInstallItem Updated,
     IReadOnlyList<ModInstallItem> MissingDependencies,
     IReadOnlyList<ModDependencyIssue> Issues,
-    IReadOnlyList<string> UnresolvedDependencies,
+    IReadOnlyList<UnresolvedModDependency> UnresolvedDependencies,
     IReadOnlyList<InstalledMod> Dependents,
     GameVersion GameVersion)
 {
