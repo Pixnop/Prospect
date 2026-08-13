@@ -81,6 +81,19 @@ public sealed record ModInstallPlan(
     IReadOnlyList<UnresolvedModDependency> UnresolvedDependencies,
     GameVersion GameVersion)
 {
+    /// <summary>
+    /// Toutes les releases installables dans cette instance, de la plus récente à la plus ancienne
+    /// et exactes avant approximatives (voir <see cref="ModReleaseSelector.SelectAll"/>). Celle de
+    /// <see cref="Primary"/> en fait partie ; c'est la première tant que l'utilisateur n'a rien
+    /// choisi d'autre.
+    /// </summary>
+    /// <remarks>
+    /// Le plan les porte plutôt que le dialogue parce que le filtre de compatibilité est du calcul
+    /// de domaine : le dialogue n'a pas à savoir qu'un tag de version de jeu est une case cochée à
+    /// la main par un auteur, ni ce que « élargir à la série mineure » veut dire.
+    /// </remarks>
+    public IReadOnlyList<ModReleaseChoice> AvailableReleases { get; init; } = [];
+
     /// <summary>Vrai s'il y a quoi que ce soit à montrer avant d'installer.</summary>
     public bool NeedsConfirmation => MissingDependencies.Count > 0 || UnresolvedDependencies.Count > 0 || Primary.IsApproximateMatch;
 }

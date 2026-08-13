@@ -64,7 +64,12 @@ public sealed class ModDbClientTests
         detail.ModId.ShouldBe(1783);
         detail.Name.ShouldBe("Config lib");
         detail.Releases.Count.ShouldBe(3);
-        detail.PageUrl.ToString().ShouldBe("https://mods.vintagestory.at/show/mod/1783");
+
+        // La fiche n'a pas d'alias d'URL, donc la route par asset. Et c'est l'ASSETID (9551) qui
+        // la route, pas le modid (1783) : cette assertion épinglait l'inverse et fixait ainsi le
+        // défaut « c'est pas le bon lien » relevé en test réel (voir ModDbMapperTests).
+        detail.AssetId.ShouldBe(9551);
+        detail.PageUrl.ToString().ShouldBe("https://mods.vintagestory.at/show/mod/9551");
     }
 
     [Fact]

@@ -114,6 +114,12 @@ public sealed class ModInstallService
     /// <param name="slug">Instance cible.</param>
     /// <param name="modDbModId">Identifiant numérique de la fiche ModDB.</param>
     /// <param name="mode">Strict, ou élargi à la série mineure.</param>
+    /// <param name="releaseId">
+    /// Release explicitement choisie dans le dialogue d'installation, ou <see langword="null"/>
+    /// pour la meilleure compatible. Un identifiant absent de la liste compatible retombe sur
+    /// cette meilleure compatible plutôt que d'échouer : la liste proposée sort du même calcul,
+    /// donc un écart ne peut venir que d'une fiche modifiée entre deux appels.
+    /// </param>
     /// <param name="progress">Avancement du téléchargement.</param>
     /// <param name="cancellationToken">Annulation.</param>
     /// <exception cref="ModReleaseNotFoundException">Aucune release compatible avec la version de l'instance.</exception>
@@ -124,6 +130,7 @@ public sealed class ModInstallService
         string slug,
         int modDbModId,
         ModCompatibilityMode mode = ModCompatibilityMode.ExactGameVersion,
+        int? releaseId = null,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
@@ -131,8 +138,12 @@ public sealed class ModInstallService
         var gameVersion = instance.Metadata.GameVersion;
 
         var detail = await _client.GetModAsync(modDbModId.ToString(System.Globalization.CultureInfo.InvariantCulture), cancellationToken).ConfigureAwait(false);
-        var primary = await BuildItemAsync(detail, gameVersion, mode, cancellationToken).ConfigureAwait(false)
+        var candidates = ModReleaseSelector.SelectAll(detail.Releases, gameVersion, mode);
+        var choice = (releaseId is { } wanted ? candidates.FirstOrDefault(candidate => candidate.Release.ReleaseId == wanted) : null)
+            ?? (candidates.Count > 0 ? candidates[0] : null)
             ?? throw new ModReleaseNotFoundException(detail.Name, gameVersion);
+
+        var primary = await BuildItemAsync(detail.ModId, detail.Name, choice, cancellationToken).ConfigureAwait(false);
 
         var archivePath = await DownloadAsync(primary, progress, cancellationToken).ConfigureAwait(false);
         var content = _archiveReader.Read(archivePath);
@@ -143,7 +154,7 @@ public sealed class ModInstallService
 
         var (dependencies, unresolved) = await ResolveDependencyItemsAsync(issues, gameVersion, mode, cancellationToken).ConfigureAwait(false);
 
-        return new ModInstallPlan(primary, dependencies, issues, unresolved, gameVersion);
+        return new ModInstallPlan(primary, dependencies, issues, unresolved, gameVersion) { AvailableReleases = candidates };
     }
 
     /// <summary>
@@ -416,16 +427,21 @@ public sealed class ModInstallService
         CancellationToken cancellationToken)
     {
         var choice = ModReleaseSelector.Select(detail.Releases, gameVersion, mode);
-        if (choice is null)
-        {
-            return null;
-        }
 
+        return choice is null ? null : await BuildItemAsync(detail.ModId, detail.Name, choice, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<ModInstallItem> BuildItemAsync(
+        int modDbModId,
+        string displayName,
+        ModReleaseChoice choice,
+        CancellationToken cancellationToken)
+    {
         var size = await _client.GetFileSizeAsync(choice.Release.DownloadUrl, cancellationToken).ConfigureAwait(false);
 
         return new ModInstallItem(
-            detail.ModId,
-            detail.Name,
+            modDbModId,
+            displayName,
             choice.Release,
             choice.IsApproximate,
             BuildFileName(choice.Release.ModIdString, choice.Release.Version),

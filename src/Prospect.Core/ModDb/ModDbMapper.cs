@@ -33,6 +33,7 @@ internal static class ModDbMapper
         return new ModDbModSummary
         {
             ModId = dto.ModId,
+            AssetId = dto.AssetId,
             Name = dto.Name,
             Summary = dto.Summary ?? string.Empty,
             Author = dto.Author ?? string.Empty,
@@ -45,6 +46,7 @@ internal static class ModDbMapper
             Follows = dto.Follows,
             TrendingPoints = dto.TrendingPoints,
             LastReleasedUtc = ParseSqlDate(dto.LastReleased),
+            PageUrl = BuildPageUrl(dto.AssetId, dto.UrlAlias),
         };
     }
 
@@ -65,6 +67,7 @@ internal static class ModDbMapper
         return new ModDbModDetail
         {
             ModId = dto.ModId,
+            AssetId = dto.AssetId,
             Name = dto.Name,
             Author = dto.Author ?? string.Empty,
             DescriptionHtml = dto.Text ?? string.Empty,
@@ -72,7 +75,12 @@ internal static class ModDbMapper
             Side = ParseSide(dto.Side),
             Tags = CleanStrings(dto.Tags),
             Downloads = dto.Downloads,
-            PageUrl = BuildPageUrl(dto.ModId),
+            Follows = dto.Follows,
+            PageUrl = BuildPageUrl(dto.AssetId, dto.UrlAlias),
+            HomepageUrl = ToExternalUri(dto.HomepageUrl),
+            SourceCodeUrl = ToExternalUri(dto.SourceCodeUrl),
+            IssueTrackerUrl = ToExternalUri(dto.IssueTrackerUrl),
+            WikiUrl = ToExternalUri(dto.WikiUrl),
             Releases = releases,
         };
     }
@@ -174,8 +182,40 @@ internal static class ModDbMapper
                 .Select(dto => new ModDbTag(dto.TagId!, dto.Name!))
                 .ToArray();
 
-    /// <summary>Page publique d'un mod, construite depuis son identifiant numérique (jamais depuis un <c>urlalias</c> deviné).</summary>
-    public static Uri BuildPageUrl(int modId) => new(SiteBaseUrl, $"show/mod/{modId.ToString(CultureInfo.InvariantCulture)}");
+    /// <summary>
+    /// Page publique d'un mod. Deux routes existent côté site, et le <c>modid</c> n'en ouvre
+    /// AUCUNE des deux : <c>show/mod/{N}</c> attend l'<c>assetid</c>, pas l'identifiant de mod.
+    /// </summary>
+    /// <param name="assetId">
+    /// Identifiant d'asset de la fiche, celui que route <c>show/mod/{N}</c>. Les deux espaces
+    /// d'identifiants divergent pour de vrai : Carry On porte <c>modid</c> 890 et <c>assetid</c>
+    /// 4405, CarryOnLib <c>modid</c> 4687 et <c>assetid</c> 27960. Construire la page depuis le
+    /// <c>modid</c>, comme le faisait cette méthode, ouvrait donc la fiche d'un AUTRE mod.
+    /// </param>
+    /// <param name="urlAlias">
+    /// Alias d'URL choisi par l'auteur, quand il en a défini un (absent sur 40 % du catalogue).
+    /// C'est la route la plus lisible (<c>mods.vintagestory.at/carryon</c>) et celle que le site
+    /// lui-même met en avant ; elle est donc préférée quand elle existe.
+    /// </param>
+    /// <returns>
+    /// L'alias s'il y en a un, sinon <c>show/mod/{assetid}</c>. La racine du site en dernier
+    /// recours, quand la fiche n'a ni alias ni <c>assetid</c> exploitable : mieux vaut un lien
+    /// inutile qu'un lien qui ouvre la fiche de quelqu'un d'autre.
+    /// </returns>
+    public static Uri BuildPageUrl(int assetId, string? urlAlias)
+    {
+        var alias = urlAlias?.Trim();
+        if (!string.IsNullOrEmpty(alias))
+        {
+            // L'alias vient du serveur mais reste une chaîne saisie par un auteur : l'échapper
+            // empêche qu'un '/' ou un '?' malencontreux compose une tout autre URL.
+            return new Uri(SiteBaseUrl, Uri.EscapeDataString(alias));
+        }
+
+        return assetId > 0
+            ? new Uri(SiteBaseUrl, $"show/mod/{assetId.ToString(CultureInfo.InvariantCulture)}")
+            : SiteBaseUrl;
+    }
 
     /// <summary>
     /// Traduit le vocabulaire de la fiche web. <c>both</c> et jamais <c>universal</c> : c'est un
@@ -231,6 +271,17 @@ internal static class ModDbMapper
 
         return versions;
     }
+
+    /// <summary>
+    /// Lien externe déclaré sur la fiche (site, code source, tickets, wiki). Contrairement aux URL
+    /// de fichier, un chemin relatif n'a AUCUN sens ici : ce sont des adresses saisies à la main
+    /// par l'auteur, et les préfixer par le site du ModDB fabriquerait un lien inventé. Tout ce
+    /// qui n'est pas une URL <c>http</c>/<c>https</c> absolue est donc écarté.
+    /// </summary>
+    public static Uri? ToExternalUri(string? value)
+        => string.IsNullOrWhiteSpace(value) || !Uri.TryCreate(value.Trim(), UriKind.Absolute, out var absolute)
+            ? null
+            : absolute.Scheme is "http" or "https" ? absolute : null;
 
     // Le mainfile de v1 est déjà absolu ; le fileUrl de v2 est relatif au site et répond en 302
     // vers cette même URL CDN, d'où le préfixage plutôt qu'un rejet.

@@ -38,6 +38,13 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- Échantillons de HTML réel du ModDB, embarqués plutôt que copiés dans du C# : 29 Ko de
+       balisage collés dans une chaîne littérale seraient illisibles en revue et impossibles à
+       rafraîchir depuis l'API sans réécrire le fichier à la main. -->
+  <ItemGroup>
+    <EmbeddedResource Include="ModDb\Fixtures\*.html" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\Prospect.Core\Prospect.Core.csproj" />
   </ItemGroup>

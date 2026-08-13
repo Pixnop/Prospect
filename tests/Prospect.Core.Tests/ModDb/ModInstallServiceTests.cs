@@ -120,6 +120,73 @@ public sealed class ModInstallServiceTests
     }
 
     [Fact]
+    public async Task PrepareAsync_ListsEveryCompatibleReleaseSoTheDialogCanOfferAChoice()
+    {
+        var harness = Create("1.21.3");
+
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, cancellationToken: CancellationToken.None);
+
+        plan.AvailableReleases.Select(choice => choice.Release.Version.ToString()).ShouldBe(["1.11.1", "1.10.0"]);
+        plan.AvailableReleases[0].Release.ReleaseId.ShouldBe(plan.Primary.Release.ReleaseId);
+    }
+
+    [Fact]
+    public async Task PrepareAsync_WithAnExplicitRelease_PlansThatOneAndKeepsTheSameChoices()
+    {
+        // Le chemin du sélecteur de version : rien d'autre ne change, ni le mode de compatibilité,
+        // ni la résolution de dépendances, ni la mécanique préparer/consentir/appliquer.
+        var harness = Create("1.21.3");
+
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, releaseId: 37000, cancellationToken: CancellationToken.None);
+
+        plan.Primary.Version.ShouldBe(ModVersion.Parse("1.10.0"));
+        plan.Primary.Release.ReleaseId.ShouldBe(37000);
+        plan.Primary.TargetFileName.ShouldBe("configlib-1.10.0.zip");
+        plan.AvailableReleases.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task PrepareAsync_ExplicitReleaseChangesTheDependenciesRead_FromTheChosenArchive()
+    {
+        // Les dépendances viennent du modinfo.json de l'archive TÉLÉCHARGÉE, jamais de l'API :
+        // changer de release change donc réellement le plan, ce qui est la raison d'être du
+        // recalcul déclenché par le sélecteur.
+        var harness = Create("1.21.3");
+
+        var newest = await harness.Service.PrepareAsync(Slug, 1783, cancellationToken: CancellationToken.None);
+        var older = await harness.Service.PrepareAsync(Slug, 1783, releaseId: 37000, cancellationToken: CancellationToken.None);
+
+        newest.MissingDependencies.Select(item => item.ModIdString).ShouldContain("vsimgui");
+        older.MissingDependencies.ShouldBeEmpty();
+        older.Issues.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task PrepareAsync_ReleaseIdThatIsNotCompatible_FallsBackToTheBestOneRatherThanFailing()
+    {
+        var harness = Create("1.21.3");
+
+        // 39980 est la release 1.12.0, taguée pour 1.22.0 seulement : elle n'est pas proposée.
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, releaseId: 39980, cancellationToken: CancellationToken.None);
+
+        plan.Primary.Version.ShouldBe(ModVersion.Parse("1.11.1"));
+    }
+
+    [Fact]
+    public async Task ApplyAsync_AfterChoosingAnOlderRelease_InstallsThatVersionAndRecordsItsProvenance()
+    {
+        var harness = Create("1.21.3");
+        var plan = await harness.Service.PrepareAsync(Slug, 1783, releaseId: 37000, cancellationToken: CancellationToken.None);
+
+        var outcome = await harness.Service.ApplyAsync(Slug, plan, cancellationToken: CancellationToken.None);
+
+        var installed = outcome.Installed.ShouldHaveSingleItem();
+        installed.FileName.ShouldBe("configlib-1.10.0.zip");
+        installed.Provenance.ShouldNotBeNull().ReleaseId.ShouldBe(37000);
+        installed.Provenance.Version.ShouldBe(ModVersion.Parse("1.10.0"));
+    }
+
+    [Fact]
     public async Task PrepareAsync_UnknownMod_SurfacesTheApplicationLevelNotFound()
     {
         var harness = Create();
@@ -438,6 +505,11 @@ public sealed class ModInstallServiceTests
     private sealed class FakeModDbServer
     {
         public static readonly byte[] ConfigLibArchive = ModInfoSamples.BuildArchive(ModInfoSamples.ConfigLib);
+
+        /// <summary>Une release ANTÉRIEURE de la même fiche, celle que le sélecteur de version permet de choisir.</summary>
+        public static readonly byte[] ConfigLibOlderArchive = ModInfoSamples.BuildArchive("""
+        { "type": "code", "name": "Config lib", "modid": "configlib", "version": "1.10.0", "authors": ["Maltiez"] }
+        """);
         public static readonly byte[] ExtraInfoArchive = ModInfoSamples.BuildArchive(ModInfoSamples.ExtraInfo);
 
         public static readonly byte[] VsImGuiArchive = ModInfoSamples.BuildArchive("""
@@ -492,6 +564,7 @@ public sealed class ModInstallServiceTests
             var payload = path switch
             {
                 "/configlib_1.11.1.zip" => ConfigLibArchive,
+                "/configlib_1.10.0.zip" => ConfigLibOlderArchive,
                 "/extrainfo_2.2.1.zip" => ExtraInfoArchive,
                 "/vsimgui_1.3.0.zip" => VsImGuiArchive,
                 "/carryon_2.0.0-pre.8.zip" => CarryOnArchive,
@@ -542,8 +615,12 @@ public sealed class ModInstallServiceTests
                 "filename": "configlib_1.12.0.zip", "downloads": 1, "tags": ["1.22.0"], "modidstr": "configlib",
                 "modversion": "1.12.0", "changelog": null, "created": "2026-05-01 12:03:34" },
               { "releaseid": 38314, "fileid": 84120, "mainfile": "https://moddbcdn.vintagestory.at/configlib_1.11.1.zip",
-                "filename": "configlib_1.11.1.zip", "downloads": 1, "tags": ["1.21.3", "1.21.0"], "modidstr": "configlib",
-                "modversion": "1.11.1", "changelog": null, "created": "2026-02-11 09:22:10" }
+                "filename": "configlib_1.11.1.zip", "downloads": 90210, "tags": ["1.21.3", "1.21.0"], "modidstr": "configlib",
+                "modversion": "1.11.1", "changelog": "<p>Correction du <strong>rechargement</strong>.</p>",
+                "created": "2026-02-11 09:22:10" },
+              { "releaseid": 37000, "fileid": 82000, "mainfile": "https://moddbcdn.vintagestory.at/configlib_1.10.0.zip",
+                "filename": "configlib_1.10.0.zip", "downloads": 41337, "tags": ["1.21.3"], "modidstr": "configlib",
+                "modversion": "1.10.0", "changelog": null, "created": "2025-12-02 08:00:00" }
             ]
           }
         }
