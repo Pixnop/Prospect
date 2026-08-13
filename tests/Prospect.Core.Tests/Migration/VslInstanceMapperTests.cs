@@ -42,27 +42,35 @@ public class VslInstanceMapperTests
     }
 
     [Fact]
-    public void ToLaunchSettings_MesaGlThreadEnabled_AddsEnvironmentVariable()
+    public void ToLaunchSettings_MesaGlThreadEnabled_BecomesTheTypedOptionNotAnEnvEntry()
     {
         var settings = VslInstanceMapper.ToLaunchSettings(Installation(mesaGlThread: true));
 
-        settings.Env.ShouldContainKeyAndValue("MESA_GLTHREAD", "true");
+        // Chez nous la variable est posee par la strategie de lancement Linux, sous le nom que Mesa
+        // lit reellement : l'importer en variable la ferait suivre l'instance sur les autres OS.
+        settings.MesaGlThread.ShouldBeTrue();
+        settings.Env.ShouldNotContainKey("MESA_GLTHREAD");
+        settings.Env.ShouldNotContainKey("mesa_glthread");
     }
 
     [Fact]
-    public void ToLaunchSettings_MesaGlThreadDisabled_DoesNotAddEnvironmentVariable()
+    public void ToLaunchSettings_MesaGlThreadDisabled_LeavesTheOptionOff()
     {
         var settings = VslInstanceMapper.ToLaunchSettings(Installation(mesaGlThread: false));
 
+        settings.MesaGlThread.ShouldBeFalse();
         settings.Env.ShouldNotContainKey("MESA_GLTHREAD");
     }
 
     [Fact]
-    public void ToLaunchSettings_MesaGlThreadEnabled_OverridesConflictingEnvVarsEntry()
+    public void ToLaunchSettings_LegacyVariableInEnvVars_IsLiftedIntoTheOptionAndRemoved()
     {
-        var settings = VslInstanceMapper.ToLaunchSettings(Installation(envVars: "MESA_GLTHREAD=false", mesaGlThread: true));
+        var settings = VslInstanceMapper.ToLaunchSettings(Installation(envVars: "MESA_GLTHREAD=true", mesaGlThread: false));
 
-        settings.Env.ShouldContainKeyAndValue("MESA_GLTHREAD", "true");
+        // Une seule intention, un seul endroit : gardee dans env, l'ancienne cle serait inerte
+        // (Mesa ne la lit pas) tout en donnant l'impression que l'option est active deux fois.
+        settings.MesaGlThread.ShouldBeTrue();
+        settings.Env.ShouldNotContainKey("MESA_GLTHREAD");
     }
 
     [Fact]
@@ -70,9 +78,9 @@ public class VslInstanceMapperTests
     {
         var settings = VslInstanceMapper.ToLaunchSettings(Installation(envVars: "DXVK_HUD=fps", mesaGlThread: true));
 
-        settings.Env.Count.ShouldBe(2);
+        settings.MesaGlThread.ShouldBeTrue();
+        settings.Env.Count.ShouldBe(1);
         settings.Env.ShouldContainKeyAndValue("DXVK_HUD", "fps");
-        settings.Env.ShouldContainKeyAndValue("MESA_GLTHREAD", "true");
     }
 
     [Fact]

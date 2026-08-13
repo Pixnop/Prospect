@@ -1,3 +1,5 @@
+using Prospect.Core.Instances;
+
 namespace Prospect.Core.Launching;
 
 /// <summary>
@@ -17,4 +19,18 @@ public sealed class MacGameLaunchStrategy : IGameLaunchStrategy
     public string ResolveExecutablePath(string installDirectory)
         => throw new MacLaunchNotSupportedException(
             "Le lancement du jeu sur macOS n'est pas encore pris en charge par Prospect. Le téléchargement et l'installation fonctionnent déjà ; le bouton Jouer attend une machine de test.");
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Rien à ajouter : <c>mesa_glthread</c> est une option des pilotes Mesa, absents de macOS. Ce
+    /// membre ne lève pas, contrairement à <see cref="ResolveExecutablePath"/> : construire un
+    /// environnement n'engage aucun lancement, et une réponse honnête vaut mieux qu'une exception
+    /// à un endroit où il n'y a rien d'impossible.
+    /// </remarks>
+    public IReadOnlyDictionary<string, string> BuildEnvironment(InstanceLaunchSettings launch)
+    {
+        ArgumentNullException.ThrowIfNull(launch);
+
+        return launch.Env;
+    }
 }

@@ -167,7 +167,8 @@
   <x:String x:Key="Instance_Options_ExtraArgsHint">One argument per line, added after --dataPath.</x:String>
   <x:String x:Key="Instance_Options_EnvLabel">Environment variables</x:String>
   <x:String x:Key="Instance_Options_EnvHint">One variable per line, as KEY=value.</x:String>
-  <x:String x:Key="Instance_Options_MesaGlThread">Enable MESA_GLTHREAD (smoother on Mesa drivers, Linux)</x:String>
+  <x:String x:Key="Instance_Options_MesaGlThread">Enable mesa_glthread</x:String>
+  <x:String x:Key="Instance_Options_MesaGlThreadHelp">May improve performance on some Linux systems, with no guarantee. No effect elsewhere.</x:String>
   <x:String x:Key="Instance_Options_Save">Save</x:String>
   <x:String x:Key="Instance_Options_ApplyNote">Changes take effect at the next launch.</x:String>
 

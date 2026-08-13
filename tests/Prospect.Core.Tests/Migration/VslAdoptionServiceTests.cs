@@ -151,7 +151,7 @@ public sealed class VslAdoptionServiceTests
         var launch = outcome.Installations.ShouldHaveSingleItem().Instance!.Metadata.Launch;
         launch.ExtraArgs.ShouldBe(["-logexcept", "-tracelog"]);
         launch.Env.ShouldContainKeyAndValue("DXVK_HUD", "fps");
-        launch.Env.ShouldContainKeyAndValue("MESA_GLTHREAD", "true");
+        launch.MesaGlThread.ShouldBeTrue();
     }
 
     [Fact]

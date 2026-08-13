@@ -183,7 +183,10 @@ public sealed class GameLauncher
 
         await InjectAccountSessionAsync(slug, logPath, cancellationToken).ConfigureAwait(false);
 
-        var request = new ProcessStartRequest(executablePath, arguments, instance.Metadata.Launch.Env, installed.Directory);
+        // L'environnement passe par la stratégie : c'est elle qui sait ce que SON système ajoute
+        // (mesa_glthread sous Linux), et GameLauncher continue d'ignorer sur quoi il tourne.
+        var environment = _strategy.BuildEnvironment(instance.Metadata.Launch);
+        var request = new ProcessStartRequest(executablePath, arguments, environment, installed.Directory);
         var process = _processRunner.Start(request);
         WireLogCapture(process, logPath);
 

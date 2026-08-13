@@ -181,7 +181,8 @@
   <x:String x:Key="Instance_Options_ExtraArgsHint">Un argument par ligne, ajouté après --dataPath.</x:String>
   <x:String x:Key="Instance_Options_EnvLabel">Variables d'environnement</x:String>
   <x:String x:Key="Instance_Options_EnvHint">Une variable par ligne, au format CLE=valeur.</x:String>
-  <x:String x:Key="Instance_Options_MesaGlThread">Activer MESA_GLTHREAD (confort pilotes Mesa, Linux)</x:String>
+  <x:String x:Key="Instance_Options_MesaGlThread">Activer mesa_glthread</x:String>
+  <x:String x:Key="Instance_Options_MesaGlThreadHelp">Peut améliorer les performances sur certains systèmes Linux, sans garantie. Sans effet ailleurs.</x:String>
   <x:String x:Key="Instance_Options_Save">Enregistrer</x:String>
   <x:String x:Key="Instance_Options_ApplyNote">Les changements s'appliquent au prochain lancement.</x:String>
 

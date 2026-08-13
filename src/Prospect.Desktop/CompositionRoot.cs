@@ -82,6 +82,7 @@ public static class CompositionRoot
         // première vraie migration enregistrée : IEnumerable<IInstanceMetadataMigration> ne
         // donnait qu'une séquence vide jusqu'ici, le schéma v1 étant le premier schéma réel.
         services.AddSingleton<IInstanceMetadataMigration, InstanceMetadataV1ToV2Migration>();
+        services.AddSingleton<IInstanceMetadataMigration, InstanceMetadataV2ToV3Migration>();
         services.AddSingleton<InstanceMetadataMigrationPipeline>();
         services.AddSingleton<IInstanceRepository, FileSystemInstanceRepository>();
         services.AddSingleton<InstanceService>();

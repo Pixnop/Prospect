@@ -342,7 +342,7 @@ installée ? runtime présent ?), construit la commande via
 `ProcessStartInfo.ArgumentList` (les `extraArgs` de l'instance sont une vraie liste,
 jamais une chaîne collée : VS Launcher passait les paramètres utilisateur comme un seul
 argv et c'était fragile), injecte les variables d'environnement de l'instance (utile
-par exemple pour `MESA_GLTHREAD=true` sur Linux), démarre le processus, capture
+par exemple pour `mesa_glthread=true` sur Linux), démarre le processus, capture
 stdout/stderr vers `logs/instance-<slug>.log`, suit l'état (une instance en cours ne se
 relance pas) et met à jour `lastLaunchedUtc` et le playtime à la sortie.
 
