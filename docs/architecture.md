@@ -442,6 +442,52 @@ télécharge pas de runtime, on diagnostique et on explique précisément quoi i
 l'interface `IDotnetLocator` laisse la porte ouverte à un runtime géré façon Prism/Java
 après le MVP.
 
+#### Lire le journal de lancement
+
+Le journal capturé sert déjà à un onglet qui l'affiche. Il sert maintenant aussi à
+répondre à deux questions que l'utilisateur pose autrement : quel mod a posé problème au
+dernier lancement, et quels mods se parlent entre eux. `GameLogAnalyzer` (Core,
+`Diagnostics/`) le lit et rend, PAR MOD, un décompte d'erreurs et d'avertissements avec
+deux ou trois lignes en exemple, plus les références inter-domaines qu'il a vues passer.
+C'est du calcul pur : des lignes entrent, un rapport sort, rien n'est écrit.
+
+Les formes reconnues viennent d'une session réelle (client et serveur 1.22.6, journaux
+relevés pendant l'implémentation), pas d'une spécification. Le moteur écrit
+`13.8.2026 22:12:06 [Server Error] <message>` sur sa sortie standard, celle que Prospect
+capture, et `[Error]` sans côté dans ses propres fichiers ; les deux se lisent. Une ligne
+sans entête est rattachée à l'entrée précédente si elle est indentée, ce qui est le cas
+des trames d'une pile d'exception, et ignorée sinon, ce qui écarte aussi bien l'entête
+que Prospect écrit en tête de journal que le bavardage d'une bibliothèque native.
+
+L'attribution suit quatre marques, de la plus fiable à la plus indirecte. Le chargeur de
+mods préfixe lui-même ses messages du `modid` concerné (`[carryon] …`), ou du nom
+d'archive quand le `modinfo.json` n'a pas pu être lu (`[monmod-1.0.0.zip] …`), et c'est
+la seule marque que le moteur écrit dans l'intention de désigner un mod. Les messages du
+chargeur de patches JSON portent le domaine du mod qui a écrit le patch
+(`Patch 2 in carryon:patches/x.json …`). Le bloc « Started N systems on … » relie chaque
+mod à ses noms de types (`Mod 'carryon-2.0.0-pre.8.zip' (carryon):` suivi de
+`CarryOn.CarrySystem`), ce qui rattache ensuite les exceptions qui les nomment. À défaut,
+un segment de nom de type qui est exactement un `modid` connu suffit, le segment le plus
+long gagnant : `CarryOn.CarryOnLib.CarryOnLibSystem` appartient à `carryonlib`, pas à
+`carryon`.
+
+Ce que l'analyse ne sait PAS faire mérite d'être écrit plutôt que découvert. Une ligne
+qu'un mod écrit LUI-MÊME par l'API du jeu n'est marquée nulle part comme venant de lui
+(vérifié : `api.Logger.Notification` ne préfixe rien), elle reste donc non attribuée sauf
+si le mod a pris soin de se nommer en tête de son message, ce que certains font. Un patch
+appliqué avec succès ne laisse aucune ligne, donc le journal ne peut pas prouver qu'une
+intégration FONCTIONNE, seulement qu'une référence a échoué : c'est l'analyse statique du
+zip qui complète. Et seules les premières `MaxLines` lignes sont lues, parce que c'est le
+DÉBUT du journal qui décrit le lancement.
+
+L'analyse est déclenchée à la sortie du jeu et à l'ouverture de l'onglet Mods, et le
+résultat est mémorisé par slug pour la session (`IGameLogInsightsCache`, côté Desktop).
+Rien n'est persisté, et pour une raison plus forte que pour le cache de mises à jour : le
+JOURNAL est déjà la persistance, il survit à la fermeture de Prospect et il est réécrit à
+chaque lancement. Deux évènements invalident la lecture, le lancement suivant (qui tronque
+le journal, donc les pastilles disparaissent au clic sur Jouer plutôt qu'à la sortie) et la
+suppression de l'instance (`DeletedInstanceStateCleaner`, où le slug redevient libre).
+
 ### 4. Client ModDB
 
 `ModDbClient` est un client REST typé sur `mods.vintagestory.at/api`, dont le schéma
@@ -501,16 +547,24 @@ jeu, les deux autres sont ignorés).
 éditoriaux de release côté ModDB et `dependencies.game` du modinfo, rendu par le badge
 de canal `incompatible` du design.
 
-**Intégrations non déclarées** (prévu juste après le MVP) : réalité du modding VS, des
-mods en référencent d'autres sans dépendance déclarée, typiquement des patches JSON
-ciblant les assets d'un autre `modid:` ou des intégrations conditionnelles. Détection
-heuristique par scan des fichiers de patch du zip installé : une cible étrangère sous
-marqueur conditionnel (`dependsOn`) est une intégration optionnelle, une cible
-étrangère sans condition est une dépendance probablement oubliée. Résultat strictement
-informatif sur la fiche du mod (« référence carrycapacity, non déclaré »), jamais
-bloquant : l'heuristique ne distingue pas l'intégration volontaire de l'oubli, et les
-dépendances de code (références d'assembly) restent hors de portée, ce que la doc
-assumera plutôt que de promettre une détection totale.
+**Intégrations non déclarées** (fait) : réalité du modding VS, des mods en référencent
+d'autres sans dépendance déclarée, typiquement des patches JSON ciblant les assets d'un
+autre `modid:` ou des intégrations conditionnelles. Deux sources, l'une observée et
+l'autre annoncée, décrites en détail dans « Lire le journal de lancement » plus bas : ce
+que le JEU a écrit dans le journal du dernier lancement, et ce que le ZIP installé
+contient. Du zip, `ModIntegrationScanner` lit les fichiers de patch et leurs cibles :
+une cible étrangère sous marqueur conditionnel (`dependsOn`) est une intégration
+optionnelle, une cible étrangère sans condition est une dépendance probablement
+oubliée. Du journal viennent les références que le moteur a REFUSÉ de résoudre, et
+c'est le seul des deux signaux qui prouve quelque chose : un patch appliqué avec succès
+ne laisse aucune ligne, seulement un total en fin de chargement.
+
+Le résultat est strictement informatif, jamais bloquant : la ligne du mod porte une
+pastille neutre « fonctionne avec X » quand la cible est installée, ou « attend du
+contenu de X » quand elle manque. L'heuristique ne distingue pas l'intégration
+volontaire de l'oubli, et les dépendances de code (références d'assembly) restent hors
+de portée. C'est assumé ici plutôt que promis à l'utilisateur : une intégration non
+détectée n'est pas une intégration absente.
 
 ### 5. Modpacks
 

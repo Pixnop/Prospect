@@ -1,6 +1,7 @@
 using System.IO.Abstractions.TestingHelpers;
 
 using Prospect.Core.Common;
+using Prospect.Core.Diagnostics;
 using Prospect.Core.Instances;
 using Prospect.Core.Instances.Migrations;
 using Prospect.Core.ModDb;
@@ -29,7 +30,8 @@ public sealed class InstanceModsTabViewModelTests
         RecordingOverlayService Overlay,
         RecordingToastService Toasts,
         MockFileSystem FileSystem,
-        string Slug);
+        string Slug,
+        string LogPath);
 
     private static async Task<Fixture> CreateAsync()
     {
@@ -44,11 +46,16 @@ public sealed class InstanceModsTabViewModelTests
         var installService = ModDbDoubles.CreateInstallService(fileSystem, instances, mods, Paths, clock, handler);
         var updateChecker = ModDbDoubles.CreateUpdateChecker(fileSystem, instances, mods, Paths, clock, handler);
         var updateCache = new ModUpdateCheckCache();
+        var logInsights = new GameLogInsightsService(fileSystem, mods, new ModIntegrationScanner(fileSystem), clock);
+        var logInsightsCache = new GameLogInsightsCache();
+        var logPath = fileSystem.Path.Combine(Paths.LogsDirectory, $"instance-{record.Slug}.log");
         var overlay = new RecordingOverlayService();
         var toasts = new RecordingToastService();
 
         return new Fixture(
-            new InstanceModsTabViewModel(record.Slug, mods, installService, updateChecker, updateCache, clock, overlay, toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()),
+            new InstanceModsTabViewModel(
+                record.Slug, mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath,
+                clock, overlay, toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()),
             mods,
             handler,
             updateCache,
@@ -56,7 +63,8 @@ public sealed class InstanceModsTabViewModelTests
             overlay,
             toasts,
             fileSystem,
-            record.Slug);
+            record.Slug,
+            logPath);
     }
 
     private static void SeedMod(Fixture fixture, string fileName, string modId, string name, string? dependency = null, string version = "1.0.0")
@@ -65,6 +73,18 @@ public sealed class InstanceModsTabViewModelTests
             fixture.Mods.GetModsDirectory(fixture.Slug),
             fileName,
             ModDbDoubles.ModInfo(modId, name, version, dependency));
+
+    // Un journal de lancement aux formes du vrai jeu (voir GameLogAnalyzerTests) : un mod à qui
+    // deux erreurs sont attribuables, un autre qui n'a rien à se reprocher.
+    private static void SeedLaunchLog(Fixture fixture, string content)
+        => fixture.FileSystem.AddFile(fixture.LogPath, new MockFileData(content.ReplaceLineEndings("\n")));
+
+    private const string LogWithConfigLibErrors = """
+    13.8.2026 21:08:23 [Client Notification] Mods, sorted by dependency: configlib, extrainfo, game
+    13.8.2026 21:08:23 [Client Error] [configlib] Could not resolve some dependencies:
+    13.8.2026 21:08:23 [Client Error] [configlib]     saltyseas - Missing
+    13.8.2026 21:08:24 [Client Warning] [configlib] a shape is missing, using a cube instead
+    """;
 
     [Fact]
     public async Task RefreshAsync_NoMods_ShowsTheEmptyState()
@@ -480,6 +500,116 @@ public sealed class InstanceModsTabViewModelTests
         fixture.Toasts.Shown.ShouldContain(toast => toast.Title == "1 mod mis à jour");
     }
 
+    // ── Ce que le journal du dernier lancement dit des mods ──────────────────────────────────
+
+    [Fact]
+    public async Task RefreshAsync_NoLaunchYet_LeavesEveryRowSilent()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip", "configlib", "Config lib");
+
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+
+        var row = fixture.Tab.Mods.ShouldHaveSingleItem();
+        row.HasLogErrors.ShouldBeFalse();
+        row.HasLogWarnings.ShouldBeFalse();
+        row.HasIntegration.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task RefreshAsync_LastLaunchBlamedAMod_BadgesThatRowAndQuotesTheLines()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip", "configlib", "Config lib");
+        SeedMod(fixture, "extrainfo-1.0.0.zip", "extrainfo", "Extra Info");
+        SeedLaunchLog(fixture, LogWithConfigLibErrors);
+
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+
+        var blamed = fixture.Tab.Mods.Single(row => row.Name == "Config lib");
+        blamed.HasLogErrors.ShouldBeTrue();
+        blamed.LogErrorsText.ShouldBe("2 erreurs au dernier lancement");
+        blamed.HasLogWarnings.ShouldBeTrue();
+        blamed.LogWarningsText.ShouldBe("1 avertissement");
+        blamed.LogProblemTooltip.ShouldContain("saltyseas");
+
+        fixture.Tab.Mods.Single(row => row.Name == "Extra Info").HasLogErrors.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Le journal EST la persistance, et le relire à chaque va-et-vient entre onglets serait le
+    /// relire pour rien : la deuxième lecture doit venir du cache de session, ce que prouve un
+    /// journal effacé entre les deux.
+    /// </summary>
+    [Fact]
+    public async Task RefreshAsync_Twice_KeepsWhatTheFirstReadingFound()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip", "configlib", "Config lib");
+        SeedLaunchLog(fixture, LogWithConfigLibErrors);
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+
+        fixture.FileSystem.File.Delete(fixture.LogPath);
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+
+        fixture.Tab.Mods.ShouldHaveSingleItem().HasLogErrors.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ReloadAfterExitAsync_ReadsTheJournalTheGameJustFinishedWriting()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip", "configlib", "Config lib");
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+        fixture.Tab.Mods.ShouldHaveSingleItem().HasLogErrors.ShouldBeFalse();
+
+        SeedLaunchLog(fixture, LogWithConfigLibErrors);
+        await fixture.Tab.ReloadAfterExitAsync();
+
+        fixture.Tab.Mods.ShouldHaveSingleItem().HasLogErrors.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Un lancement tronque le journal : garder les pastilles pendant que le jeu tourne les ferait
+    /// décrire une session qui n'existe plus.
+    /// </summary>
+    [Fact]
+    public async Task ResetLogInsightsAsync_ForgetsWhatThePreviousLaunchSaid()
+    {
+        var fixture = await CreateAsync();
+        SeedMod(fixture, "configlib-1.0.0.zip", "configlib", "Config lib");
+        SeedLaunchLog(fixture, LogWithConfigLibErrors);
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+
+        fixture.FileSystem.File.Delete(fixture.LogPath);
+        await fixture.Tab.ResetLogInsightsAsync();
+
+        fixture.Tab.Mods.ShouldHaveSingleItem().HasLogErrors.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task RefreshAsync_ModThatPatchesAnInstalledMod_SaysItWorksWithIt()
+    {
+        var fixture = await CreateAsync();
+        ModDbDoubles.SeedMod(
+            fixture.FileSystem,
+            fixture.Mods.GetModsDirectory(fixture.Slug),
+            "carryon-1.0.0.zip",
+            ModDbDoubles.ModInfo("carryon", "Carry On", "1.0.0"),
+            extraEntries: new Dictionary<string, string>
+            {
+                ["assets/carryon/patches/crates.json"] = """[{ "file": "bettercrates:blocktypes/a", "op": "add", "path": "/x", "value": 1 }]""",
+            });
+        SeedMod(fixture, "bettercrates-1.0.0.zip", "bettercrates", "Better Crates");
+
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+
+        var carryon = fixture.Tab.Mods.Single(row => row.Name == "Carry On");
+        carryon.HasIntegration.ShouldBeTrue();
+        carryon.IntegrationText.ShouldBe("fonctionne avec Better Crates");
+        fixture.Tab.Mods.Single(row => row.Name == "Better Crates").HasIntegration.ShouldBeFalse();
+    }
+
     [Fact]
     public async Task Constructor_NullArguments_AreRejected()
     {
@@ -491,14 +621,31 @@ public sealed class InstanceModsTabViewModelTests
         var updateChecker = ModDbDoubles.CreateUpdateChecker(fileSystem, instances, mods, Paths, new FakeClock(Now));
         var updateCache = new ModUpdateCheckCache();
         var clock = new FakeClock(Now);
+        var logInsights = new GameLogInsightsService(fileSystem, mods, new ModIntegrationScanner(fileSystem), clock);
+        var logInsightsCache = new GameLogInsightsCache();
+        var logPath = fileSystem.Path.Combine(Paths.LogsDirectory, "instance-slug.log");
 
-        Should.Throw<ArgumentException>(() => new InstanceModsTabViewModel(string.Empty, mods, installService, updateChecker, updateCache, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", null!, installService, updateChecker, updateCache, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, null!, updateChecker, updateCache, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, null!, updateCache, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, updateChecker, null!, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, updateChecker, updateCache, null!, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, updateChecker, updateCache, clock, null!, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
-        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel("slug", mods, installService, updateChecker, updateCache, clock, fixture.Overlay, null!, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentException>(() => new InstanceModsTabViewModel(
+            string.Empty, mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
+            "slug", null!, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
+            "slug", mods, null!, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
+            "slug", mods, installService, null!, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
+            "slug", mods, installService, updateChecker, null!, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
+            "slug", mods, installService, updateChecker, updateCache, null!, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
+            "slug", mods, installService, updateChecker, updateCache, logInsights, null!, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentException>(() => new InstanceModsTabViewModel(
+            "slug", mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, string.Empty, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
+            "slug", mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, null!, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
+            "slug", mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, null!, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
+            "slug", mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, null!, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
     }
 }

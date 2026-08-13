@@ -198,13 +198,23 @@ public sealed class ResponsiveRegressionTests
             "cartomap-1.0.0.zip",
             ModDbDoubles.ModInfo("cartomap", "Extension de cartographie détaillée pour la région nord du monde"));
 
+        // Et par-dessus ce nom trop long, les pastilles du dernier lancement (erreurs,
+        // avertissements, intégration manquante) : ce sont des PHRASES courtes, pas des mots, donc
+        // la rangée la plus large que cette ligne puisse avoir à porter.
+        ResponsiveScenario.SeedLaunchLogBlaming(provider, fileSystem, record.Slug, "cartomap");
+
         shell.ShowInstanceDetail(record.Slug);
         var detail = shell.CurrentPage.ShouldBeOfType<InstanceDetailViewModel>();
         await detail.InitializeCommand.ExecuteAsync(null);
         window.Settle();
-        detail.ModsTab.Mods.ShouldHaveSingleItem().Name.ShouldContain("cartographie");
 
-        window.ShouldHoldLayoutInvariantsAtEverySize("Détail d'instance, onglet Mods, nom de mod long");
+        var row = detail.ModsTab.Mods.ShouldHaveSingleItem();
+        row.Name.ShouldContain("cartographie");
+        row.HasLogErrors.ShouldBeTrue();
+        row.HasLogWarnings.ShouldBeTrue();
+        row.HasIntegration.ShouldBeTrue();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize("Détail d'instance, onglet Mods, nom de mod long et pastilles de journal");
 
         window.Close();
     }

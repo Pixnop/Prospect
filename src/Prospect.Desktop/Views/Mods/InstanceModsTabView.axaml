@@ -126,6 +126,21 @@
                   <TextBlock Text="{Binding UnidentifiedReason}" Margin="0,2,0,0" TextWrapping="Wrap"
                              IsVisible="{Binding IsUnidentified}"
                              FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource WarningText}" />
+
+                  <!-- Ce que le dernier lancement a écrit sur ce mod, et avec quels autres mods il
+                       s'entend (Prospect.Core.Diagnostics.GameLogAnalyzer). Sous le nom plutôt
+                       qu'à droite avec les pastilles d'état : ces libellés sont des phrases
+                       courtes, pas des mots, et la colonne de droite est déjà pleine de commandes
+                       dont la largeur ne doit pas dépendre d'un décompte. Rien ne s'affiche quand
+                       le mod n'a rien à signaler, ce qui est le cas ordinaire. -->
+                  <WrapPanel Margin="0,4,0,0" ItemSpacing="6" LineSpacing="4">
+                    <ContentControl Classes="badge incompatible" Content="{Binding LogErrorsText}"
+                                    IsVisible="{Binding HasLogErrors}" ToolTip.Tip="{Binding LogProblemTooltip}" />
+                    <ContentControl Classes="badge unstable" Content="{Binding LogWarningsText}"
+                                    IsVisible="{Binding HasLogWarnings}" ToolTip.Tip="{Binding LogProblemTooltip}" />
+                    <ContentControl Classes="badge" Content="{Binding IntegrationText}"
+                                    IsVisible="{Binding HasIntegration}" ToolTip.Tip="{Binding IntegrationTooltip}" />
+                  </WrapPanel>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">

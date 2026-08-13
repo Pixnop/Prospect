@@ -13,10 +13,11 @@ namespace Prospect.Desktop.Services;
 /// libre dès que son dossier disparaît, si bien qu'une nouvelle instance du même nom reçoit
 /// EXACTEMENT le même slug — et hérite alors de tout ce que le launcher gardait en mémoire, ou
 /// ailleurs sur le disque, sous cette clé : le rapport de vérification de mises à jour de
-/// l'ancienne, son état de processus suivi, son journal de lancement.
+/// l'ancienne, son état de processus suivi, son journal de lancement, et la lecture qui avait été
+/// faite de ce journal (<see cref="IGameLogInsightsCache"/>).
 /// </para>
 /// <para>
-/// Un objet dédié plutôt qu'un abonnement disséminé : le jour où un quatrième cache par slug
+/// Un objet dédié plutôt qu'un abonnement disséminé : le jour où un cinquième état par slug
 /// apparaît, c'est ici qu'on regarde. Il s'abonne à <see cref="InstanceService.Deleted"/>, seul
 /// signal fiable puisqu'il est publié une fois la suppression réellement terminée.
 /// </para>
@@ -27,23 +28,27 @@ public sealed class DeletedInstanceStateCleaner : IDisposable
     private readonly RunningInstanceTracker _tracker;
     private readonly GameLauncher _launcher;
     private readonly IModUpdateCheckCache _updateCache;
+    private readonly IGameLogInsightsCache _logInsightsCache;
 
     /// <summary>Construit le nettoyeur et s'abonne aux suppressions.</summary>
     public DeletedInstanceStateCleaner(
         InstanceService instanceService,
         RunningInstanceTracker tracker,
         GameLauncher launcher,
-        IModUpdateCheckCache updateCache)
+        IModUpdateCheckCache updateCache,
+        IGameLogInsightsCache logInsightsCache)
     {
         ArgumentNullException.ThrowIfNull(instanceService);
         ArgumentNullException.ThrowIfNull(tracker);
         ArgumentNullException.ThrowIfNull(launcher);
         ArgumentNullException.ThrowIfNull(updateCache);
+        ArgumentNullException.ThrowIfNull(logInsightsCache);
 
         _instanceService = instanceService;
         _tracker = tracker;
         _launcher = launcher;
         _updateCache = updateCache;
+        _logInsightsCache = logInsightsCache;
 
         _instanceService.Deleted += OnDeleted;
     }
@@ -54,6 +59,7 @@ public sealed class DeletedInstanceStateCleaner : IDisposable
     private void OnDeleted(object? sender, string slug)
     {
         _updateCache.Invalidate(slug);
+        _logInsightsCache.Invalidate(slug);
         _tracker.Forget(slug);
         _launcher.DeleteLogFile(slug);
     }

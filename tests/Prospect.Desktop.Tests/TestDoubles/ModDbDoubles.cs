@@ -78,11 +78,25 @@ internal static class ModDbDoubles
         => new ModLogoCache(new HttpClient(handler ?? new FakeModDbHandler(), disposeHandler: false));
 
     /// <summary>Pose une archive de mod valide dans le dossier <c>data/Mods/</c> d'une instance.</summary>
-    public static void SeedMod(MockFileSystem fileSystem, string modsDirectory, string fileName, string modInfoJson)
-        => fileSystem.AddFile(fileSystem.Path.Combine(modsDirectory, fileName), new MockFileData(BuildArchive(modInfoJson)));
+    public static void SeedMod(
+        MockFileSystem fileSystem,
+        string modsDirectory,
+        string fileName,
+        string modInfoJson,
+        IReadOnlyDictionary<string, string>? extraEntries = null)
+        => fileSystem.AddFile(
+            fileSystem.Path.Combine(modsDirectory, fileName),
+            new MockFileData(BuildArchive(modInfoJson, extraEntries)));
 
-    /// <summary>Construit une archive de mod en mémoire, avec son <c>modinfo.json</c> à la racine.</summary>
-    public static byte[] BuildArchive(string? modInfoJson)
+    /// <summary>
+    /// Construit une archive de mod en mémoire, avec son <c>modinfo.json</c> à la racine.
+    /// </summary>
+    /// <param name="modInfoJson">Contenu du <c>modinfo.json</c>, ou <see langword="null"/> pour n'en poser aucun.</param>
+    /// <param name="extraEntries">
+    /// Entrées supplémentaires, chemin dans l'archive vers contenu : de quoi poser des fichiers de
+    /// patch, que l'analyse d'intégrations lit (voir <c>ModIntegrationScanner</c>).
+    /// </param>
+    public static byte[] BuildArchive(string? modInfoJson, IReadOnlyDictionary<string, string>? extraEntries = null)
     {
         using var buffer = new MemoryStream();
         using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
@@ -92,6 +106,13 @@ internal static class ModDbDoubles
                 var entry = archive.CreateEntry("modinfo.json");
                 using var stream = entry.Open();
                 stream.Write(Encoding.UTF8.GetBytes(modInfoJson));
+            }
+
+            foreach (var (name, content) in extraEntries ?? new Dictionary<string, string>())
+            {
+                var entry = archive.CreateEntry(name);
+                using var stream = entry.Open();
+                stream.Write(Encoding.UTF8.GetBytes(content));
             }
         }
 

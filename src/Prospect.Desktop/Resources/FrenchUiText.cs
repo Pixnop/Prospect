@@ -754,6 +754,34 @@ internal sealed class FrenchModsText : ModsText
         => failures.Count == 0
             ? string.Empty
             : $"Échec pour {string.Join(", ", failures.Select(failure => failure.ModName))}.";
+
+    internal override string LogErrorsBadge(int count) => count == 1
+        ? "1 erreur au dernier lancement"
+        : $"{count} erreurs au dernier lancement";
+
+    internal override string LogWarningsBadge(int count) => count == 1
+        ? "1 avertissement"
+        : $"{count} avertissements";
+
+    internal override string LogProblemTooltip(IReadOnlyList<string> samples) => samples.Count == 0
+        ? string.Empty
+        : "Ce que le jeu a écrit au dernier lancement :" + Environment.NewLine + string.Join(Environment.NewLine, samples);
+
+    internal override string WorksWithBadge(string modName, int others) => others <= 0
+        ? $"fonctionne avec {modName}"
+        : $"fonctionne avec {modName} et {others} autre{(others == 1 ? string.Empty : "s")}";
+
+    internal override string ExpectsContentBadge(string modName, int others) => others <= 0
+        ? $"attend du contenu de {modName}"
+        : $"attend du contenu de {modName} et {others} autre{(others == 1 ? string.Empty : "s")}";
+
+    internal override string IntegrationTooltipLine(string modName, bool resolved) => resolved
+        ? $"Référence le contenu de {modName}, présent."
+        : $"Référence du contenu de {modName}, absent au dernier lancement.";
+
+    internal override string IntegrationTooltip(IReadOnlyList<string> lines) => lines.Count == 0
+        ? string.Empty
+        : string.Join(Environment.NewLine, lines) + Environment.NewLine + "Relevé à la lecture du journal et des archives : indicatif, jamais bloquant.";
 }
 
 

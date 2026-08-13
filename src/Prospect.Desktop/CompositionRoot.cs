@@ -107,11 +107,18 @@ public static class CompositionRoot
         // et surtout, aucun client HTTP dans son graphe de dépendances.
         services.AddSingleton<InstanceDoctor>();
 
+        // Lecture du journal de lancement (docs/architecture.md, niveau 3 des dépendances) : même
+        // composition sans adaptateur propre, et sans réseau non plus — un journal se lit sur le
+        // disque, et le résultat n'est qu'informatif.
+        services.AddSingleton<ModIntegrationScanner>();
+        services.AddSingleton<GameLogInsightsService>();
+
         // Services Desktop transverses.
         services.AddSingleton<IOverlayService, OverlayService>();
         services.AddSingleton<IToastService, ToastService>();
         services.AddSingleton<IUiDispatcher, AvaloniaUiDispatcher>();
         services.AddSingleton<IModUpdateCheckCache, ModUpdateCheckCache>();
+        services.AddSingleton<IGameLogInsightsCache, GameLogInsightsCache>();
 
         // L'Application Avalonia elle-même : déjà construite et courante avant que ce conteneur ne
         // soit peuplé (App.Initialize / TestAppBuilder pour les tests headless), résolue telle
@@ -184,6 +191,8 @@ public static class CompositionRoot
             provider.GetRequiredService<ModInstallService>(),
             provider.GetRequiredService<ModUpdateChecker>(),
             provider.GetRequiredService<IModUpdateCheckCache>(),
+            provider.GetRequiredService<GameLogInsightsService>(),
+            provider.GetRequiredService<IGameLogInsightsCache>(),
             provider.GetRequiredService<InstanceDoctor>(),
             provider.GetRequiredService<IAppEnvironment>(),
             provider.GetRequiredService<IFileSystem>(),

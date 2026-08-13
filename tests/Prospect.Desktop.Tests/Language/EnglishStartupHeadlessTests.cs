@@ -6,9 +6,11 @@ using Avalonia.VisualTree;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Prospect.Core.ModDb;
 using Prospect.Core.Settings;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Tests.Support;
+using Prospect.Desktop.Tests.TestDoubles;
 using Prospect.Desktop.ViewModels.Home;
 using Prospect.Desktop.ViewModels.Instance;
 using Prospect.Desktop.ViewModels.Settings;
@@ -158,6 +160,46 @@ public sealed class EnglishStartupHeadlessTests
         texts.ShouldContain("Changes take effect at the next launch.");
         // Texte calculé côté C# (jamais lancée), pas une clé de dictionnaire.
         detail.LastPlayedText.ShouldBe("never");
+
+        window.Close();
+    }
+
+    /// <summary>
+    /// Les pastilles tirées du journal du dernier lancement sont du texte CALCULÉ (décomptes,
+    /// noms de mods) : la parité des deux langues y est une erreur de compilation, mais qu'elles
+    /// arrivent bien jusqu'à l'écran en anglais, seul un test le montre.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task Startup_WithEnglishPersisted_ShowsEnglishOnTheModsTabBadges()
+    {
+        using var provider = CreateEnglishProvider(out var fileSystem);
+        using var language = UiLanguageScope.ApplyStartupLanguage(provider);
+        provider.SeedInstalledVersion(fileSystem, "1.20.4");
+
+        var window = provider.GetRequiredService<MainWindow>();
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var home = provider.GetRequiredService<HomeViewModel>();
+        window.Show();
+
+        var record = await ResponsiveScenario.CreateInstanceAsync(shell, home, "Homestead", "1.20.4");
+        ModDbDoubles.SeedMod(
+            fileSystem,
+            provider.GetRequiredService<IInstalledModRepository>().GetModsDirectory(record.Slug),
+            "configlib-1.0.0.zip",
+            ModDbDoubles.ModInfo("configlib", "Config lib", "1.0.0"));
+        ResponsiveScenario.SeedLaunchLogBlaming(provider, fileSystem, record.Slug, "configlib");
+
+        shell.ShowInstanceDetail(record.Slug);
+        var detail = shell.CurrentPage.ShouldBeOfType<InstanceDetailViewModel>();
+        await detail.InitializeCommand.ExecuteAsync(null);
+        window.Settle();
+
+        var row = detail.ModsTab.Mods.ShouldHaveSingleItem();
+        row.LogErrorsText.ShouldBe("3 errors at the last launch");
+        row.LogWarningsText.ShouldBe("1 warning");
+        row.IntegrationText.ShouldBe("expects content from cartographieavancee");
+        row.IntegrationTooltip.ShouldContain("missing at the last launch");
+        VisibleTexts(window).ShouldContain("3 errors at the last launch");
 
         window.Close();
     }

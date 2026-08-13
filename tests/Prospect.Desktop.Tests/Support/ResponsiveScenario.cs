@@ -116,6 +116,25 @@ internal static class ResponsiveScenario
     }
 
     /// <summary>
+    /// Pose un journal de lancement qui accable le mod <paramref name="modId"/> et lui donne une
+    /// intégration manquante : c'est ce qui fait apparaître les pastilles du dernier lancement,
+    /// donc la rangée la plus large que la ligne de mod puisse avoir à porter.
+    /// </summary>
+    public static void SeedLaunchLogBlaming(ServiceProvider provider, MockFileSystem fileSystem, string slug, string modId)
+    {
+        var launcher = provider.GetRequiredService<GameLauncher>();
+        var lines = string.Join(
+            Environment.NewLine,
+            $"13.8.2026 21:08:23 [Client Notification] Mods, sorted by dependency: {modId}, game",
+            $"13.8.2026 21:08:23 [Client Error] [{modId}] Could not resolve some dependencies:",
+            $"13.8.2026 21:08:23 [Client Error] [{modId}]     cartographieavancee - Missing",
+            $"13.8.2026 21:08:24 [Client Warning] [{modId}] a shape is missing, using a cube instead",
+            $"13.8.2026 21:08:24 [Client Error] Patch 0 in {modId}:patches/cartes.json: File cartographieavancee:blocktypes/table.json not found");
+
+        fileSystem.AddFile(launcher.GetLogFilePath(slug), new MockFileData(lines));
+    }
+
+    /// <summary>
     /// Installe un mod en retard et sert la réponse d'API qui annonce sa mise à jour : de quoi
     /// atteindre le dialogue de plan de mise à jour, un panneau que rien d'autre ne peuple.
     /// </summary>

@@ -45,6 +45,13 @@
     <EmbeddedResource Include="ModDb\Fixtures\*.html" />
   </ItemGroup>
 
+  <!-- Journal de lancement complet, embarqué pour la même raison : quarante lignes de journal
+       dans un littéral C# ne se relisent pas, et ce fichier-là se compare directement à une vraie
+       session du jeu (formes relevées sur Vintage Story 1.22.6, contenu synthétique). -->
+  <ItemGroup>
+    <EmbeddedResource Include="Diagnostics\Fixtures\*.log" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\Prospect.Core\Prospect.Core.csproj" />
   </ItemGroup>
