@@ -87,13 +87,13 @@
         Deux corrections tenues ensemble, parce qu'elles répondent au même défaut : une rangée qui
         défile sans qu'on puisse la défiler.
 
-        `flush` retire la gouttière de 12 points (Styles/Controls/ScrollViewer.axaml) et `Padding`
-        RÉSERVE la bande de la barre sous le contenu. Sans ça, la barre se peignait PAR-DESSUS les
-        pastilles : dans le gabarit Fluent, les barres flottent au-dessus du présentateur, et la
-        gouttière ne fait que les décaler vers le haut, c'est-à-dire plus loin dans le contenu. La
-        gouttière existe pour les barres collées au bord de la fenêtre, où le cadre vole la poignée ;
-        celle-ci est au milieu de la page, donc elle n'en a pas besoin — et c'est exactement le cas
-        que la classe `flush` documente.
+        `flush` retire la gouttière de 12 points (Styles/Controls/ScrollViewer.axaml), et la marge
+        basse du contenu, plus bas, RÉSERVE la bande de la barre. Sans ces deux-là, la barre se
+        peignait PAR-DESSUS les pastilles : dans le gabarit Fluent, les barres flottent au-dessus du
+        présentateur, et la gouttière ne fait que les décaler vers le haut, c'est-à-dire plus loin
+        dans le contenu. Cette gouttière existe pour les barres collées au bord de la fenêtre, où le
+        cadre vole la poignée ; celle-ci est au milieu de la page, donc elle n'en a pas besoin — et
+        c'est exactement le cas que la classe `flush` documente.
 
         `WheelScroll.Horizontal` traduit la molette en défilement latéral. Une souris n'a qu'une
         molette, verticale, et un ScrollViewer sans défilement vertical n'en faisait rien : les deux
