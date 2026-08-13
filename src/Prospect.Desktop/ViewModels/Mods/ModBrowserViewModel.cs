@@ -47,6 +47,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
     private readonly IModDbClient _client;
     private readonly ModInstallService _installService;
+    private readonly IInstalledModRepository _installedMods;
     private readonly IInstanceRepository _instances;
     private readonly IExternalUrlOpener _urlOpener;
     private readonly IOverlayService _overlay;
@@ -56,10 +57,12 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     private IReadOnlyList<ModDbModSummary> _catalog = [];
     private IReadOnlyList<ModDbModSummary> _matches = [];
     private ModDbCompatibilityIndex? _compatibilityIndex;
+    private InstalledModIndex _installedIndex = InstalledModIndex.Empty;
 
     public ModBrowserViewModel(
         IModDbClient client,
         ModInstallService installService,
+        IInstalledModRepository installedMods,
         IInstanceRepository instances,
         IExternalUrlOpener urlOpener,
         IOverlayService overlay,
@@ -68,6 +71,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(installService);
+        ArgumentNullException.ThrowIfNull(installedMods);
         ArgumentNullException.ThrowIfNull(instances);
         ArgumentNullException.ThrowIfNull(urlOpener);
         ArgumentNullException.ThrowIfNull(overlay);
@@ -76,6 +80,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
 
         _client = client;
         _installService = installService;
+        _installedMods = installedMods;
         _instances = instances;
         _urlOpener = urlOpener;
         _overlay = overlay;
@@ -196,6 +201,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             await LoadInstancesAsync(cancellationToken).ConfigureAwait(true);
             await LoadCatalogAsync(forceRefresh, cancellationToken).ConfigureAwait(true);
             await LoadCompatibilityAsync(cancellationToken).ConfigureAwait(true);
+            await LoadInstalledAsync(cancellationToken).ConfigureAwait(true);
         }
         finally
         {
@@ -292,12 +298,31 @@ public sealed partial class ModBrowserViewModel : ObservableObject
             .ConfigureAwait(true);
     }
 
-    partial void OnSelectedInstanceChanged(ModTargetInstanceViewModel? value)
-        => _ = ReloadCompatibilityAsync();
+    /// <summary>
+    /// Scanne les mods déjà présents dans l'instance ciblée. Aucun canal réseau nouveau : c'est le
+    /// même scan de <c>data/Mods/</c> que l'onglet Mods d'une instance, croisé au catalogue par
+    /// <see cref="InstalledModIndex"/>.
+    /// </summary>
+    private async Task LoadInstalledAsync(CancellationToken cancellationToken)
+    {
+        if (SelectedInstance?.Slug is not { } slug)
+        {
+            _installedIndex = InstalledModIndex.Empty;
 
-    private async Task ReloadCompatibilityAsync()
+            return;
+        }
+
+        var installed = await _installedMods.ScanAsync(slug, cancellationToken).ConfigureAwait(true);
+        _installedIndex = InstalledModIndex.From(installed);
+    }
+
+    partial void OnSelectedInstanceChanged(ModTargetInstanceViewModel? value)
+        => _ = ReloadForTargetAsync();
+
+    private async Task ReloadForTargetAsync()
     {
         await LoadCompatibilityAsync(CancellationToken.None).ConfigureAwait(true);
+        await LoadInstalledAsync(CancellationToken.None).ConfigureAwait(true);
         Rebuild();
     }
 
@@ -347,7 +372,13 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         for (var index = Results.Count; index < target; index++)
         {
             var summary = _matches[index];
-            Results.Add(new ModCardViewModel(summary, BuildBadge(summary), OpenAsync, StartInstallAsync, _logoCache));
+            Results.Add(new ModCardViewModel(
+                summary,
+                BuildBadge(summary),
+                _installedIndex.Find(summary.ModId, summary.ModIdStrings),
+                OpenAsync,
+                StartInstallAsync,
+                _logoCache));
         }
 
         HasMoreResults = Results.Count < _matches.Count;
@@ -455,6 +486,10 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                 ToastTone.Success,
                 UiText.Mods.InstalledTitle(plan.Primary.DisplayName),
                 UiText.Mods.InstalledMessage(outcome.Installed.Count, SelectedInstance?.Name ?? slug));
+
+            // Les cartes doivent refléter ce qui vient d'entrer dans l'instance, sans quitter
+            // l'écran : rescan du dossier et remise à jour des états de chaque carte affichée.
+            await RefreshInstalledStateAsync().ConfigureAwait(true);
         }
         catch (Exception exception) when (exception is DownloadFailedException or ModInstallFailedException)
         {
@@ -464,6 +499,21 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         finally
         {
             InstallProgress = null;
+        }
+    }
+
+    /// <summary>
+    /// Rescanne l'instance ciblée et repose l'état de chaque carte DÉJÀ construite, sans reconstruire
+    /// la fenêtre de rendu : rebâtir les cartes relancerait tous leurs chargements de logo et
+    /// remonterait le défilement, pour un changement qui ne concerne qu'une propriété.
+    /// </summary>
+    private async Task RefreshInstalledStateAsync()
+    {
+        await LoadInstalledAsync(CancellationToken.None).ConfigureAwait(true);
+
+        foreach (var card in Results)
+        {
+            card.Installed = _installedIndex.Find(card.ModId, card.Summary.ModIdStrings);
         }
     }
 

@@ -32,9 +32,15 @@ public sealed partial class ModCardViewModel : ObservableObject, IDisposable
     /// Cache de logos, interrogé seulement si <paramref name="summary"/> en annonce un
     /// (<c>docs/research/moddb-api.md</c> : absent sur 30 à 40 % du catalogue).
     /// </param>
+    /// <param name="installed">
+    /// Le mod déjà présent dans l'instance ciblée, ou <see langword="null"/>. Quand il l'est, la
+    /// carte le DIT et son bouton change de verbe : « Gérer » ouvre la fiche, là où « Installer »
+    /// relançait un téléchargement à l'aveugle sur quelque chose qui était déjà là.
+    /// </param>
     public ModCardViewModel(
         ModDbModSummary summary,
         ModCompatibilityBadge compatibility,
+        InstalledModMatch? installed,
         Func<ModCardViewModel, Task> open,
         Func<ModCardViewModel, Task> install,
         IModLogoCache logoCache)
@@ -56,6 +62,7 @@ public sealed partial class ModCardViewModel : ObservableObject, IDisposable
         SideText = UiText.Mods.SideLabel(summary.Side);
         HasSide = summary.Side != ModDbSide.Unknown;
         _compatibility = compatibility;
+        _installed = installed;
 
         if (summary.LogoUrl is { } logoUrl)
         {
@@ -107,6 +114,29 @@ public sealed partial class ModCardViewModel : ObservableObject, IDisposable
 
     public bool ShowCompatibility => Compatibility.IsVisible;
 
+    /// <summary>
+    /// Le mod déjà installé dans l'instance ciblée, ou <see langword="null"/>. Change quand
+    /// l'utilisateur change de cible et après une installation faite depuis le navigateur.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsInstalled))]
+    [NotifyPropertyChangedFor(nameof(InstalledText))]
+    [NotifyPropertyChangedFor(nameof(ActionLabel))]
+    private InstalledModMatch? _installed;
+
+    /// <summary>Vrai quand ce mod est déjà dans l'instance ciblée par le sélecteur.</summary>
+    public bool IsInstalled => Installed is not null;
+
+    /// <summary>« Installé · 1.2.0 », ou vide.</summary>
+    public string InstalledText => Installed is { } match ? UiText.Mods.InstalledBadge(match.Version?.ToString()) : string.Empty;
+
+    /// <summary>
+    /// Verbe du bouton principal. « Gérer » sur un mod déjà là : la fiche est l'endroit où vivent le
+    /// sélecteur de release et le remplacement, donc l'endroit où l'on CHANGE de version. Relancer
+    /// « Installer » sur un mod présent était un téléchargement à l'aveugle.
+    /// </summary>
+    public string ActionLabel => IsInstalled ? UiText.Mods.ManageAction : UiText.Mods.InstallAction;
+
     [ObservableProperty]
     private bool _isBusy;
 
@@ -114,7 +144,7 @@ public sealed partial class ModCardViewModel : ObservableObject, IDisposable
     private Task OpenAsync() => _open(this);
 
     [RelayCommand(CanExecute = nameof(CanInstall))]
-    private Task InstallAsync() => _install(this);
+    private Task InstallAsync() => IsInstalled ? _open(this) : _install(this);
 
     private bool CanInstall() => !IsBusy;
 

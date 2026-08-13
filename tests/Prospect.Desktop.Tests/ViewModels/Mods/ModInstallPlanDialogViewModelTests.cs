@@ -224,6 +224,7 @@ public sealed class ModInstallPlanDialogViewModelTests
         var browser = new ModBrowserViewModel(
             ModDbDoubles.CreateClient(fileSystem, Paths, clock, handler),
             ModDbDoubles.CreateInstallService(fileSystem, instances, mods, Paths, clock, handler),
+            mods,
             instances,
             new FakeExternalUrlOpener(),
             overlay,

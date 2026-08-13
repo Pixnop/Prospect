@@ -427,6 +427,14 @@ internal abstract class ModsText
 
     internal abstract string PickInstanceMessage { get; }
 
+    /// <summary>Verbe du bouton d'une carte : installer, ou gérer ce qui est déjà là.</summary>
+    internal abstract string InstallAction { get; }
+
+    internal abstract string ManageAction { get; }
+
+    /// <summary>Pastille « Installé · 1.2.0 » d'une carte, version omise quand elle est illisible.</summary>
+    internal abstract string InstalledBadge(string? version);
+
     internal abstract string StaleCatalog { get; }
 
     internal abstract string OfflineEmptyTitle { get; }

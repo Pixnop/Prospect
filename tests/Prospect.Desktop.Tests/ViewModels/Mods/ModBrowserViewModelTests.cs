@@ -45,7 +45,7 @@ public sealed class ModBrowserViewModelTests
         var toasts = new RecordingToastService();
 
         var opener = new FakeExternalUrlOpener();
-        var browser = new ModBrowserViewModel(client, installService, instances, opener, overlay, toasts, logoCache);
+        var browser = new ModBrowserViewModel(client, installService, mods, instances, opener, overlay, toasts, logoCache);
 
         return new Fixture(browser, handler, overlay, toasts, mods, fileSystem, opener, record.Slug);
     }
@@ -313,6 +313,85 @@ public sealed class ModBrowserViewModelTests
         (await fixture.Mods.ScanAsync(fixture.Slug, CancellationToken.None)).ShouldBeEmpty();
     }
 
+    // ── Ce que l'instance ciblée contient déjà ────────────────────────────────────────────────
+    //
+    // « Je ne dois pas pouvoir retélécharger un mod déjà téléchargé pour l'instance où je suis. »
+    // Une carte doit donc DIRE ce qui est là, et son bouton ouvrir la fiche — où vivent le
+    // sélecteur de release et le remplacement — au lieu de relancer un téléchargement aveugle.
+
+    [Fact]
+    public async Task ACardWhoseModIsAlreadyInTheTargetInstance_SaysSoAndOffersToManageIt()
+    {
+        var fixture = await CreateAsync();
+        ModDbDoubles.SeedMod(
+            fixture.FileSystem,
+            fixture.Mods.GetModsDirectory(fixture.Slug),
+            "configlib-1.11.1.zip",
+            ModDbDoubles.ModInfo("configlib", "Config lib", "1.11.1"));
+
+        await fixture.Browser.InitializeCommand.ExecuteAsync(null);
+
+        var installed = fixture.Browser.Results.Single(card => card.Name == "Config lib");
+        installed.IsInstalled.ShouldBeTrue();
+        installed.InstalledText.ShouldBe("Installé · 1.11.1");
+        installed.ActionLabel.ShouldBe("Gérer");
+
+        var untouched = fixture.Browser.Results.Single(card => card.Name == "BetterRuins");
+        untouched.IsInstalled.ShouldBeFalse();
+        untouched.ActionLabel.ShouldBe("Installer");
+    }
+
+    [Fact]
+    public async Task TheButtonOfAnInstalledCard_OpensItsSheetInsteadOfDownloadingAgain()
+    {
+        var fixture = await CreateAsync();
+        ModDbDoubles.SeedMod(
+            fixture.FileSystem,
+            fixture.Mods.GetModsDirectory(fixture.Slug),
+            "configlib-1.11.1.zip",
+            ModDbDoubles.ModInfo("configlib", "Config lib", "1.11.1"));
+        await fixture.Browser.InitializeCommand.ExecuteAsync(null);
+
+        await fixture.Browser.Results.Single(card => card.Name == "Config lib").InstallCommand.ExecuteAsync(null);
+
+        fixture.Overlay.Shown.ShouldHaveSingleItem().ShouldBeOfType<ModDetailDialogViewModel>();
+    }
+
+    [Fact]
+    public async Task SwitchingTargetInstance_RecomputesWhatIsInstalled()
+    {
+        var fixture = await CreateAsync();
+        ModDbDoubles.SeedMod(
+            fixture.FileSystem,
+            fixture.Mods.GetModsDirectory(fixture.Slug),
+            "configlib-1.11.1.zip",
+            ModDbDoubles.ModInfo("configlib", "Config lib", "1.11.1"));
+        await fixture.Browser.InitializeCommand.ExecuteAsync(null);
+        fixture.Browser.Results.Single(card => card.Name == "Config lib").IsInstalled.ShouldBeTrue();
+
+        // « Toutes les versions » n'est l'instance de personne : plus rien à affirmer.
+        fixture.Browser.SelectedInstance = fixture.Browser.TargetInstances[0];
+        await Task.Yield();
+
+        fixture.Browser.Results.ShouldAllBe(card => !card.IsInstalled);
+    }
+
+    [Fact]
+    public async Task InstallingFromTheBrowser_FlipsThatCardWithoutLeavingTheScreen()
+    {
+        var fixture = await CreateAsync();
+        await fixture.Browser.InitializeCommand.ExecuteAsync(null);
+        var card = fixture.Browser.Results.Single(candidate => candidate.Name == "Config lib");
+        card.IsInstalled.ShouldBeFalse();
+
+        await card.InstallCommand.ExecuteAsync(null);
+        await ((ModInstallPlanDialogViewModel)fixture.Overlay.Shown[0]).ConfirmCommand.ExecuteAsync(null);
+
+        card.IsInstalled.ShouldBeTrue();
+        card.InstalledText.ShouldBe("Installé · 1.11.1");
+        card.ActionLabel.ShouldBe("Gérer");
+    }
+
     [Fact]
     public void Constructor_NullArguments_AreRejected()
     {
@@ -327,12 +406,13 @@ public sealed class ModBrowserViewModelTests
         var toasts = new RecordingToastService();
         var logoCache = ModDbDoubles.CreateLogoCache();
 
-        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(null!, installService, instances, opener, overlay, toasts, logoCache));
-        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, null!, instances, opener, overlay, toasts, logoCache));
-        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, null!, opener, overlay, toasts, logoCache));
-        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, instances, null!, overlay, toasts, logoCache));
-        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, instances, opener, null!, toasts, logoCache));
-        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, instances, opener, overlay, null!, logoCache));
-        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, instances, opener, overlay, toasts, null!));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(null!, installService, mods, instances, opener, overlay, toasts, logoCache));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, null!, mods, instances, opener, overlay, toasts, logoCache));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, null!, instances, opener, overlay, toasts, logoCache));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, mods, null!, opener, overlay, toasts, logoCache));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, mods, instances, null!, overlay, toasts, logoCache));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, mods, instances, opener, null!, toasts, logoCache));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, mods, instances, opener, overlay, null!, logoCache));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, mods, instances, opener, overlay, toasts, null!));
     }
 }

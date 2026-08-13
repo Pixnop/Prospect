@@ -422,6 +422,13 @@ internal sealed class FrenchModsText : ModsText
 
     internal override string PickInstanceMessage => "Sélectionne l'instance de destination avant d'installer un mod.";
 
+    internal override string InstallAction => "Installer";
+
+    internal override string ManageAction => "Gérer";
+
+    internal override string InstalledBadge(string? version)
+        => string.IsNullOrWhiteSpace(version) ? "Installé" : $"Installé · {version}";
+
     internal override string StaleCatalog
         => "L'index n'a pas pu être actualisé. Les mods affichés viennent du dernier relevé connu.";
 

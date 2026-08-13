@@ -391,6 +391,32 @@ public sealed class ResponsiveRegressionTests
         window.Close();
     }
 
+    /// <summary>
+    /// Une carte qui porte les TROIS badges — compatibilité, côté, « Installé · 1.11.1 » — plus son
+    /// bouton d'action, sur une carte de 320 points de large au plancher de la fenêtre. C'est le cas
+    /// où la rangée du bas déborde si personne ne la tient.
+    /// </summary>
+    [AvaloniaTheory]
+    [InlineData("Dark")]
+    [InlineData("Light")]
+    public async Task ModBrowser_ACardAlreadyInstalled_HoldsItsBoxes(string variant)
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        var window = ResponsiveScenario.ShowWindow(provider, variant == "Light" ? ThemeVariant.Light : ThemeVariant.Dark);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var slug = await provider.SeedTargetInstanceAsync(ResponsiveScenario.LongInstanceName);
+        ResponsiveScenario.SeedInstalledMod(provider, fileSystem, slug);
+
+        shell.ShowModBrowser(slug);
+        await shell.ModBrowser.InitializeCommand.ExecuteAsync(null);
+        window.Settle();
+        shell.ModBrowser.Results.ShouldContain(card => card.IsInstalled);
+
+        window.ShouldHoldLayoutInvariantsAtEverySize($"Navigateur de mods, carte déjà installée ({variant})");
+
+        window.Close();
+    }
+
     [AvaloniaFact]
     public async Task ModBrowser_Grid_AddsAColumnAsTheWindowGrows()
     {

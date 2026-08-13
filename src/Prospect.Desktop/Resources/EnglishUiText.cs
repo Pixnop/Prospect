@@ -426,6 +426,13 @@ internal sealed class EnglishModsText : ModsText
 
     internal override string PickInstanceMessage => "Pick the instance to install into before you add a mod.";
 
+    internal override string InstallAction => "Install";
+
+    internal override string ManageAction => "Manage";
+
+    internal override string InstalledBadge(string? version)
+        => string.IsNullOrWhiteSpace(version) ? "Installed" : $"Installed · {version}";
+
     internal override string StaleCatalog
         => "The index could not be refreshed. The mods shown come from the last reading.";
 
