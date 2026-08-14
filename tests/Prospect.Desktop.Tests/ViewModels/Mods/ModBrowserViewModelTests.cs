@@ -60,7 +60,7 @@ public sealed class ModBrowserViewModelTests
         fixture.Browser.Results.Count.ShouldBe(2);
         fixture.Browser.Tags.Select(tag => tag.Name).ShouldBe(["Exploration", "Utility", "Worldgen"]);
         fixture.Browser.TargetInstances.Count.ShouldBe(2);
-        fixture.Browser.SubtitleText.ShouldContain("2 mods indexés");
+        fixture.Browser.SubtitleText.ShouldContain("2 mods disponibles");
     }
 
     [Fact]

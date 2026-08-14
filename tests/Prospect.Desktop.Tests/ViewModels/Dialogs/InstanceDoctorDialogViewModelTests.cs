@@ -31,12 +31,14 @@ public sealed class InstanceDoctorDialogViewModelTests
         Action? navigateToVersions = null,
         Action? openModsTab = null,
         RecordingOverlayService? overlay = null,
-        Func<string, Task>? installMod = null)
+        Func<string, Task>? installMod = null,
+        Func<Task>? checkModUpdates = null)
         => new(
             report,
             navigateToVersions ?? (() => { }),
             openModsTab ?? (() => { }),
             installMod ?? (_ => Task.CompletedTask),
+            checkModUpdates ?? (() => Task.CompletedTask),
             overlay ?? new RecordingOverlayService());
 
     [Fact]
@@ -44,11 +46,11 @@ public sealed class InstanceDoctorDialogViewModelTests
     {
         var overlay = new RecordingOverlayService();
 
-        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(null!, () => { }, () => { }, _ => Task.CompletedTask, overlay));
-        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(HealthyReport(), null!, () => { }, _ => Task.CompletedTask, overlay));
-        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(HealthyReport(), () => { }, null!, _ => Task.CompletedTask, overlay));
-        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(HealthyReport(), () => { }, () => { }, null!, overlay));
-        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(HealthyReport(), () => { }, () => { }, _ => Task.CompletedTask, null!));
+        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(null!, () => { }, () => { }, _ => Task.CompletedTask, () => Task.CompletedTask, overlay));
+        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(HealthyReport(), null!, () => { }, _ => Task.CompletedTask, () => Task.CompletedTask, overlay));
+        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(HealthyReport(), () => { }, null!, _ => Task.CompletedTask, () => Task.CompletedTask, overlay));
+        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(HealthyReport(), () => { }, () => { }, null!, () => Task.CompletedTask, overlay));
+        Should.Throw<ArgumentNullException>(() => new InstanceDoctorDialogViewModel(HealthyReport(), () => { }, () => { }, _ => Task.CompletedTask, () => Task.CompletedTask, null!));
     }
 
     [Fact]
@@ -96,7 +98,7 @@ public sealed class InstanceDoctorDialogViewModelTests
 
         var row = dialog.Groups.ShouldHaveSingleItem().Rows.ShouldHaveSingleItem();
         row.Severity.ShouldBe(InstanceDoctorSeverity.Error);
-        row.Message.ShouldContain("Microsoft.NETCore.App");
+        row.Message.ShouldContain(".NET 10.0.0");
         row.Message.ShouldContain("10.0.0");
         row.HasAction.ShouldBeFalse();
     }

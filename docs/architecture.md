@@ -857,6 +857,45 @@ de langue inconnue, absente ou mal casée dans le JSON retombe sur le français,
 `init` (il n'est pas rejoué quand le champ manque). Toute évolution de forme des réglages
 passe par `Normalized()`.
 
+#### Glossaire : un geste, un mot
+
+Un même geste portait jusqu'à quatre noms selon l'écran : on installait un mod avec un bouton
+« Installer », la confirmation disait qu'il serait « ajouté », et le toast de fin annonçait
+« Ajouté ». Ce n'est pas un détail de style — un utilisateur qui cherche comment retirer un mod ne
+trouve pas « désinstaller » s'il a lu « retirer », et un rapport de terrain devient inarbitrable
+quand deux mots désignent la même chose. Le tableau ci-dessous fixe le vocabulaire ; toute nouvelle
+chaîne s'y aligne, dans les deux langues.
+
+| Geste ou objet | Français | Anglais | À ne plus écrire |
+|---|---|---|---|
+| Poser un mod dans une instance | installer | install | ajouter, add, déposer, drop |
+| Retirer un mod d'une instance | retirer | remove | supprimer, désinstaller, delete |
+| Retirer une version du jeu | désinstaller | uninstall | supprimer, remove (dans le corps du texte) |
+| Effacer définitivement une instance ou une sauvegarde | supprimer | delete | effacer, erase |
+| Vider un champ ou un filtre | effacer | clear | supprimer |
+| Rendre un mod ou une option actif | activer | enable | turn on |
+| Redemander des données au serveur | actualiser | refresh | rafraîchir, rescanner, rescan |
+| Chercher des versions plus récentes de mods | vérifier les mises à jour | check for updates | vérifier les nouveautés (réservé aux versions du jeu) |
+| La liste distante des mods | la liste des mods | the mod list | index, catalogue (réservé aux versions du jeu) |
+| La liste distante des versions du jeu | catalogue | catalog | index |
+| Une publication d'un mod | version | version | release (en anglais aussi) |
+| Archive de secours d'une instance | sauvegarde | backup | — |
+| Parties enregistrées par le jeu | mondes | worlds | sauvegardes (en français : le mot est pris) |
+| Enregistrer un formulaire de réglages | enregistrer | save | sauvegarder |
+| Démarrer le jeu | lancer, lancement | launch | démarrer, start, run |
+| Une installation du jeu | version du jeu | game version | installation, moteur, engine |
+| Un dossier VS Launcher repris | installation VS Launcher | VS Launcher install | instance |
+| Tourne des deux côtés | client et serveur | client and server | universel, universal |
+| Ouvrir une session de compte | se connecter | sign in | — |
+| Joignabilité du réseau | connexion, hors ligne | connection, offline | reconnecte-toi (se lit « reconnecte ton compte ») |
+
+Deux règles de forme accompagnent le tableau. Un bouton dit son EFFET et jamais le mécanisme :
+« Se connecter » et non « Valider le code », « Annuler l'installation » et non « Annuler », « Arrêter
+la mise à jour » et non « Annuler ». Et aucun mot d'ingénieur n'atteint l'écran : ni `index`, ni
+`schéma`, ni `runtime`, ni `dépôt`, ni `canal`, ni `empreinte` — les identifiants de mods, les noms
+de fichiers et les chemins restent, eux, tels quels, parce que ce sont des valeurs que
+l'utilisateur retrouve sur son disque ou sur le site.
+
 Les règles restent : aucun code-behind au-delà d'`InitializeComponent`, ViewModels
 constructibles sans UI (testables en headless), textes centralisés dans les dictionnaires
 de ressources par langue et dans `UiText`. La voix du produit est spécifiée dans le readme du design :
@@ -909,6 +948,34 @@ Le workflow `ci.yml` tourne sur push vers `main` et sur toute PR :
    soit réellement bloquante sur la PR.
 3. **format** : `dotnet format --verify-no-changes`, le garde-fou de style le moins
    cher qui existe.
+
+### Les parcours utilisateur, garde permanente
+
+`tests/Prospect.Desktop.Tests/Journeys/` tient un test par PARCOURS complet, de l'état initial au
+but final, sur le graphe DI réel et un réseau factice. Ce sont les seuls tests de la suite qui ne
+partent d'aucun état prémâché : là où un test d'écran sème une instance et une version sur le
+disque avant d'affirmer quoi que ce soit, un parcours obtient tout par les gestes de l'utilisateur,
+et une seule rupture dans la chaîne le fait tomber. Huit parcours : premier contact (jusqu'à une
+partie lancée puis sortie), découverte d'un mod, cycle de vie d'un mod, réparation d'une instance
+cassée, tour des réglages, entretien de la bibliothèque, gestion des versions du jeu, et réseau
+coupé écran par écran.
+
+Trois exigences les distinguent, et ce sont elles qui ont trouvé les défauts. Ils interrogent
+l'ARBRE VISUEL (`JourneyHarness.ShowsText`, `HasEnabledButton`) plutôt que des booléens de
+ViewModel : c'est ainsi que le panneau « tout va bien » du docteur a été pris en flagrant délit de
+ne rien afficher, ses deux textes pointant vers des clés de ressources qui n'existaient dans aucun
+des deux dictionnaires — un `{StaticResource}` introuvable ne casse ni la compilation ni le rendu.
+Ils exigent qu'une action ABOUTISSE : chaque bouton du rapport de diagnostic est mené jusqu'à la
+réparation effective, ce qui a montré qu'une ligne demandait une vérification de mises à jour tout
+en proposant « Voir les mods ». Et ils attendent RÉELLEMENT (`WaitUntilAsync`, avec de courtes
+pauses) plutôt que de faire tourner le dispatcher à vide : les chemins d'échec réseau passent par
+la politique de réessai, et une boucle sans pause ferait passer un écran bavard pour un écran muet.
+
+Le harnais qu'ils ont demandé est `TestServiceProviderFactory.CreateForJourney`, qui remplace les
+trois derniers ports du monde réel que le conteneur de test laissait passer (lancement de
+processus, détection de runtime, sélecteur de fichiers) et rend les doubles à l'appelant. Sans lui,
+aucun test ne pouvait lancer le jeu à travers le vrai `GameLauncher` : les tests de ViewModel
+câblent un lanceur à la main, à côté du graphe qu'on veut justement exercer.
 
 Un second workflow, `conformance.yml`, porte tout ce qui sort de la machine et n'a donc
 rien à faire dans la gate d'une PR. Déclenchement manuel ou hebdomadaire uniquement, deux

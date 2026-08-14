@@ -372,6 +372,12 @@ internal abstract class DoctorText(ModsText mods)
     internal abstract string OpenModsAction { get; }
 
     /// <summary>
+    /// Action de la ligne de compatibilité : elle LANCE la vérification que son message réclame,
+    /// au lieu de renvoyer vers une liste où il n'y aurait rien de plus à voir.
+    /// </summary>
+    internal abstract string CheckUpdatesAction { get; }
+
+    /// <summary>
     /// Action d'une ligne de dépendance MANQUANTE : elle nomme le mod et se termine par des points
     /// de suspension, parce qu'elle ouvre un plan à confirmer, jamais une installation directe.
     /// </summary>

@@ -41,10 +41,14 @@
           <StackPanel HorizontalAlignment="Center" Spacing="10" Margin="0,20" IsVisible="{Binding IsAllClear}">
             <Path Width="34" Height="34" Stretch="Uniform" HorizontalAlignment="Center" Data="{StaticResource Icon.check-circle}"
                   Stroke="{DynamicResource SuccessText}" StrokeThickness="1.5" StrokeLineCap="Round" StrokeJoin="Round" />
-            <TextBlock Text="{StaticResource InstanceDoctor_AllClearTitle}" HorizontalAlignment="Center"
+            <!-- Liés au ViewModel, PAS au dictionnaire de chaînes : ces deux textes n'existaient
+                 dans aucun des deux dictionnaires, et un {StaticResource} introuvable ne casse
+                 rien à la compilation — le panneau s'affichait simplement vide. Le texte vit dans
+                 UiText.Instance.Doctor, où la parité des langues est une erreur de compilation. -->
+            <TextBlock Text="{Binding AllClearTitle}" HorizontalAlignment="Center"
                        FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsSubheading}"
                        FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
-            <TextBlock Text="{StaticResource InstanceDoctor_AllClearDescription}" HorizontalAlignment="Center" TextAlignment="Center"
+            <TextBlock Text="{Binding AllClearDescription}" HorizontalAlignment="Center" TextAlignment="Center"
                        TextWrapping="Wrap" MaxWidth="360" FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text3}" />
           </StackPanel>
 

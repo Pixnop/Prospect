@@ -24,7 +24,6 @@ namespace Prospect.Desktop.ViewModels.Instance;
 public sealed partial class InstanceBackupsSectionViewModel : ObservableObject
 {
     private readonly string _slug;
-    private readonly string _instanceName;
     private readonly InstanceService _instanceService;
     private readonly InstanceBackupService _backupService;
     private readonly IOverlayService _overlay;
@@ -63,6 +62,22 @@ public sealed partial class InstanceBackupsSectionViewModel : ObservableObject
         // qu'on vient de charger (même piège que InstanceOptionsTabViewModel avec ses champs texte).
         _autoBeforeLaunch = settings.AutoBeforeLaunch;
         _keepCount = settings.KeepCount;
+    }
+
+    /// <summary>
+    /// Nom affichable de l'instance, celui que la confirmation de restauration prononce. Il se
+    /// REPOSE après un renommage (voir <see cref="SetInstanceName"/>) : construit une fois pour
+    /// toutes, il faisait nommer au dialogue une instance qui n'existait plus.
+    /// </summary>
+    private string _instanceName;
+
+    /// <summary>Met à jour le nom prononcé par les dialogues de cette section.</summary>
+    public void SetInstanceName(string name)
+    {
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            _instanceName = name;
+        }
     }
 
     /// <summary>Les seuls choix proposés par le sélecteur (design : « garder N sauvegardes »).</summary>

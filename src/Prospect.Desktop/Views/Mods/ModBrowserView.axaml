@@ -232,7 +232,7 @@
                     <StackPanel>
                       <Grid ColumnDefinitions="Auto,*,Auto">
                         <Border Grid.Column="0" Width="40" Height="40" CornerRadius="{StaticResource RadiusSm}"
-                                Background="{DynamicResource Stone800}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1"
+                                Background="{DynamicResource GlassItem}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1"
                                 ClipToBounds="True">
                           <Panel>
                             <!-- Repli générique : toujours dans l'arbre visuel, masqué une fois le logo décodé

@@ -81,6 +81,17 @@ public sealed partial class InstanceOptionsTabViewModel : ObservableObject
     /// <summary>Bloc Sauvegardes de l'onglet Options : toggle auto-avant-lancement, rétention, liste, création/restauration/suppression.</summary>
     public InstanceBackupsSectionViewModel Backups { get; }
 
+    /// <summary>
+    /// Reporte le nom affichable de l'instance après un renommage.
+    /// </summary>
+    /// <remarks>
+    /// Défaut relevé par le parcours d'entretien : l'onglet Options est construit UNE FOIS au
+    /// chargement, avec le nom d'alors, tandis que l'en-tête et l'onglet Mods, eux, se remettent à
+    /// jour. La confirmation de restauration nommait donc l'ancienne instance, c'est-à-dire une qui
+    /// n'existe plus — sur un dialogue dont le rôle est précisément de dire CE QU'ON REMPLACE.
+    /// </remarks>
+    public void SetInstanceName(string name) => Backups.SetInstanceName(name);
+
     [ObservableProperty]
     private string _extraArgsText;
 

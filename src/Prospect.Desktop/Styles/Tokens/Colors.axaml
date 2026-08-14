@@ -28,7 +28,14 @@
   <Color x:Key="Stone700">#332E29</Color>
   <Color x:Key="Stone600">#443D36</Color>
   <Color x:Key="Stone500">#5B5249</Color>
+  <!-- Deux demi-marches ajoutées au ramp livré (qui a déjà des 850 et 750) : le ramp n'avait pas
+       assez de résolution au milieu pour une échelle de texte à quatre niveaux qui tienne le
+       contraste sur le verre. Voir Text3/Text4 plus bas. -->
+  <Color x:Key="Stone350">#9C9288</Color>
+  <Color x:Key="Stone375">#8A8177</Color>
   <Color x:Key="Stone400">#7E756B</Color>
+  <Color x:Key="Stone450">#6E655B</Color>
+  <Color x:Key="Stone475">#655C52</Color>
   <Color x:Key="Stone300">#B3A99E</Color>
   <Color x:Key="Stone200">#D5CCC2</Color>
   <Color x:Key="Stone100">#EDE6DD</Color>
@@ -57,6 +64,7 @@
   <Color x:Key="Verdigris400">#7DBBA4</Color>
   <Color x:Key="Verdigris500">#5E9C86</Color>
   <Color x:Key="Verdigris600">#4A7E6B</Color>
+  <Color x:Key="Verdigris700">#3A6455</Color>
   <Color x:Key="Verdigris900">#14231E</Color>
 
   <!-- Ochre — avertissement, canal unstable, mise à jour disponible. -->
@@ -64,6 +72,7 @@
   <Color x:Key="Ochre400">#E0B662</Color>
   <Color x:Key="Ochre500">#D9A441</Color>
   <Color x:Key="Ochre600">#B08331</Color>
+  <Color x:Key="Ochre700">#7E5C1C</Color>
   <Color x:Key="Ochre900">#2A2011</Color>
 
   <!-- Slate — information, canal pre-release, notices neutres. -->
@@ -71,6 +80,7 @@
   <Color x:Key="Slate400">#9AAEC4</Color>
   <Color x:Key="Slate500">#7C93AE</Color>
   <Color x:Key="Slate600">#61748C</Color>
+  <Color x:Key="Slate700">#4C5D72</Color>
   <Color x:Key="Slate900">#161A20</Color>
 
   <!-- ═══════════════════════ Alias sémantiques (par thème) ════════════════════════ -->
@@ -92,8 +102,14 @@
 
       <SolidColorBrush x:Key="Text1" Color="{StaticResource Stone100}" />
       <SolidColorBrush x:Key="Text2" Color="{StaticResource Stone300}" />
-      <SolidColorBrush x:Key="Text3" Color="{StaticResource Stone400}" />
-      <SolidColorBrush x:Key="Text4" Color="{StaticResource Stone500}" />
+      <!-- Text3 et Text4 remontés d'une demi-marche chacun, pour une raison mesurée et non
+           esthétique : composés sur GlassPane (la vitre la plus FINE, celle des pages), ils
+           tombaient à 4,19:1 et 2,48:1. Le second est moitié moins que le plancher AA du texte
+           courant, et il porte des chemins, des noms de fichier et des compteurs à 11 px. Ils
+           valent maintenant 6,21:1 et 4,95:1, l'ordre des quatre niveaux est intact, et Text1/Text2
+           n'ont pas bougé. -->
+      <SolidColorBrush x:Key="Text3" Color="{StaticResource Stone350}" />
+      <SolidColorBrush x:Key="Text4" Color="{StaticResource Stone375}" />
       <SolidColorBrush x:Key="TextOnAccent" Color="#1A1512" />
       <SolidColorBrush x:Key="TextLink" Color="{StaticResource Copper300}" />
       <SolidColorBrush x:Key="TextLinkHover" Color="{StaticResource Copper200}" />
@@ -154,7 +170,7 @@
       <SolidColorBrush x:Key="NeutralQuiet" Color="#80111010" />
       <SolidColorBrush x:Key="SwitchTrackOff" Color="#80111010" />
       <SolidColorBrush x:Key="ProgressTrackBg" Color="{StaticResource Stone750}" />
-      <SolidColorBrush x:Key="TooltipBg" Color="#B8111010" />
+      <SolidColorBrush x:Key="TooltipBg" Color="#E8111010" />
     </ResourceDictionary>
 
     <!-- ── Clair — variante secondaire ─────────────────────────────────────────── -->
@@ -168,12 +184,19 @@
       <SolidColorBrush x:Key="BgHover" Color="#0F7E5230" />
       <SolidColorBrush x:Key="BgActive" Color="#1A7E5230" />
       <SolidColorBrush x:Key="BgSelected" Color="#1F7E5230" />
-      <SolidColorBrush x:Key="BgScrim" Color="#5928201A" />
+      <!-- Remonté de 35 % à 62 %, la valeur du thème sombre : c'est le voile du panneau modal, et
+           lui seul. Un voile deux fois plus fin en clair laissait la page se lire à travers les
+           dialogues (voir GlassMenu dans Glass.axaml). -->
+      <SolidColorBrush x:Key="BgScrim" Color="#9E28201A" />
 
       <SolidColorBrush x:Key="Text1" Color="#231E1A" />
       <SolidColorBrush x:Key="Text2" Color="#5B5249" />
-      <SolidColorBrush x:Key="Text3" Color="#7E756B" />
-      <SolidColorBrush x:Key="Text4" Color="#A2988D" />
+      <!-- Même correction en clair, où elle était pire encore : 3,85:1 et 2,41:1 sur GlassPane.
+           Text3 valait littéralement la même couleur qu'en sombre — le seul jeton de texte à ne pas
+           basculer avec le thème, réglé pour un fond sombre et jamais rejugé sur fond clair. Il
+           bascule désormais comme les autres : 5,58:1 et 4,87:1. -->
+      <SolidColorBrush x:Key="Text3" Color="{StaticResource Stone475}" />
+      <SolidColorBrush x:Key="Text4" Color="{StaticResource Stone450}" />
       <SolidColorBrush x:Key="TextOnAccent" Color="#FFF8F1" />
       <SolidColorBrush x:Key="TextLink" Color="{StaticResource Copper700}" />
       <SolidColorBrush x:Key="TextLinkHover" Color="{StaticResource Copper800}" />
@@ -197,15 +220,18 @@
       <SolidColorBrush x:Key="DangerQuiet" Color="#1FC1503B" />
 
       <SolidColorBrush x:Key="Success" Color="{StaticResource Verdigris600}" />
-      <SolidColorBrush x:Key="SuccessText" Color="{StaticResource Verdigris600}" />
+      <SolidColorBrush x:Key="SuccessText" Color="{StaticResource Verdigris700}" />
       <SolidColorBrush x:Key="SuccessQuiet" Color="#1F4A7E6B" />
 
       <SolidColorBrush x:Key="Warning" Color="{StaticResource Ochre600}" />
-      <SolidColorBrush x:Key="WarningText" Color="{StaticResource Ochre600}" />
+      <!-- Les trois teintes de statut en clair étaient sous le plancher AA sur le verre :
+           l'ambre à 2,91:1 était la pire couleur du système, et elle porte les avertissements
+           qu'il faut justement lire. Descendues d'une marche : 5,21:1, 5,71:1 et 5,74:1. -->
+      <SolidColorBrush x:Key="WarningText" Color="{StaticResource Ochre700}" />
       <SolidColorBrush x:Key="WarningQuiet" Color="#24B08331" />
 
       <SolidColorBrush x:Key="Info" Color="{StaticResource Slate600}" />
-      <SolidColorBrush x:Key="InfoText" Color="{StaticResource Slate600}" />
+      <SolidColorBrush x:Key="InfoText" Color="{StaticResource Slate700}" />
       <SolidColorBrush x:Key="InfoQuiet" Color="#1F61748C" />
 
       <SolidColorBrush x:Key="ScrollbarTrack" Color="Transparent" />
@@ -223,7 +249,7 @@
       <SolidColorBrush x:Key="NeutralQuiet" Color="#7AFFFFFF" />
       <SolidColorBrush x:Key="SwitchTrackOff" Color="#7AFFFFFF" />
       <SolidColorBrush x:Key="ProgressTrackBg" Color="#DCD3C7" />
-      <SolidColorBrush x:Key="TooltipBg" Color="#C7FCF9F4" />
+      <SolidColorBrush x:Key="TooltipBg" Color="#EEFCF9F4" />
     </ResourceDictionary>
 
   </ResourceDictionary.ThemeDictionaries>

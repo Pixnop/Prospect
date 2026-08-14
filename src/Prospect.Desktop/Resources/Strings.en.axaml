@@ -15,16 +15,11 @@
 
   <!-- ── Sidebar ─────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Nav_Bibliotheque">Library</x:String>
-  <x:String x:Key="Nav_Accueil">Home</x:String>
-  <x:String x:Key="Nav_Mods">Mods</x:String>
-  <x:String x:Key="Nav_Versions">Versions</x:String>
-  <x:String x:Key="Nav_Reglages">Settings</x:String>
   <x:String x:Key="Nav_Telechargements">Downloads</x:String>
 
   <!-- ── Titlebar ────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Titlebar_Minimize">Minimize</x:String>
   <x:String x:Key="Titlebar_Maximize">Maximize</x:String>
-  <x:String x:Key="Titlebar_Restore">Restore</x:String>
   <x:String x:Key="Titlebar_Close">Close</x:String>
 
   <!-- ── Popover téléchargements ─────────────────────────────────────────────────── -->
@@ -32,7 +27,7 @@
   <x:String x:Key="Downloads_EmptyTitle">No downloads</x:String>
   <x:String x:Key="Downloads_EmptyDescription">Game versions and mods you download will show up here.</x:String>
   <x:String x:Key="Downloads_Close">Close</x:String>
-  <x:String x:Key="Downloads_Cancel">Cancel</x:String>
+  <x:String x:Key="Downloads_Cancel">Cancel the download</x:String>
   <x:String x:Key="Downloads_ClearAll">Clear all</x:String>
 
   <!-- ── Journaux ────────────────────────────────────────────────────────────────── -->
@@ -59,8 +54,7 @@
   <!-- ── Carte d'instance ────────────────────────────────────────────────────────── -->
   <x:String x:Key="Card_Play">Play</x:String>
   <x:String x:Key="Card_Stop">Stop</x:String>
-  <x:String x:Key="Card_Launching">Starting…</x:String>
-  <x:String x:Key="Card_Playing">Running</x:String>
+  <x:String x:Key="Card_Launching">Launching…</x:String>
   <x:String x:Key="Card_Actions">Actions</x:String>
   <x:String x:Key="Card_Open">Open</x:String>
   <x:String x:Key="Card_Rename">Rename</x:String>
@@ -82,10 +76,10 @@
   <x:String x:Key="Wizard_Step2_VersionLabel">Game version</x:String>
   <x:String x:Key="Wizard_Step2_Loading">Reading the catalog…</x:String>
   <x:String x:Key="Wizard_Step2_Empty">No version available. Check your connection, or install one from the Versions screen.</x:String>
-  <x:String x:Key="Wizard_Step2_ChannelAll">All channels</x:String>
-  <x:String x:Key="Wizard_Step2_ChannelStable">Stable channel</x:String>
-  <x:String x:Key="Wizard_Step2_ChannelUnstable">Unstable channel</x:String>
-  <x:String x:Key="Wizard_Step2_ChannelPre">Pre channel</x:String>
+  <x:String x:Key="Wizard_Step2_ChannelAll">All versions</x:String>
+  <x:String x:Key="Wizard_Step2_ChannelStable">Stable versions</x:String>
+  <x:String x:Key="Wizard_Step2_ChannelUnstable">Test versions</x:String>
+  <x:String x:Key="Wizard_Step2_ChannelPre">Previews</x:String>
   <x:String x:Key="Wizard_CancelInstall">Cancel the install</x:String>
 
   <x:String x:Key="Wizard_Step3_Title">Instance icon</x:String>
@@ -114,17 +108,19 @@
   <!-- ── Écran Versions ──────────────────────────────────────────────────────────── -->
   <x:String x:Key="Versions_Title">Game versions</x:String>
   <x:String x:Key="Versions_CheckForUpdates">Check for new releases</x:String>
+  <x:String x:Key="Versions_Retry">Try again</x:String>
+  <x:String x:Key="Versions_ClearFilter">Clear the filter</x:String>
   <x:String x:Key="Versions_SearchPlaceholder">Filter by version…</x:String>
   <x:String x:Key="Versions_FilterAll">All</x:String>
   <x:String x:Key="Versions_FilterInstalled">Installed</x:String>
   <x:String x:Key="Versions_FilterAvailable">Available</x:String>
-  <x:String x:Key="Versions_ShowUnstable">Show unstable and pre</x:String>
+  <x:String x:Key="Versions_ShowUnstable">Show test versions</x:String>
   <x:String x:Key="Versions_InstalledSection">Installed</x:String>
   <x:String x:Key="Versions_AvailableSection">Available</x:String>
   <x:String x:Key="Versions_BrokenSection">Installs that cannot be used</x:String>
   <x:String x:Key="Versions_Install">Install</x:String>
   <x:String x:Key="Versions_Uninstall">Uninstall</x:String>
-  <x:String x:Key="Versions_CancelInstall">Cancel</x:String>
+  <x:String x:Key="Versions_CancelInstall">Cancel the install</x:String>
   <x:String x:Key="Versions_InstalledBadge">installed</x:String>
   <x:String x:Key="Versions_EmptyTitle">No versions</x:String>
   <x:String x:Key="Versions_EmptyDescription">No version matches the current filter. Widen it, or check the catalog for new releases.</x:String>
@@ -132,16 +128,11 @@
   <!-- ── Dialogue de désinstallation ─────────────────────────────────────────────── -->
   <x:String x:Key="Dialog_Uninstall_Confirm">Uninstall</x:String>
 
-  <!-- ── Pages placeholder ───────────────────────────────────────────────────────── -->
-  <x:String x:Key="Placeholder_Mods_Title">Mod browser</x:String>
-  <x:String x:Key="Placeholder_Mods_Description">Coming soon: search and install mods from the official ModDB.</x:String>
-
   <!-- ── Page de détail d'instance ───────────────────────────────────────────────── -->
   <x:String x:Key="Instance_Back">Instances</x:String>
   <x:String x:Key="Instance_Play">Play</x:String>
   <x:String x:Key="Instance_Stop">Stop</x:String>
-  <x:String x:Key="Instance_Launching">Starting…</x:String>
-  <x:String x:Key="Instance_Playing">Running</x:String>
+  <x:String x:Key="Instance_Launching">Launching…</x:String>
   <x:String x:Key="Instance_MoreActions">More actions</x:String>
   <x:String x:Key="Instance_CheckInstance">Check the instance</x:String>
   <x:String x:Key="Instance_Rename">Rename</x:String>
@@ -159,8 +150,6 @@
   <x:String x:Key="Tab_Journal">Log</x:String>
   <x:String x:Key="Tab_Options">Options</x:String>
 
-  <x:String x:Key="Instance_Mods_Title">Mods</x:String>
-  <x:String x:Key="Instance_Mods_Description">Coming soon: install and manage this instance's mods from the official ModDB.</x:String>
 
   <x:String x:Key="Instance_Worlds_EmptyTitle">No worlds</x:String>
   <x:String x:Key="Instance_Worlds_EmptyDescription">Worlds created in this instance will show up here after the first launch.</x:String>
@@ -202,7 +191,7 @@
 
   <!-- ── Navigateur de mods ──────────────────────────────────────────────────────── -->
   <x:String x:Key="Mods_Title">Mod browser</x:String>
-  <x:String x:Key="Mods_Refresh">Refresh the index</x:String>
+  <x:String x:Key="Mods_Refresh">Refresh the list</x:String>
   <x:String x:Key="Mods_Retry">Try again</x:String>
   <x:String x:Key="Mods_SearchPlaceholder">Search for a mod…</x:String>
   <x:String x:Key="Mods_ClearSearch">Clear the search</x:String>
@@ -214,7 +203,7 @@
   <x:String x:Key="Mods_Sort_Trending">Trending</x:String>
   <x:String x:Key="Mods_Sort_Name">Name</x:String>
   <x:String x:Key="Mods_Offline_Title">ModDB unreachable</x:String>
-  <x:String x:Key="Mods_Offline_Description">The connection to the official repository failed. Mods you already installed still work offline.</x:String>
+  <x:String x:Key="Mods_Offline_Description">The connection to ModDB failed. Mods you already installed still work offline.</x:String>
   <x:String x:Key="Mods_ShowMore">Show more</x:String>
   <x:String x:Key="Mods_Tags_ScrollHint">Wheel or bar to scroll the row and see every category.</x:String>
   <x:String x:Key="Mods_BadgesTruncated">The card is too narrow for every badge. Open the mod page to see them all.</x:String>
@@ -237,7 +226,7 @@
 
   <!-- ── Onglet Mods d'une instance ──────────────────────────────────────────────── -->
   <x:String x:Key="Mods_Tab_Browse">Browse ModDB</x:String>
-  <x:String x:Key="Mods_Tab_Rescan">Rescan</x:String>
+  <x:String x:Key="Mods_Tab_Rescan">Refresh</x:String>
   <x:String x:Key="Mods_Tab_EmptyTitle">No mods installed</x:String>
   <x:String x:Key="Mods_Tab_EmptyDescription">Install mods from the official ModDB, or drop their .zip files straight into the instance's Mods folder.</x:String>
   <x:String x:Key="Mods_Row_Unidentified">unidentified</x:String>
@@ -248,7 +237,7 @@
   <!-- ── Détection et application des mises à jour (feature 4b) ─────────────────── -->
   <x:String x:Key="Mods_Tab_CheckUpdates">Check for updates</x:String>
   <x:String x:Key="Mods_Tab_UpdateAll">Update all</x:String>
-  <x:String x:Key="Mods_Tab_CancelUpdateAll">Cancel</x:String>
+  <x:String x:Key="Mods_Tab_CancelUpdateAll">Stop updating</x:String>
   <x:String x:Key="Mods_Row_UpdateAvailable">update</x:String>
   <x:String x:Key="Mods_Row_UnknownToModDb">unknown to ModDB</x:String>
   <x:String x:Key="Mods_Row_UndeclaredUpdate">newer, not declared</x:String>
@@ -260,10 +249,10 @@
   <x:String x:Key="Dialog_AdoptVsl_Cancel">Cancel</x:String>
   <x:String x:Key="Dialog_AdoptVsl_Confirm">Adopt</x:String>
   <x:String x:Key="Dialog_AdoptVsl_CancelAdoption">Cancel the adoption</x:String>
-  <x:String x:Key="Dialog_AdoptVsl_Close">Close</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_Close">Done</x:String>
   <x:String x:Key="Dialog_AdoptVsl_InstallationsSectionTitle">Installs</x:String>
   <x:String x:Key="Dialog_AdoptVsl_EnginesSectionTitle">Engines</x:String>
-  <x:String x:Key="Dialog_AdoptVsl_EnginesNotice">These files are copied from VS Launcher exactly as they are, and nothing checks them again: a download gets a checksum, this does not. If in doubt, uninstall the version and download it again from the Versions screen.</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_EnginesNotice">These files are copied from VS Launcher exactly as they are. Unlike a download, nothing checks that they are intact: if in doubt, uninstall the version and download it again from the Versions screen.</x:String>
 
   <!-- ── Réglages ────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Settings_Title">Settings</x:String>
@@ -301,7 +290,7 @@
   <x:String x:Key="Settings_GameSectionTitle">Where the data lives</x:String>
   <x:String x:Key="Settings_GameDataPathLabel">Data folder</x:String>
   <x:String x:Key="Settings_GameOpenFolder">Open the folder</x:String>
-  <x:String x:Key="Settings_GameRelocateHint">Instances, game versions and cache all live under this folder. Moving it is not possible yet.</x:String>
+  <x:String x:Key="Settings_GameRelocateHint">Instances, game versions and downloaded files all live under this folder. Moving it is not possible yet.</x:String>
 
   <!-- Réseau -->
   <x:String x:Key="Settings_NetworkSectionTitle">Downloads</x:String>
@@ -319,9 +308,8 @@
   <x:String x:Key="Settings_AccountsTwoFactorTitle">Verification code</x:String>
   <x:String x:Key="Settings_AccountsTwoFactorLabel">Six-digit code</x:String>
   <x:String x:Key="Settings_AccountsTwoFactorHint">Your account asks for two-factor authentication. Open your authenticator app and type in the code it shows.</x:String>
-  <x:String x:Key="Settings_AccountsTwoFactorSubmit">Submit the code</x:String>
+  <x:String x:Key="Settings_AccountsTwoFactorSubmit">Sign in</x:String>
   <x:String x:Key="Settings_AccountsTwoFactorCancel">Cancel</x:String>
-  <x:String x:Key="Settings_AccountsSignedInTitle">Signed in</x:String>
   <x:String x:Key="Settings_AccountsSignedInHint">The multiplayer session is written into each instance the moment you launch the game.</x:String>
   <x:String x:Key="Settings_AccountsSignOut">Sign out</x:String>
 

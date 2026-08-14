@@ -347,6 +347,16 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
                 // plus rien dire ici. L'installation a sa propre durée de vie.
                 return ModsTab.InstallByIdentifierAsync(modIdString, CancellationToken.None);
             },
+            // Même construction que l'installation d'une dépendance : le diagnostic se referme
+            // AVANT que le réseau n'entre en jeu, et c'est ce clic-ci qui l'appelle. Le docteur
+            // reste hors ligne par construction.
+            checkModUpdates: () =>
+            {
+                _overlay.Close();
+                SelectTab(InstanceDetailTab.Mods);
+
+                return ModsTab.CheckUpdatesCommand.ExecuteAsync(null);
+            },
             _overlay));
     }
 
@@ -387,6 +397,10 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
     {
         Name = record.Metadata.Name;
         ModsTab.SetInstanceName(record.Metadata.Name);
+
+        // L'onglet Options aussi : ses dialogues de sauvegarde NOMMENT l'instance, et il n'est
+        // reconstruit qu'au chargement de la page, pas à chaque renommage.
+        OptionsTab.SetInstanceName(record.Metadata.Name);
         VersionText = record.Metadata.GameVersion.ToString();
         ChannelBadgeTone = ChannelBadgePresentation.ToBadgeTone(record.Metadata.GameVersion.Channel);
         IconKey = InstanceIconKeyResolver.Resolve(record.Metadata.Icon);

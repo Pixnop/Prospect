@@ -29,7 +29,7 @@ public sealed class LaunchErrorPresenterTests
 
         var presentation = LaunchErrorPresenter.Describe(exception);
 
-        presentation.Title.ShouldBe("Runtime .NET manquant");
+        presentation.Title.ShouldBe("Composant .NET manquant");
         presentation.Message.ShouldContain("Microsoft.NETCore.App");
         presentation.Action.ShouldBe(LaunchErrorAction.None);
     }

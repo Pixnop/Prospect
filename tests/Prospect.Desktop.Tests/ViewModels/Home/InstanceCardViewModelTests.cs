@@ -138,7 +138,7 @@ public sealed class InstanceCardViewModelTests
 
         fixture.Card.IsRunning.ShouldBeFalse();
         var toast = fixture.Toasts.Shown.ShouldHaveSingleItem();
-        toast.Title.ShouldBe("Runtime .NET manquant");
+        toast.Title.ShouldBe("Composant .NET manquant");
         toast.Description.ShouldNotBeNull().ShouldContain("8.0.10");
     }
 

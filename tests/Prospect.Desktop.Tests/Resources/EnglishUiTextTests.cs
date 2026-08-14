@@ -153,8 +153,8 @@ public sealed class EnglishUiTextTests
     public void Mods_Subtitle_UsesTheEnglishThousandsSeparator()
     {
         English.Mods.Subtitle(0).ShouldBe("Official ModDB");
-        English.Mods.Subtitle(1).ShouldBe("Official ModDB · 1 mod indexed");
-        English.Mods.Subtitle(5280).ShouldBe("Official ModDB · 5,280 mods indexed");
+        English.Mods.Subtitle(1).ShouldBe("Official ModDB · 1 mod available");
+        English.Mods.Subtitle(5280).ShouldBe("Official ModDB · 5,280 mods available");
     }
 
     [Fact]
@@ -252,7 +252,7 @@ public sealed class EnglishUiTextTests
     public void BrokenInstances_Reason_KeepsTheFileNameUntranslated()
     {
         English.BrokenInstances.Reason(InstanceBrokenReason.MissingMetadataFile).ShouldBe("instance.json missing");
-        English.BrokenInstances.Reason(InstanceBrokenReason.UnsupportedSchemaVersion).ShouldBe("schema version not supported");
+        English.BrokenInstances.Reason(InstanceBrokenReason.UnsupportedSchemaVersion).ShouldBe("made by a newer version of Prospect");
     }
 
     [Fact]

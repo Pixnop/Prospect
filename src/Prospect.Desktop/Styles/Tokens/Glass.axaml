@@ -56,7 +56,22 @@
       <SolidColorBrush x:Key="GlassChrome" Color="#4D111010" />
       <SolidColorBrush x:Key="GlassPane" Color="#26111010" />
       <SolidColorBrush x:Key="GlassItem" Color="#80111010" />
-      <SolidColorBrush x:Key="GlassMenu" Color="#B8111010" />
+
+      <!-- La vitre la plus dense : dialogues, popover, menus, infobulles.
+
+           Montée de 72 % à 91 %, et c'est une correction de LISIBILITÉ, pas un changement de goût.
+           Le voile du modal laisse passer 38 % de ce qu'il couvre, la vitre en laissait passer 28 %
+           de plus : la page continuait donc de se lire à 10,6 % à travers le dialogue, soit un
+           rapport de contraste fantôme de 1,26 pour un titre de page — largement au-dessus du seuil
+           où l'œil voit une bande (mesuré sur captures avant/après, les cartes du navigateur de mods
+           se lisaient à travers le panneau entier). À 91 %, la transmission tombe à 3,4 % et le
+           rapport fantôme à 1,07, ce qui est sous le seuil de perception. Le verre reste du verre :
+           le liseré cuivre, le sheen intérieur et l'ombre portée sont intacts, et le fond
+           transparaît encore, simplement il ne raconte plus le contenu de la page.
+
+           Corollaire déjà vrai avant, rappelé ici : cette valeur est aussi celle des infobulles
+           (TooltipBg dans Colors.axaml), qui doivent la suivre pour rester la même matière. -->
+      <SolidColorBrush x:Key="GlassMenu" Color="#E8111010" />
 
       <SolidColorBrush x:Key="GlassEdge" Color="#1AD5A275" />
       <SolidColorBrush x:Key="GlassEdgeStrong" Color="#38D5A275" />
@@ -111,7 +126,12 @@
       <SolidColorBrush x:Key="GlassChrome" Color="#70F7F2EB" />
       <SolidColorBrush x:Key="GlassPane" Color="#4FF7F2EB" />
       <SolidColorBrush x:Key="GlassItem" Color="#7AFFFFFF" />
-      <SolidColorBrush x:Key="GlassMenu" Color="#C7FCF9F4" />
+
+      <!-- Même correction qu'en sombre, et elle était encore plus nécessaire ici : le voile du
+           modal, en clair, ne masquait que 35 % (contre 62 % en sombre), ce qui portait la
+           transmission à travers un dialogue à 14,3 % et le fantôme à 1,33. Le voile clair est
+           remonté à parité du sombre (BgScrim, Colors.axaml) ET la vitre à 93 %. -->
+      <SolidColorBrush x:Key="GlassMenu" Color="#EEFCF9F4" />
 
       <SolidColorBrush x:Key="GlassEdge" Color="#247E5230" />
       <SolidColorBrush x:Key="GlassEdgeStrong" Color="#477E5230" />

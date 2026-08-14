@@ -83,7 +83,7 @@ public sealed class ModInstallPlanDialogViewModelTests
     {
         var fresh = Dialog(PlanWith("1.22.6"));
         fresh.Title.ShouldContain("Installer");
-        fresh.Message.ShouldContain("ajoutée");
+        fresh.Message.ShouldContain("installée");
 
         var existing = new InstalledMod
         {

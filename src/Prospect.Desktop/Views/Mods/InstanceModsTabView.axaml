@@ -19,9 +19,15 @@
   <UserControl.Styles>
     <!-- Équivalent du modificateur « disabled » de pr-modrow, dans le design : une ligne
          désactivée reste lisible mais s'efface, pour qu'un coup d'œil suffise à voir ce que le
-         jeu chargera. -->
+         jeu chargera.
+
+         L'opacité était à 0,5, et une opacité de conteneur multiplie l'alpha de TOUT ce qu'il
+         porte : les lignes d'auteur et de nom de fichier, déjà à 11 px sur le jeton de texte le
+         plus discret, tombaient sous 2:1 de contraste. « S'effacer » ne doit pas vouloir dire
+         « devenir illisible » : 0,78 marque encore franchement la ligne éteinte sans emporter son
+         texte avec elle. -->
     <Style Selector="Border.modRow.off">
-      <Setter Property="Opacity" Value="0.5" />
+      <Setter Property="Opacity" Value="0.78" />
     </Style>
   </UserControl.Styles>
 
@@ -29,14 +35,14 @@
     <Grid ColumnDefinitions="*,Auto,Auto,Auto">
       <StackPanel Grid.Column="0" VerticalAlignment="Center">
         <TextBlock Text="{Binding SummaryText}" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
-        <TextBlock Text="{Binding LastCheckedText}" Margin="0,2,0,0"
-                   FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
+        <TextBlock Text="{Binding LastCheckedText}" Classes="onGlass" Margin="0,2,0,0"
+                   FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
 
         <!-- Verdict de la dernière vérification. Sans lui, une vérification qui ne trouve rien à
              proposer laisse l'écran exactement dans l'état où elle l'a trouvé, et un bouton qui ne
              change rien passe pour un bouton cassé. -->
-        <TextBlock Text="{Binding CheckVerdictText}" IsVisible="{Binding HasCheckVerdict}" Margin="0,2,0,0"
-                   TextWrapping="Wrap" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}" />
+        <TextBlock Text="{Binding CheckVerdictText}" Classes="onGlass" IsVisible="{Binding HasCheckVerdict}" Margin="0,2,0,0"
+                   TextWrapping="Wrap" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}" />
       </StackPanel>
       <Button Grid.Column="1" Classes="ghost sm" Margin="0,0,8,0" Command="{Binding CheckUpdatesCommand}">
         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -92,7 +98,7 @@
                     BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}">
               <Grid ColumnDefinitions="Auto,*,Auto">
                 <Border Grid.Column="0" Width="30" Height="30" CornerRadius="{StaticResource RadiusSm}"
-                        Background="{DynamicResource Stone800}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1">
+                        Background="{DynamicResource GlassItem}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1">
                   <Path Width="15" Height="15" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
                         Data="{StaticResource Icon.package}" Stroke="{DynamicResource Text3}"
                         StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
