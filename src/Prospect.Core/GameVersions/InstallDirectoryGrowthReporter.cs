@@ -129,6 +129,8 @@ internal sealed class InstallDirectoryGrowthReporter
         }
         catch (OperationCanceledException)
         {
+            // Fin normale : la boucle s'arrête quand le processus surveillé rend la main, et c'est
+            // l'appelant qui annule. Rien à signaler, rien à relayer.
         }
     }
 

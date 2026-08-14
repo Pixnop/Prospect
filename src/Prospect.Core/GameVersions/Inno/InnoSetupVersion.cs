@@ -105,11 +105,35 @@ internal readonly record struct InnoSetupVersion(int Major, int Minor, int Patch
         }
 
         Span<int> parts = stackalloc int[4];
-        var count = 0;
+        if (!TryReadNumbers(id.Slice(IdPrefix.Length, end), parts, out var count))
+        {
+            return false;
+        }
+
+        version = new InnoSetupVersion(
+            parts[0],
+            count > 1 ? parts[1] : 0,
+            count > 2 ? parts[2] : 0,
+            count > 3 ? parts[3] : 0);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Découpe une suite de nombres séparés par des points, en refusant tout le reste.
+    /// </summary>
+    /// <remarks>
+    /// Le refus est ce qui compte : cette chaîne est le premier contrôle qui distingue un véritable
+    /// en-tête d'un motif de douze octets tombé par hasard au milieu d'une ressource. Accepter une
+    /// forme approchante reviendrait à laisser la lecture partir sur une position arbitraire.
+    /// </remarks>
+    private static bool TryReadNumbers(ReadOnlySpan<byte> text, Span<int> parts, out int count)
+    {
+        count = 0;
         var value = 0;
         var digits = 0;
 
-        foreach (var b in id.Slice(IdPrefix.Length, end))
+        foreach (var b in text)
         {
             if (b is >= (byte)'0' and <= (byte)'9')
             {
@@ -134,12 +158,6 @@ internal readonly record struct InnoSetupVersion(int Major, int Minor, int Patch
         }
 
         parts[count++] = value;
-
-        version = new InnoSetupVersion(
-            parts[0],
-            count > 1 ? parts[1] : 0,
-            count > 2 ? parts[2] : 0,
-            count > 3 ? parts[3] : 0);
 
         return true;
     }

@@ -149,42 +149,13 @@ internal sealed class InnoSetupScript
     {
         var header = ReadHeader(reader, version);
 
-        for (var i = 0; i < header.LanguageCount; i++)
-        {
-            ReadLanguage(reader);
-        }
-
-        for (var i = 0; i < header.MessageCount; i++)
-        {
-            reader.SkipString();
-            reader.SkipString();
-            reader.Skip(4);
-        }
-
-        for (var i = 0; i < header.PermissionCount; i++)
-        {
-            reader.SkipString();
-        }
-
-        for (var i = 0; i < header.TypeCount; i++)
-        {
-            ReadType(reader);
-        }
-
-        for (var i = 0; i < header.ComponentCount; i++)
-        {
-            ReadComponent(reader);
-        }
-
-        for (var i = 0; i < header.TaskCount; i++)
-        {
-            ReadTask(reader);
-        }
-
-        for (var i = 0; i < header.DirectoryCount; i++)
-        {
-            ReadDirectory(reader);
-        }
+        Repeat(reader, header.LanguageCount, ReadLanguage);
+        Repeat(reader, header.MessageCount, ReadMessage);
+        Repeat(reader, header.PermissionCount, static r => r.SkipString());
+        Repeat(reader, header.TypeCount, ReadType);
+        Repeat(reader, header.ComponentCount, ReadComponent);
+        Repeat(reader, header.TaskCount, ReadTask);
+        Repeat(reader, header.DirectoryCount, ReadDirectory);
 
         var entries = new InnoFileEntry[header.FileCount];
         for (var i = 0; i < entries.Length; i++)
@@ -194,30 +165,11 @@ internal sealed class InnoSetupScript
 
         files = entries;
 
-        for (var i = 0; i < header.IconCount; i++)
-        {
-            ReadIcon(reader);
-        }
-
-        for (var i = 0; i < header.IniEntryCount; i++)
-        {
-            ReadIni(reader);
-        }
-
-        for (var i = 0; i < header.RegistryEntryCount; i++)
-        {
-            ReadRegistry(reader);
-        }
-
-        for (var i = 0; i < header.DeleteEntryCount + header.UninstallDeleteEntryCount; i++)
-        {
-            ReadDelete(reader);
-        }
-
-        for (var i = 0; i < header.RunEntryCount + header.UninstallRunEntryCount; i++)
-        {
-            ReadRun(reader);
-        }
+        Repeat(reader, header.IconCount, ReadIcon);
+        Repeat(reader, header.IniEntryCount, ReadIni);
+        Repeat(reader, header.RegistryEntryCount, ReadRegistry);
+        Repeat(reader, header.DeleteEntryCount + header.UninstallDeleteEntryCount, ReadDelete);
+        Repeat(reader, header.RunEntryCount + header.UninstallRunEntryCount, ReadRun);
 
         ReadWizardImages(reader);
         ReadWizardImages(reader);
@@ -369,6 +321,30 @@ internal sealed class InnoSetupScript
         }
 
         return entries;
+    }
+
+    /// <summary>
+    /// Traverse <paramref name="count"/> enregistrements du même type.
+    /// </summary>
+    /// <remarks>
+    /// Le format enchaîne une douzaine de tables de longueur variable, et chacune s'écrivait ici en
+    /// boucle : douze boucles qui ne disent rien de plus que « et maintenant, celle-ci ». Les
+    /// nommer une fois rend l'ORDRE des tables lisible d'un coup d'œil, et c'est cet ordre qui est
+    /// la seule chose à ne pas se tromper.
+    /// </remarks>
+    private static void Repeat(InnoRecordReader reader, int count, Action<InnoRecordReader> read)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            read(reader);
+        }
+    }
+
+    private static void ReadMessage(InnoRecordReader reader)
+    {
+        reader.SkipString(); // nom
+        reader.SkipString(); // valeur
+        reader.Skip(4);      // langue
     }
 
     private static int ReadCount(InnoRecordReader reader)
