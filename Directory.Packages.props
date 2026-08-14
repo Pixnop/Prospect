@@ -23,6 +23,10 @@
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="coverlet.msbuild" Version="10.0.1" />
 
+    <!-- Décodage LZMA1/LZMA2 des installeurs Inno Setup (GameVersions/Inno). Licence MIT,
+         100 % managé : aucun binaire natif n'entre dans la distribution. -->
+    <PackageVersion Include="SharpCompress" Version="0.50.4" />
+
     <!-- Système de fichiers abstrait (Storage) -->
     <PackageVersion Include="System.IO.Abstractions" Version="22.2.0" />
     <PackageVersion Include="System.IO.Abstractions.TestingHelpers" Version="22.2.0" />
