@@ -73,6 +73,29 @@ internal sealed class SyntheticInnoInstaller
         return this;
     }
 
+    /// <summary>
+    /// Ajoute une destination de PLUS pour un contenu déjà ajouté, sans le stocker deux fois.
+    /// </summary>
+    /// <remarks>
+    /// C'est ainsi que l'installeur du jeu pose ses polices : une seule entrée de données, deux
+    /// entrées de fichier qui la désignent, l'une vers <c>{app}</c> et l'autre vers le dossier de
+    /// polices du système.
+    /// </remarks>
+    /// <param name="existingDestination">Destination déjà ajoutée, dont le contenu est partagé.</param>
+    /// <param name="destination">Nouvelle destination du même contenu.</param>
+    public SyntheticInnoInstaller AddAlias(string existingDestination, string destination)
+    {
+        var index = _entries.FindIndex(e => e.Destination == existingDestination);
+        if (index < 0)
+        {
+            throw new InvalidOperationException($"« {existingDestination} » n'a pas été ajouté.");
+        }
+
+        _entries.Add(_entries[index] with { Destination = destination, AliasOf = index });
+
+        return this;
+    }
+
     /// <summary>Assemble l'installeur.</summary>
     public byte[] Build()
     {
@@ -80,11 +103,20 @@ internal sealed class SyntheticInnoInstaller
         // que c'est bien la forme transformée que l'installeur stocke.
         var payload = new MemoryStream();
         var locations = new List<Location>();
+        var locationOf = new Dictionary<int, uint>();
 
-        foreach (var entry in _entries)
+        for (var i = 0; i < _entries.Count; i++)
         {
+            var entry = _entries[i];
             if (!entry.HasData)
             {
+                continue;
+            }
+
+            // Un alias ne stocke rien de plus : il réutilise l'emplacement de l'entrée d'origine.
+            if (entry.AliasOf is { } original)
+            {
+                locationOf[i] = locationOf[original];
                 continue;
             }
 
@@ -92,6 +124,7 @@ internal sealed class SyntheticInnoInstaller
             var stored = entry.CallInstructionOptimized ? Filter(entry.Content) : entry.Content;
             payload.Write(stored, 0, stored.Length);
 
+            locationOf[i] = (uint)locations.Count;
             locations.Add(new Location(
                 offset,
                 (ulong)entry.Content.Length,
@@ -101,7 +134,7 @@ internal sealed class SyntheticInnoInstaller
 
         var chunkBody = CompressPayload ? CompressLzma2(payload.ToArray()) : payload.ToArray();
 
-        var primary = WriteBlock(BuildPrimaryBlock(locations.Count));
+        var primary = WriteBlock(BuildPrimaryBlock(locations.Count, locationOf));
         var secondary = WriteBlock(BuildSecondaryBlock(locations, (ulong)chunkBody.Length));
 
         // Talon exécutable factice : le chargeur vit à l'intérieur d'un vrai PE, et la recherche du
@@ -200,7 +233,7 @@ internal sealed class SyntheticInnoInstaller
         return id;
     }
 
-    private byte[] BuildPrimaryBlock(int dataEntryCount)
+    private byte[] BuildPrimaryBlock(int dataEntryCount, Dictionary<int, uint> locationOf)
     {
         var writer = new BlockWriter();
 
@@ -254,20 +287,20 @@ internal sealed class SyntheticInnoInstaller
         writer.Zero(8);  // taille affichée
         writer.Zero(version >= Encode(6, 4, 0, 1) ? 6 : 7); // options
 
-        var location = 0u;
-        foreach (var entry in _entries)
+        for (var i = 0; i < _entries.Count; i++)
         {
+            var entry = _entries[i];
             writer.String(entry.Destination);            // source
             writer.String(entry.Destination);            // destination
             writer.String(string.Empty);                 // police
             writer.String(string.Empty);                 // nom fort d'assemblage
-            for (var i = 0; i < 6; i++)
+            for (var condition = 0; condition < 6; condition++)
             {
-                writer.String(string.Empty);             // conditions
+                writer.String(string.Empty);
             }
 
             writer.Zero(20);                             // versions Windows
-            writer.UInt32(entry.HasData ? location++ : 0xFFFFFFFFu);
+            writer.UInt32(entry.HasData ? locationOf[i] : 0xFFFFFFFFu);
             writer.Zero(4);                              // attributs
             writer.Zero(8);                              // taille externe
             writer.Zero(2);                              // permission
@@ -462,6 +495,9 @@ internal sealed class SyntheticInnoInstaller
     private sealed record Entry(string Destination, byte[] Content, bool CallInstructionOptimized, byte[]? ChecksumOverride)
     {
         public bool HasData { get; init; } = true;
+
+        /// <summary>Index de l'entrée dont celle-ci partage les données, pour un alias.</summary>
+        public int? AliasOf { get; init; }
     }
 
     private sealed class BlockWriter

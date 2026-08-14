@@ -124,7 +124,13 @@ internal sealed class InnoPayloadExtractor
     /// </remarks>
     private static ExtractionPlan BuildPlan(InnoSetupScript script)
     {
-        var destinations = new Dictionary<uint, string>();
+        // Une entrée de données peut servir PLUSIEURS destinations : l'installeur ne stocke qu'une
+        // fois un contenu qu'il pose à deux endroits, et les onze polices du jeu sont exactement ce
+        // cas (une copie sous {app}, une dans le dossier de polices du système). Indexer par
+        // emplacement plutôt que par destination est donc obligatoire pour ne lire le flux qu'une
+        // fois, mais il faut retenir TOUTES les destinations de chacun, sans quoi le jour où deux
+        // chemins sous {app} partageraient un contenu, l'un des deux manquerait sans un mot.
+        var destinations = new Dictionary<uint, List<string>>();
 
         foreach (var file in script.Files)
         {
@@ -135,10 +141,19 @@ internal sealed class InnoPayloadExtractor
                 continue;
             }
 
+            var relativePath = file.Destination[AppPrefix.Length..];
+            if (!destinations.TryGetValue(file.Location, out var paths))
+            {
+                destinations[file.Location] = [relativePath];
+                continue;
+            }
+
             // Deux entrées peuvent viser la même destination sous des conditions d'installation
-            // différentes (variantes 32 et 64 bits). La première gagne, comme le ferait Setup en
-            // suivant l'ordre du script.
-            destinations.TryAdd(file.Location, file.Destination[AppPrefix.Length..]);
+            // différentes (variantes 32 et 64 bits) : une seule écriture suffit.
+            if (!paths.Contains(relativePath, StringComparer.OrdinalIgnoreCase))
+            {
+                paths.Add(relativePath);
+            }
         }
 
         if (destinations.Count == 0)
@@ -147,7 +162,7 @@ internal sealed class InnoPayloadExtractor
         }
 
         var items = new List<PlannedFile>(destinations.Count);
-        foreach (var (location, relativePath) in destinations)
+        foreach (var (location, paths) in destinations)
         {
             var entry = script.DataEntries[(int)location];
 
@@ -161,7 +176,7 @@ internal sealed class InnoPayloadExtractor
                 throw InnoFormatException.Corrupt($"entrée de {entry.FileSize} octets");
             }
 
-            items.Add(new PlannedFile(entry, relativePath));
+            items.Add(new PlannedFile(entry, paths));
         }
 
         items.Sort(static (left, right) => Compare(left.Entry, right.Entry));
@@ -253,8 +268,12 @@ internal sealed class InnoPayloadExtractor
                         InnoCallInstructionFilter.Unfilter(content);
                     }
 
-                    VerifyChecksum(content, entry, planned.RelativePath);
-                    Write(root, planned.RelativePath, content);
+                    VerifyChecksum(content, entry, planned.RelativePaths[0]);
+
+                    foreach (var relativePath in planned.RelativePaths)
+                    {
+                        Write(root, relativePath, content);
+                    }
                 }
                 finally
                 {
@@ -398,7 +417,7 @@ internal sealed class InnoPayloadExtractor
         }
     }
 
-    private readonly record struct PlannedFile(InnoDataEntry Entry, string RelativePath);
+    private readonly record struct PlannedFile(InnoDataEntry Entry, IReadOnlyList<string> RelativePaths);
 
     private sealed record ExtractionPlan(IReadOnlyList<PlannedFile> Files, long TotalBytes);
 

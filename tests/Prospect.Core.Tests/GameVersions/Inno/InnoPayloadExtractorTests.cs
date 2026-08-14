@@ -102,6 +102,48 @@ public sealed class InnoPayloadExtractorTests
     }
 
     /// <summary>
+    /// Un même contenu peut être posé à DEUX endroits à partir d'une seule entrée de données :
+    /// l'installeur ne le stocke qu'une fois. C'est ainsi que le jeu reçoit ses polices, et il
+    /// suffirait que les deux destinations tombent sous <c>{app}</c> pour qu'une lecture qui n'en
+    /// retient qu'une perde un fichier sans le dire.
+    /// </summary>
+    [Fact]
+    public async Task Extraction_WritesEveryDestinationThatSharesTheSameData()
+    {
+        var fileSystem = FileSystemWith(new SyntheticInnoInstaller()
+            .Add(@"{app}\assets\game\fonts\Lora-Regular.ttf", Encoding.UTF8.GetBytes("font"))
+            .AddAlias(@"{app}\assets\game\fonts\Lora-Regular.ttf", @"{app}\Lib\fallback\Lora-Regular.ttf")
+            .Add(@"{app}\Vintagestory.exe", Encoding.UTF8.GetBytes("client"))
+            .Build());
+
+        await Extract(fileSystem);
+
+        fileSystem.File.ReadAllText(Path(@"assets\game\fonts\Lora-Regular.ttf")).ShouldBe("font");
+        fileSystem.File.ReadAllText(Path(@"Lib\fallback\Lora-Regular.ttf")).ShouldBe("font");
+        fileSystem.File.ReadAllText(Path("Vintagestory.exe")).ShouldBe("client");
+    }
+
+    /// <summary>
+    /// Le même partage, mais avec une seule des deux destinations sous <c>{app}</c> : c'est la forme
+    /// réelle, l'autre copie allant dans le dossier de polices du système. Celle-là ne doit pas être
+    /// écrite, et surtout ne doit pas priver l'autre.
+    /// </summary>
+    [Fact]
+    public async Task Extraction_KeepsTheApplicationCopyWhenTheOtherGoesToTheSystem()
+    {
+        var fileSystem = FileSystemWith(new SyntheticInnoInstaller()
+            .Add(@"{app}\assets\game\fonts\Lora-Regular.ttf", Encoding.UTF8.GetBytes("font"))
+            .AddAlias(@"{app}\assets\game\fonts\Lora-Regular.ttf", @"{autofonts}\Lora-Regular.ttf")
+            .Add(@"{app}\Vintagestory.exe", Encoding.UTF8.GetBytes("client"))
+            .Build());
+
+        await Extract(fileSystem);
+
+        fileSystem.File.ReadAllText(Path(@"assets\game\fonts\Lora-Regular.ttf")).ShouldBe("font");
+        fileSystem.AllFiles.ShouldNotContain(f => f.Contains("autofonts", StringComparison.Ordinal));
+    }
+
+    /// <summary>
     /// Une entrée sans données (le désinstalleur, que Setup fabrique lui-même) ne doit ni être
     /// écrite ni décaler la lecture de la table des emplacements.
     /// </summary>
