@@ -36,10 +36,14 @@ public sealed class ModDetailDialogViewModelTests
         PageUrl = new Uri("https://mods.vintagestory.at/configlib"),
     };
 
-    private static ModDetailDialogViewModel Open(OverlayService overlay, ModDbModDetail? detail = null)
+    private static ModDetailDialogViewModel Open(
+        OverlayService overlay,
+        ModDbModDetail? detail = null,
+        string summary = "Des réglages en jeu pour les mods qui en veulent.")
     {
         var dialog = new ModDetailDialogViewModel(
             detail ?? Detail(),
+            summary,
             target: null,
             new FakeExternalUrlOpener(),
             overlay,
@@ -49,6 +53,37 @@ public sealed class ModDetailDialogViewModelTests
         overlay.Show(dialog);
 
         return dialog;
+    }
+
+    /// <summary>
+    /// Le résumé d'une ligne vient du CATALOGUE, pas de la fiche : l'API de détail ne le rend pas.
+    /// Ces deux cas sont ceux du produit — un mod que le catalogue résume, un mod qu'il ne résume
+    /// pas (fréquent) — et le second doit faire disparaître la ligne, pas afficher un blanc.
+    /// </summary>
+    [AvaloniaFact]
+    public void Summary_QuandLeCatalogueEnFournitUn_EstAffichableSousLeNom()
+    {
+        var overlay = new OverlayService();
+        var dialog = Open(overlay, summary: "  Des réglages en jeu.  ");
+
+        dialog.Summary.ShouldBe("Des réglages en jeu.");
+        dialog.HasSummary.ShouldBeTrue();
+
+        dialog.CloseCommand.Execute(null);
+    }
+
+    [AvaloniaTheory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Summary_QuandLeCatalogueNAnnonceRien_LaLigneDisparait(string summary)
+    {
+        var overlay = new OverlayService();
+        var dialog = Open(overlay, summary: summary);
+
+        dialog.Summary.ShouldBeEmpty();
+        dialog.HasSummary.ShouldBeFalse("une ligne vide vaut moins qu'une ligne absente");
+
+        dialog.CloseCommand.Execute(null);
     }
 
     [AvaloniaFact]
@@ -80,6 +115,7 @@ public sealed class ModDetailDialogViewModelTests
         var installed = false;
         var dialog = new ModDetailDialogViewModel(
             Detail(),
+            summary: string.Empty,
             target: null,
             new FakeExternalUrlOpener(),
             overlay,

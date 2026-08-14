@@ -43,6 +43,14 @@
                        Foreground="{DynamicResource Text1}" />
             <TextBlock Text="{Binding MetaText}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"
                        FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
+            <!-- À quoi sert ce mod, en une ligne, avant toute lecture. Le résumé du catalogue, celui
+                 que la carte du navigateur affiche déjà. Tronqué sur une seule ligne avec infobulle :
+                 les résumés réels vont du fragment de phrase au paragraphe, et l'en-tête d'une fiche
+                 ne peut pas grandir au gré de ce qu'un auteur a écrit. Masqué quand le catalogue
+                 n'annonce rien, plutôt que de réserver un blanc. -->
+            <TextBlock Text="{Binding Summary}" Margin="0,4,0,0" IsVisible="{Binding HasSummary}"
+                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Summary}"
+                       FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text2}" />
           </StackPanel>
           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
             <Button Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}">

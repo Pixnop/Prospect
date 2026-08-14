@@ -75,6 +75,14 @@ public sealed class ModDiscoveryJourneyTests
 
         var detail = shell.Overlay.Active.ShouldBeOfType<ModDetailDialogViewModel>();
         detail.Name.ShouldBe("Carry On");
+
+        // Le résumé d'une ligne suit la carte jusque dans la fiche : sans lui, savoir à quoi sert
+        // le mod demandait d'entamer une description qui fait ici 29 Ko. Il vient du catalogue déjà
+        // chargé, donc la fiche ne redemande rien au réseau pour l'afficher.
+        detail.HasSummary.ShouldBeTrue("la fiche doit dire à quoi sert le mod avant sa description");
+        detail.Summary.ShouldBe(card.Description, "c'est le résumé de la carte, pas un second texte");
+        window.ShowsText(detail.Summary).ShouldBeTrue("un résumé non rendu ne sert à personne");
+
         detail.HasDescription.ShouldBeTrue("une fiche sans description ne dit pas à quoi sert le mod");
         detail.Description.IsEmpty.ShouldBeFalse("la description HTML doit être rendue, pas affichée en balises");
         detail.CanInstall.ShouldBeTrue("la fiche doit porter l'action principale, sans obliger à refermer pour installer");

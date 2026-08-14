@@ -50,6 +50,7 @@ public sealed class ModCatalogShapesLiveTests(ITestOutputHelper output)
 
                 var dialog = new ModDetailDialogViewModel(
                     detail,
+                    mod.Summary,
                     shell.ModBrowser.SelectedInstance,
                     new FakeExternalUrlOpener(),
                     shell.Overlay,

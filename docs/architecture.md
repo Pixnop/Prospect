@@ -725,6 +725,27 @@ sa taille d'affichage plutôt que de garder la résolution du CDN, borne ce qu'i
 et ne libère jamais un bitmap déjà distribué (un `Image.Source` pointant vers un `Bitmap`
 libéré fait lever une `NullReferenceException` dans la passe de mise en page suivante).
 
+#### Deux textes pour un mod, et lequel vient d'où
+
+L'API en rend deux, et ils n'ont ni la même source ni le même rôle. Le CATALOGUE
+(`/api/mods`) porte un `summary` d'une ligne, prévu pour une liste. La FICHE
+(`/api/mod/{id}`) porte une description longue en HTML d'éditeur riche, qui va jusqu'à
+trente écrans sur les mods populaires — et elle ne porte PAS le résumé.
+
+Le résumé s'affiche donc aux deux endroits, sur la carte du navigateur et en tête de fiche
+sous le nom et l'auteur (arbitrage du 2026-08-14 : la première question posée à une fiche
+est à quoi sert ce mod, et y répondre demandait d'entamer la description). Il n'est pas
+redemandé au réseau pour autant : `ModBrowserViewModel.OpenAsync` le passe au dialogue
+depuis la carte qui vient d'être cliquée, déjà décodé de ses entités HTML. La fiche ne sait
+pas le chercher elle-même, et c'est volontaire — elle n'a aucun moyen de le faire sans un
+appel de plus.
+
+Deux cas limites, tenus par le ViewModel plutôt que par la vue. Un catalogue qui n'annonce
+rien (fréquent) fait DISPARAÎTRE la ligne au lieu de réserver un blanc sous le nom. Et un
+résumé qui déborde est tronqué sur une seule ligne avec infobulle, comme partout ailleurs :
+les résumés réels vont du fragment de phrase au paragraphe entier, et l'en-tête d'une fiche
+ne peut pas grandir au gré de ce qu'un auteur a écrit.
+
 #### Ce qui est borné, et par quoi
 
 Le fenêtrage ci-dessus bornait le rendu INITIAL et rien d'autre : l'extension par tranches

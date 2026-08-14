@@ -22,6 +22,13 @@ namespace Prospect.Desktop.ViewModels.Mods;
 ///
 /// Les captures d'écran de la maquette restent hors périmètre : la description en embarque déjà
 /// souvent, et la galerie séparée est un chantier à part pour un bénéfice décoratif.
+///
+/// L'en-tête porte en revanche, depuis l'arbitrage du 2026-08-14, le RÉSUMÉ D'UNE LIGNE que les
+/// cartes du navigateur affichent déjà. Il répondait à la première question — à quoi sert ce mod —
+/// dans la liste, puis disparaissait à l'ouverture de la fiche, où il fallait entamer une
+/// description qui va parfois à trente écrans pour retrouver la même phrase. Il vient du catalogue
+/// et traverse le constructeur : <c>/api/mod/{id}</c> ne le rend pas, et aucun appel réseau de plus
+/// n'est fait pour lui.
 /// </remarks>
 public sealed partial class ModDetailDialogViewModel : ObservableObject, IDisposable
 {
@@ -38,6 +45,13 @@ public sealed partial class ModDetailDialogViewModel : ObservableObject, IDispos
 
     /// <summary>Construit la fiche.</summary>
     /// <param name="detail">Fiche complète telle que rendue par l'API.</param>
+    /// <param name="summary">
+    /// Résumé d'une ligne, celui-là même que porte la carte du navigateur. Il vient de l'entrée de
+    /// CATALOGUE (<see cref="ModDbModSummary.Summary"/>) et non de la fiche : l'API de détail ne le
+    /// rend pas, et c'est pourquoi il traverse le constructeur au lieu de se lire dans
+    /// <paramref name="detail"/>. Vide quand le catalogue n'en fournit aucun (le cas est fréquent,
+    /// voir docs/research/moddb-api.md) : la ligne disparaît alors.
+    /// </param>
     /// <param name="target">Instance cible choisie dans le navigateur, ou <see langword="null"/>.</param>
     /// <param name="urlOpener">Ouverture de la page officielle et des liens de la description.</param>
     /// <param name="overlay">Panneau modal, pour se refermer.</param>
@@ -45,6 +59,7 @@ public sealed partial class ModDetailDialogViewModel : ObservableObject, IDispos
     /// <param name="install">Lance la préparation d'installation.</param>
     public ModDetailDialogViewModel(
         ModDbModDetail detail,
+        string summary,
         ModTargetInstanceViewModel? target,
         IExternalUrlOpener urlOpener,
         IOverlayService overlay,
@@ -64,6 +79,8 @@ public sealed partial class ModDetailDialogViewModel : ObservableObject, IDispos
 
         Name = HtmlText.DecodeEntities(detail.Name);
         MetaText = UiText.Mods.DetailMeta(detail.Author, detail.Downloads);
+        Summary = (summary ?? string.Empty).Trim();
+        HasSummary = Summary.Length > 0;
         Description = new RichTextDocumentViewModel(
             HtmlRichTextParser.Parse(detail.DescriptionHtml),
             urlOpener,
@@ -110,6 +127,17 @@ public sealed partial class ModDetailDialogViewModel : ObservableObject, IDispos
     public string Name { get; }
 
     public string MetaText { get; }
+
+    /// <summary>
+    /// À quoi sert ce mod, en une ligne, sous le nom et l'auteur. Déjà décodé de ses entités HTML
+    /// par la carte qui le transmet. La vue le tronque et pose une infobulle : les résumés réels
+    /// vont du fragment de phrase au paragraphe entier, et une fiche ne peut pas s'étirer sur le
+    /// caprice d'un auteur.
+    /// </summary>
+    public string Summary { get; }
+
+    /// <summary>Faux quand le catalogue n'annonce rien : la vue masque la ligne au lieu de réserver un blanc.</summary>
+    public bool HasSummary { get; }
 
     /// <summary>Description ModDB rendue telle que publiée, blocs et liens compris.</summary>
     public RichTextDocumentViewModel Description { get; }

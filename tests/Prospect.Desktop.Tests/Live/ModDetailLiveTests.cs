@@ -73,8 +73,11 @@ public sealed class ModDetailLiveTests(ITestOutputHelper output)
 
         // Exactement ce que fait ModBrowserViewModel.OpenAsync après son appel réseau : construire
         // la fiche puis la poser dans le panneau modal partagé.
+        // Le résumé vient du catalogue, jamais de la fiche : ici on prend celui de l'entrée réelle
+        // quand le navigateur l'a indexée, chaîne vide sinon — exactement les deux cas du produit.
         var dialog = new ModDetailDialogViewModel(
             detail,
+            shell.ModBrowser.Results.FirstOrDefault(card => card.ModId == modId)?.Description ?? string.Empty,
             shell.ModBrowser.SelectedInstance,
             new FakeExternalUrlOpener(),
             shell.Overlay,

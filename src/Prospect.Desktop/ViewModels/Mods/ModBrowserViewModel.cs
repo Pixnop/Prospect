@@ -444,8 +444,11 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                 card.ModId.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 CancellationToken.None).ConfigureAwait(true);
 
+            // Le résumé d'une ligne vient de la CARTE, pas de la fiche : l'entrée de catalogue le
+            // porte, la réponse de /api/mod/{id} non. Le passer ici évite d'aller le rechercher.
             _overlay.Show(new ModDetailDialogViewModel(
                 detail,
+                card.Description,
                 SelectedInstance,
                 _urlOpener,
                 _overlay,
