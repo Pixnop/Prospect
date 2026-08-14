@@ -20,7 +20,7 @@ namespace Prospect.Desktop.Tests.Journeys;
 /// <summary>
 /// PARCOURS 5 — faire le tour des réglages. Thème et fond changent SOUS LES YEUX ; la langue, non,
 /// et l'écran doit le dire au lieu de laisser croire à un bouton mort ; le retour au premier
-/// lancement rouvre bien l'écran d'accueil ; et l'adoption VS Launcher part d'ici comme du premier
+/// lancement rouvre bien l'écran d'accueil ; et l'import VS Launcher part d'ici comme du premier
 /// lancement.
 /// </summary>
 /// <remarks>
@@ -118,24 +118,40 @@ public sealed class SettingsJourneyTests
         window.Pump();
         shell.Overlay.Active.ShouldBeNull();
 
-        // ── Étape 6 : l'adoption VS Launcher, depuis les réglages ───────────────────────
+        // ── Étape 6 : l'import VS Launcher, depuis les réglages ─────────────────────────
         await settings.InitializeCommand.ExecuteAsync(null);
         window.Pump();
 
         settings.VslDetected.ShouldBeTrue("un dossier VS Launcher est posé : la détection doit le voir");
         settings.VslStatusText.ShouldNotBeNullOrWhiteSpace("la détection doit RÉSUMER ce qu'elle a trouvé");
         settings.OpenAdoptionCommand.CanExecute(null).ShouldBeTrue();
+        window.ShowsText(JourneyHarness.ResourceText("Settings_VslCardDescription")).ShouldBeTrue(
+            "la carte doit dire que l'import COPIE avant qu'on ouvre le dialogue pour l'apprendre");
 
         settings.OpenAdoptionCommand.Execute(null);
         window.Pump();
 
         var adopt = shell.Overlay.Active.ShouldBeOfType<AdoptVslViewModel>();
         adopt.HasInstallations.ShouldBeTrue();
+
+        // Le nom de l'écran promet une copie : l'écran doit tenir la promesse par écrit, à l'étape
+        // où la décision se prend. C'est la question de quelqu'un qui a encore ses parties en cours
+        // sous VS Launcher, et un mot dans un bouton n'y répond pas tout seul.
+        window.ShowsText(JourneyHarness.ResourceText("Dialog_AdoptVsl_Title")).ShouldBeTrue();
+        window.ShowsText(JourneyHarness.ResourceText("Dialog_AdoptVsl_CopyNotice")).ShouldBeTrue(
+            "l'écran d'import doit dire noir sur blanc que le dossier VS Launcher n'est pas touché");
+        window.HasEnabledButton(JourneyHarness.ResourceText("Dialog_AdoptVsl_Confirm")).ShouldBeTrue();
+
         await adopt.ConfirmCommand.ExecuteAsync(null);
         window.Pump();
 
-        adopt.ReportGroups.ShouldNotBeEmpty("une adoption doit rendre compte de ce qu'elle a fait, ligne par ligne");
+        adopt.ReportGroups.ShouldNotBeEmpty("un import doit rendre compte de ce qu'il a fait, ligne par ligne");
         home.Instances.Select(instance => instance.Name).ShouldContain("Survie médiévale");
+
+        // Et le dossier source est toujours là, intact : c'est la seule preuve qui vaille pour une
+        // promesse de non-destruction, un texte à l'écran n'en est pas une.
+        fileSystem.Directory.Exists("/vsl/installations/survie").ShouldBeTrue(
+            "importer COPIE : le dossier VS Launcher d'origine ne bouge pas");
 
         window.Close();
     }

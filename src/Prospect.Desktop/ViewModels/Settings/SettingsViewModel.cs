@@ -16,13 +16,14 @@ namespace Prospect.Desktop.ViewModels.Settings;
 
 /// <summary>
 /// Écran Réglages (design/ui_kits/launcher/screen-settings.jsx) : cinq sections en onglets —
-/// Général (thème, fond, langue, revoir le premier lancement, et l'action d'adoption VS Launcher,
-/// toujours accessible ici), Jeu (emplacement des données), Réseau (téléchargements simultanés),
+/// Général (thème, fond, langue, revoir le premier lancement, et l'import VS Launcher, toujours
+/// accessible ici), Jeu (emplacement des données), Réseau (téléchargements simultanés),
 /// Comptes (connexion au compte Vintage Story pour le multijoueur) et À propos (version, licence,
-/// dépôt, site officiel). Même flux d'adoption que <see cref="Home.HomeViewModel.FirstRun"/> (même
-/// dialogue <see cref="AdoptVslViewModel"/>, même service de détection) mais TOUJOURS disponible
-/// ici, avec un choix de dossier manuel si la détection automatique ne trouve rien à l'emplacement
-/// par défaut de l'OS.
+/// dépôt, site officiel). Même flux d'import que <see cref="Home.HomeViewModel.FirstRun"/> (même
+/// dialogue <see cref="AdoptVslViewModel"/>, nom de code inchangé, même service de détection) mais
+/// TOUJOURS disponible ici, avec un choix de dossier manuel si la détection automatique ne trouve
+/// rien à l'emplacement par défaut de l'OS. La carte dit ce que l'import fait — une copie, le
+/// dossier d'origine intact — avant qu'on ait à ouvrir le dialogue pour l'apprendre.
 /// </summary>
 public sealed partial class SettingsViewModel : ObservableObject
 {

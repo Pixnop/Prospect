@@ -58,7 +58,7 @@
   <x:String x:Key="Home_SortName">Nom</x:String>
   <x:String x:Key="Home_NewInstance">Nouvelle instance</x:String>
   <x:String x:Key="Home_EmptyTitle">Aucune instance</x:String>
-  <x:String x:Key="Home_EmptyDescription">Une instance isole une version du jeu, ses mods et ses sauvegardes. Crée la première pour commencer.</x:String>
+  <x:String x:Key="Home_EmptyDescription">Une instance isole une version du jeu, ses mods et ses mondes. Crée la première pour commencer.</x:String>
   <x:String x:Key="Home_NoResultsTitle">Aucun résultat</x:String>
   <x:String x:Key="Home_ClearFilter">Effacer le filtre</x:String>
   <x:String x:Key="Home_BrokenSectionTitle">Instances non chargées</x:String>
@@ -101,16 +101,17 @@
   <x:String x:Key="Wizard_Step4_Version">Version</x:String>
   <x:String x:Key="Wizard_Step4_Icon">Icône</x:String>
   <x:String x:Key="Wizard_Step4_Location">Emplacement</x:String>
-  <x:String x:Key="Wizard_Step4_Note">Le dossier de l'instance est créé immédiatement, prêt à recevoir mods et sauvegardes.</x:String>
+  <x:String x:Key="Wizard_Step4_Note">Le dossier de l'instance est créé immédiatement, prêt à recevoir mods et mondes.</x:String>
 
   <!-- ── Dialogues de carte ──────────────────────────────────────────────────────── -->
   <x:String x:Key="Dialog_Cancel">Annuler</x:String>
 
-  <x:String x:Key="Dialog_Rename_Title">Renommer l'instance</x:String>
+  <!-- Les titres de ces deux dialogues NE SONT PLUS ici : depuis la passe de grammaire des titres,
+       tout dialogue qui engage une action sur un objet nommé pose une question et nomme l'objet
+       (« Renommer « Homestead » ? »), donc il se calcule. Voir DialogsText.RenameTitle. -->
   <x:String x:Key="Dialog_Rename_Label">Nom de l'instance</x:String>
   <x:String x:Key="Dialog_Rename_Confirm">Renommer</x:String>
 
-  <x:String x:Key="Dialog_Duplicate_Title">Dupliquer l'instance</x:String>
   <x:String x:Key="Dialog_Duplicate_Label">Nom de la copie</x:String>
   <x:String x:Key="Dialog_Duplicate_Confirm">Dupliquer</x:String>
   <x:String x:Key="Dialog_Duplicate_CancelCopy">Annuler la copie</x:String>
@@ -169,7 +170,7 @@
   <x:String x:Key="Instance_Journal_Refresh">Actualiser</x:String>
   <x:String x:Key="Instance_Journal_EmptyTitle">Aucun journal</x:String>
   <x:String x:Key="Instance_Journal_EmptyDescription">Cette instance n'a jamais été lancée. Le journal du dernier lancement apparaîtra ici.</x:String>
-  <x:String x:Key="Instance_Journal_RunningNotice">Le jeu tourne : rafraîchis pour voir les dernières lignes écrites.</x:String>
+  <x:String x:Key="Instance_Journal_RunningNotice">Le jeu tourne : actualise pour voir les dernières lignes écrites.</x:String>
 
   <x:String x:Key="Instance_Options_Title">Options de l'instance</x:String>
   <x:String x:Key="Instance_Options_Description">Arguments de lancement et variables d'environnement propres à cette instance.</x:String>
@@ -211,7 +212,10 @@
   <x:String x:Key="Mods_OpenOnModDb">Ouvrir sur le ModDB</x:String>
   <x:String x:Key="Mods_OpenFailed">Le navigateur n'a pas pu être ouvert. Copie l'adresse ci-dessous pour y accéder à la main.</x:String>
   <x:String x:Key="Mods_Sort_Downloads">Téléchargements</x:String>
-  <x:String x:Key="Mods_Sort_Updated">Mise à jour</x:String>
+  <!-- « Dernière mise à jour » et non « Mise à jour » : ce dernier est mot pour mot la pastille
+       Mods_Row_UpdateAvailable, qui dit tout autre chose (une mise à jour EXISTE pour ce mod). Un
+       critère de tri et un état de mod ne peuvent pas porter le même libellé. -->
+  <x:String x:Key="Mods_Sort_Updated">Dernière mise à jour</x:String>
   <x:String x:Key="Mods_Sort_Trending">Tendance</x:String>
   <x:String x:Key="Mods_Sort_Name">Nom</x:String>
   <x:String x:Key="Mods_Offline_Title">ModDB injoignable</x:String>
@@ -256,22 +260,28 @@
   <x:String x:Key="Mods_Row_Update">Mettre à jour</x:String>
   <x:String x:Key="Mods_UpdatePlan_Confirm">Mettre à jour</x:String>
 
-  <!-- ── Dialogue d'adoption VS Launcher ─────────────────────────────────────────── -->
-  <x:String x:Key="Dialog_AdoptVsl_Title">Adopter tes installations VS Launcher</x:String>
+  <!-- ── Dialogue d'import VS Launcher ───────────────────────────────────────────────
+       Les CLÉS gardent « AdoptVsl », comme les types C# derrière (VslAdoptionService,
+       AdoptVslViewModel) : l'arbitrage du 2026-08-14 ne renomme que ce qui s'affiche. « Adopter »
+       était le seul mot de son espèce dans le produit et ne disait pas ce qui se passe ; « importer »
+       le dit, et le dialogue précise en toutes lettres que rien n'est modifié côté VS Launcher. -->
+  <x:String x:Key="Dialog_AdoptVsl_Title">Importer tes installations VS Launcher</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_CopyNotice">Tes dossiers VS Launcher sont copiés, jamais modifiés ni déplacés. VS Launcher continue de fonctionner comme avant.</x:String>
   <x:String x:Key="Dialog_AdoptVsl_Cancel">Annuler</x:String>
-  <x:String x:Key="Dialog_AdoptVsl_Confirm">Adopter</x:String>
-  <x:String x:Key="Dialog_AdoptVsl_CancelAdoption">Annuler l'adoption</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_Confirm">Importer</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_CancelAdoption">Annuler l'import</x:String>
   <x:String x:Key="Dialog_AdoptVsl_Close">Terminer</x:String>
   <x:String x:Key="Dialog_AdoptVsl_InstallationsSectionTitle">Installations</x:String>
-  <x:String x:Key="Dialog_AdoptVsl_EnginesSectionTitle">Moteurs</x:String>
-  <x:String x:Key="Dialog_AdoptVsl_EnginesNotice">Ces fichiers sont recopiés tels quels depuis VS Launcher. Contrairement à un téléchargement, rien ne vérifie qu'ils sont intacts : en cas de doute, désinstalle la version puis retélécharge-la depuis l'écran Versions.</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_EnginesSectionTitle">Versions du jeu</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_EnginesNotice">Rien ne vérifie que ces fichiers sont intacts. Ils sont recopiés tels quels, alors qu'un téléchargement est contrôlé à l'arrivée. En cas de doute, désinstalle la version puis retélécharge-la depuis l'écran Versions.</x:String>
 
   <!-- ── Réglages ────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Settings_Title">Réglages</x:String>
   <x:String x:Key="Settings_GeneralSectionTitle">Général</x:String>
   <x:String x:Key="Settings_VslCardTitle">VS Launcher</x:String>
+  <x:String x:Key="Settings_VslCardDescription">Importer une installation VS Launcher en fait une copie dans Prospect. Le dossier d'origine n'est ni modifié ni déplacé.</x:String>
   <x:String x:Key="Settings_VslPickFolder">Choisir un dossier…</x:String>
-  <x:String x:Key="Settings_VslOpenAdoption">Adopter tes installations VS Launcher</x:String>
+  <x:String x:Key="Settings_VslOpenAdoption">Importer tes installations VS Launcher</x:String>
   <x:String x:Key="Settings_VslDetecting">Détection en cours…</x:String>
 
   <!-- Onglets -->
@@ -335,7 +345,7 @@
 
   <!-- ── Rappel de premier lancement (Accueil, état vide) ───────────────────────── -->
   <x:String x:Key="FirstRun_VslCardTitle">Tu utilisais VS Launcher ?</x:String>
-  <x:String x:Key="FirstRun_VslOpenAdoption">Adopter tes installations VS Launcher</x:String>
+  <x:String x:Key="FirstRun_VslOpenAdoption">Importer tes installations VS Launcher</x:String>
 
   <!-- ── Écran de premier lancement (design/ui_kits/launcher/screen-firstrun.jsx) ──
        Titres/sous-titres/libellés d'action des lignes de checklist NE SONT PAS ici : ils sont

@@ -40,7 +40,11 @@ public sealed partial class DuplicateDialogViewModel : ObservableObject, IDispos
         _requestRefresh = requestRefresh;
         _name = UiText.Dialogs.DuplicateSuggestedName(sourceName);
         _progressLabel = string.Empty;
+        Title = UiText.Dialogs.DuplicateTitle(sourceName);
     }
+
+    /// <summary>Titre du dialogue : une question qui nomme l'instance SOURCE, pas la copie à venir.</summary>
+    public string Title { get; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Error))]

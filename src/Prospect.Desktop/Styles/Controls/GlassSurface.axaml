@@ -11,7 +11,7 @@
     recouvrir, ce qu'Avalonia décide par l'ordre du document, faute de spécificité.
   -->
 
-  <!-- ── Les quatre profondeurs, en classes composables : Classes="glass menu" ────────── -->
+  <!-- ── Les cinq profondeurs, en classes composables : Classes="glass menu" ─────────── -->
 
   <Style Selector="Border.glass">
     <Setter Property="BorderBrush" Value="{DynamicResource GlassEdge}" />
@@ -34,6 +34,14 @@
 
   <Style Selector="Border.glass.menu">
     <Setter Property="Background" Value="{DynamicResource GlassMenu}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource GlassElevMenu}" />
+  </Style>
+
+  <!-- Réservée aux DIALOGUES MODAUX : eux seuls recouvrent de la lecture (voir Tokens/Glass.axaml
+       pour la raison de la cinquième profondeur). Un menu, un popover ou une infobulle reste sur
+       .menu. L'élévation est la même des deux côtés, seule la vitre change. -->
+  <Style Selector="Border.glass.dialog">
+    <Setter Property="Background" Value="{DynamicResource GlassDialog}" />
     <Setter Property="BoxShadow" Value="{DynamicResource GlassElevMenu}" />
   </Style>
 

@@ -725,6 +725,27 @@ sa taille d'affichage plutôt que de garder la résolution du CDN, borne ce qu'i
 et ne libère jamais un bitmap déjà distribué (un `Image.Source` pointant vers un `Bitmap`
 libéré fait lever une `NullReferenceException` dans la passe de mise en page suivante).
 
+#### Deux textes pour un mod, et lequel vient d'où
+
+L'API en rend deux, et ils n'ont ni la même source ni le même rôle. Le CATALOGUE
+(`/api/mods`) porte un `summary` d'une ligne, prévu pour une liste. La FICHE
+(`/api/mod/{id}`) porte une description longue en HTML d'éditeur riche, qui va jusqu'à
+trente écrans sur les mods populaires — et elle ne porte PAS le résumé.
+
+Le résumé s'affiche donc aux deux endroits, sur la carte du navigateur et en tête de fiche
+sous le nom et l'auteur (arbitrage du 2026-08-14 : la première question posée à une fiche
+est à quoi sert ce mod, et y répondre demandait d'entamer la description). Il n'est pas
+redemandé au réseau pour autant : `ModBrowserViewModel.OpenAsync` le passe au dialogue
+depuis la carte qui vient d'être cliquée, déjà décodé de ses entités HTML. La fiche ne sait
+pas le chercher elle-même, et c'est volontaire — elle n'a aucun moyen de le faire sans un
+appel de plus.
+
+Deux cas limites, tenus par le ViewModel plutôt que par la vue. Un catalogue qui n'annonce
+rien (fréquent) fait DISPARAÎTRE la ligne au lieu de réserver un blanc sous le nom. Et un
+résumé qui déborde est tronqué sur une seule ligne avec infobulle, comme partout ailleurs :
+les résumés réels vont du fragment de phrase au paragraphe entier, et l'en-tête d'une fiche
+ne peut pas grandir au gré de ce qu'un auteur a écrit.
+
 #### Ce qui est borné, et par quoi
 
 Le fenêtrage ci-dessus bornait le rendu INITIAL et rien d'autre : l'extension par tranches
@@ -762,6 +783,50 @@ ouvertures répétées de fiches laissent la mémoire gérée et le nombre d'abo
 évènements des services singletons strictement plats. C'est le rôle des `Dispose` de
 `ModCardViewModel`, `InstanceCardViewModel`, `InstanceDetailViewModel` et
 `DownloadItemViewModel`, et de `ShellViewModel.Navigate` qui dispose la page sortante.
+
+### Les profondeurs de verre, et qui a droit à laquelle
+
+Le système de surfaces (`Styles/Tokens/Glass.axaml`) n'a qu'un levier, l'alpha : la composition est
+interne, aucun panneau n'a de flou propre (voir l'en-tête du fichier). C'est donc l'alpha seul qui
+porte la hiérarchie, et cette hiérarchie est un vocabulaire fermé.
+
+| Profondeur | Sombre | Clair | Ce qu'elle habille |
+| --- | --- | --- | --- |
+| `GlassPane` | 15 % | 31 % | Conteneurs de page, enveloppes |
+| `GlassChrome` | 30 % | 44 % | Barre latérale, barre de titre |
+| `GlassItem` | 50 % | 48 % | Cartes, rangées, champs, boutons secondaires |
+| `GlassMenu` | 91 % | 93 % | Menus déroulants, popovers, toasts, infobulles |
+| `GlassDialog` | 95 % | 96 % | Dialogues modaux, wizard, écran de premier lancement |
+
+Les quatre premières sont le port littéral de `design/tokens/glass.css`. **La cinquième est un
+choix produit local, absente du handoff** : le CSS s'arrête à quatre profondeurs et fait servir la
+dernière indistinctement aux menus et aux dialogues. La séparation vient de ce que les deux
+familles ne rendent pas le même service. Un menu ou une infobulle se pose sur quelques lignes,
+brièvement, et laisser deviner la page dessous fait partie de l'effet du verre. Un dialogue modal
+recouvre de la LECTURE, parfois plusieurs minutes, et la page qui transparaît devient du bruit
+derrière le texte qu'on demande de lire. Le critère qui a fixé les deux valeurs est visuel et non
+numérique : aucun texte de la page ne doit se deviner à travers un dialogue, sur le fond clair le
+plus chargé du catalogue. À 91 % en clair, les titres de cartes du navigateur de mods restaient
+devinables derrière le panneau d'installation. La valeur claire monte d'un cran de plus que la
+sombre parce qu'en clair la vitre et le fond ont des luminances voisines, le registre exact où
+l'œil lit encore des formes.
+
+Vérifié sur captures headless, en mesurant une zone VIDE du dialogue posée sur une rangée de
+cartes : la page y affiche un rapport de contraste de 15,2 (sombre) et 15,0 (clair) sans dialogue,
+et 1,032 puis 1,029 à travers. La transmission tombe de 3,4 % à 1,9 % en sombre, de 2,5 % à 1,5 %
+en clair. Le juge le plus dur du produit est le dialogue d'import posé sur la grille du sélecteur
+de fond, onze photographies en thème clair.
+
+Ce qui ne se dédouble PAS : l'élévation. `GlassElevMenu` (ombre portée plus sheen intérieur) reste
+la valeur des deux familles, parce que l'épaisseur d'une surface flottante ne dépend pas de ce
+qu'elle recouvre. Seul l'alpha de la vitre distingue les deux profondeurs.
+
+Deux gardes tiennent la règle, et il en faut deux parce qu'elles attrapent des pannes différentes.
+`GlassTokensTests` vérifie les valeurs du dictionnaire : les cinq profondeurs existent dans les
+deux variantes, sont ordonnées, distinctes, et aucune n'est opaque. Et un test monté sur les seize
+panneaux modaux vérifie qu'ils la portent réellement — sans lui, une vue oubliée resterait sur
+`GlassMenu` sans que rien ne le signale, puisqu'un panneau un peu trop transparent se rend
+parfaitement.
 
 ### Fond de fenêtre
 
@@ -885,9 +950,25 @@ chaîne s'y aligne, dans les deux langues.
 | Démarrer le jeu | lancer, lancement | launch | démarrer, start, run |
 | Une installation du jeu | version du jeu | game version | installation, moteur, engine |
 | Un dossier VS Launcher repris | installation VS Launcher | VS Launcher install | instance |
+| Reprendre un dossier VS Launcher | importer | import | adopter, adopt, migrer, reprendre |
 | Tourne des deux côtés | client et serveur | client and server | universel, universal |
 | Ouvrir une session de compte | se connecter | sign in | — |
 | Joignabilité du réseau | connexion, hors ligne | connection, offline | reconnecte-toi (se lit « reconnecte ton compte ») |
+
+La ligne « importer » est un arbitrage du 2026-08-14, et elle porte sa propre leçon. « Adopter »
+était le seul mot de son espèce dans le produit : aucun autre écran n'employait de métaphore, et
+surtout celle-ci ne disait pas ce qui se passe — ni si le dossier VS Launcher est copié, déplacé ou
+modifié. C'est précisément la question que se pose quelqu'un qui a encore ses parties en cours de
+l'autre côté. « Importer » le dit, et l'écran l'écrit maintenant noir sur blanc sous son titre :
+une copie, le dossier d'origine ni modifié ni déplacé.
+
+Ce que ce renommage NE touche pas : les identifiants. `VslAdoptionService`, `AdoptVslViewModel`,
+`MigrationText.AdoptingEnginesPhase`, les clés `Dialog_AdoptVsl_*` restent tels quels, et les
+endroits où le nom de code et le nom d'écran divergent désormais le disent en docstring. La règle
+qui en sort vaut pour les prochains arbitrages de vocabulaire : un mot d'écran se change dans les
+dictionnaires et les tables de textes, pas dans une hiérarchie de types. Le coût d'un refactor de
+surface se paie en conflits et en revue, pour zéro gain de lisibilité une fois la divergence
+documentée.
 
 Deux règles de forme accompagnent le tableau. Un bouton dit son EFFET et jamais le mécanisme :
 « Se connecter » et non « Valider le code », « Annuler l'installation » et non « Annuler », « Arrêter
@@ -895,6 +976,43 @@ la mise à jour » et non « Annuler ». Et aucun mot d'ingénieur n'atteint l'�
 `schéma`, ni `runtime`, ni `dépôt`, ni `canal`, ni `empreinte` — les identifiants de mods, les noms
 de fichiers et les chemins restent, eux, tels quels, parce que ce sont des valeurs que
 l'utilisateur retrouve sur son disque ou sur le site.
+
+#### La forme d'un message long, et celle d'un titre
+
+Le vocabulaire fixé, restait la construction des phrases, et elle dérivait dans un sens précis :
+la plupart des messages de plusieurs phrases commençaient par la RÉSERVE et finissaient par la
+conclusion. « L'installeur s'est terminé sans erreur, mais… » ; « Le lancement continue, mais… » ;
+« Publiés sur le ModDB, mais sans version pour… ». Un utilisateur qui lit une bannière d'erreur en
+diagonale reçoit alors exactement le contraire du message.
+
+L'ordre est donc fixé, et c'est celui d'un rapport : **le verdict en première phrase, courte ; le
+détail ensuite ; la voie de sortie en dernier.** « L'installation n'a rien laissé au bon endroit.
+L'installeur s'est terminé sans erreur, mais le jeu n'est pas dans « … » : il a probablement été
+posé par-dessus une installation existante. Rien n'a été marqué comme installé, désinstalle
+l'ancienne copie puis réessaie. » Le modèle à imiter existait déjà, `Settings_AccountsIntro` :
+il annonce à quoi sert la connexion avant d'expliquer comment elle marche.
+
+Les titres suivent une règle à deux branches, et elle est binaire pour ne pas se rediscuter à
+chaque dialogue. Un panneau qui montre un ÉTAT porte un nom : « Options de l'instance »,
+« Diagnostic de l'instance », « Sauvegardes ». Un dialogue qui engage une ACTION pose une question
+et NOMME son objet : « Supprimer « Homestead » ? », « Installer « Carry On » ? », « Renommer
+« Homestead » ? ». La conséquence pratique est que ces titres-là se calculent
+(`DialogsText.RenameTitle`, `DuplicateTitle`, `DeleteTitle`…) au lieu de vivre dans les
+dictionnaires statiques : un titre qui ne peut pas nommer son objet n'est pas un titre d'action.
+Deux dialogues traînaient encore un infinitif sans objet — « Renommer l'instance », « Dupliquer
+l'instance » —, qui laissait deviner laquelle quand deux cartes se ressemblent.
+
+Enfin, un libellé ne peut pas être exactement un autre libellé qui dit autre chose. Le tri du
+navigateur de mods s'appelait « Mise à jour », mot pour mot la pastille qui signale qu'une mise à
+jour EXISTE pour un mod : c'est « Dernière mise à jour ».
+
+Une seule dérive du tableau reste en place, et le dire vaut mieux que la laisser trouver : la
+rangée de mods d'une instance affiche encore « universel » là où le glossaire demande « client et
+serveur », que la carte du navigateur affiche déjà. Le libellé long ajoute une quarantaine de
+points à la colonne Auto de droite de cette rangée, ce qui écrase la colonne du milieu jusqu'à
+faire déborder l'auteur et les pastilles de journal — deux gardes d'invariants de boîtes
+l'attrapent à 960 points. Corriger le mot demande d'abord de donner un budget de largeur à la
+rangée. C'est écrit sur `SideLabel(ModSide?)` dans les deux tables.
 
 Les règles restent : aucun code-behind au-delà d'`InitializeComponent`, ViewModels
 constructibles sans UI (testables en headless), textes centralisés dans les dictionnaires

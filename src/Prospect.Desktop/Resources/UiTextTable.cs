@@ -118,6 +118,17 @@ internal abstract class DialogsText
 
     internal abstract string DuplicateProgressLabel(int filesCopied, int totalFiles);
 
+    /// <summary>
+    /// Titre du dialogue de renommage. Calculé et non statique depuis la passe de grammaire des
+    /// titres : tout dialogue qui engage une action sur un objet NOMMÉ pose une question et nomme
+    /// l'objet, comme <see cref="DeleteTitle"/> et <see cref="RestoreBackupTitle"/> le faisaient
+    /// déjà. « Renommer l'instance » laissait deviner laquelle quand deux cartes se ressemblent.
+    /// </summary>
+    internal abstract string RenameTitle(string instanceName);
+
+    /// <summary>Titre du dialogue de duplication, même règle que <see cref="RenameTitle"/>.</summary>
+    internal abstract string DuplicateTitle(string sourceName);
+
     internal abstract string DeleteTitle(string instanceName);
 
     internal abstract string DeleteMessage(string instanceName);
@@ -730,11 +741,21 @@ internal abstract class ModsText
 
 
 /// <summary>
-/// Textes de l'adoption des installations VS Launcher (chantier « migration »,
+/// Textes de l'import des installations VS Launcher (chantier « migration »,
 /// docs/research/vslauncher-et-distribution.md). Voix produit pour le rapport final, même
 /// principe que le reste de cette table : jamais de trace technique quand une raison courte
 /// suffit.
 /// </summary>
+/// <remarks>
+/// LE NOM DE CODE ET LE NOM D'ÉCRAN DIVERGENT ICI, et c'est voulu. L'écran dit « importer » depuis
+/// l'arbitrage du 2026-08-14 : « adopter » était le seul mot de son espèce dans le produit et ne
+/// disait pas ce qui se passe, alors qu'une copie qui laisse le dossier VS Launcher intact se
+/// nomme un import. Les identifiants, eux, n'ont pas bougé (<c>MigrationText</c>,
+/// <c>Adopting*Phase</c>, <c>*AdoptedGroupTitle</c>, <c>VslAdoptionService</c> côté Core) : le
+/// renommage est de surface, pas un refactor, et rien ne gagnerait à faire bouger une hiérarchie de
+/// types pour un choix de vocabulaire. Deuxième correction du même passage : le mot « moteur » a
+/// quitté l'écran, le glossaire de docs/architecture.md fixant « version du jeu ».
+/// </remarks>
 internal abstract class MigrationText
 {
     internal abstract string Starting { get; }
@@ -747,6 +768,7 @@ internal abstract class MigrationText
 
     internal abstract string AdoptingInstallationsPhase(int completedItems, int totalItems, string? currentItemLabel);
 
+    /// <summary>Phase de copie des versions du jeu. Le membre garde « Engines », l'écran dit « versions du jeu ».</summary>
     internal abstract string AdoptingEnginesPhase(int completedItems, int totalItems, string? currentItemLabel);
 
     internal abstract string FilesCopied(int filesCopied, int totalFiles);
@@ -808,6 +830,7 @@ internal abstract class FirstRunText
 
     internal abstract string InstallVersionAction { get; }
 
+    /// <summary>Action de la ligne VS Launcher. Le membre garde « Adopt », le bouton dit « Importer ».</summary>
     internal abstract string AdoptAction { get; }
 
     internal abstract string NoVersionInstalled { get; }

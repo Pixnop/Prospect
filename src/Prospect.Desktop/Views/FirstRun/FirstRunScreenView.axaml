@@ -28,7 +28,7 @@
   -->
 
   <Border Width="520" MaxHeight="680" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
-          Background="{DynamicResource GlassMenu}" BorderBrush="{DynamicResource GlassEdge}"
+          Background="{DynamicResource GlassDialog}" BorderBrush="{DynamicResource GlassEdge}"
           BorderThickness="1" BoxShadow="{DynamicResource GlassElevMenu}">
     <DockPanel>
 

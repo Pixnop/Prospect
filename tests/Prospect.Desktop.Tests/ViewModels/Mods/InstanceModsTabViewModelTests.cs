@@ -387,8 +387,8 @@ public sealed class InstanceModsTabViewModelTests
         var english = UiText.TableFor(ProspectSettings.English).Mods;
 
         english.CheckVerdict(0, 0, 3).ShouldBe("3 mods checked: everything is up to date.");
-        english.CheckVerdict(0, 1, 3).ShouldBe("3 mods checked: 1 newer release exists, not declared for your game version.");
-        english.CheckVerdict(2, 1, 4).ShouldBe("4 mods checked: 2 updates available, and 1 newer release not declared.");
+        english.CheckVerdict(0, 1, 3).ShouldBe("3 mods checked: 1 newer version exists, not declared for your game version.");
+        english.CheckVerdict(2, 1, 4).ShouldBe("4 mods checked: 2 updates available, and 1 newer version not declared.");
         english.CheckVerdict(0, 0, 0).ShouldBe("No mod to check.");
     }
 

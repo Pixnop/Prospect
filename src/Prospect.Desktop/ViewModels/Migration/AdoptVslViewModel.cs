@@ -15,18 +15,27 @@ using Prospect.Desktop.ViewModels.Toasts;
 namespace Prospect.Desktop.ViewModels.Migration;
 
 /// <summary>
-/// Dialogue de flux d'adoption VS Launcher (design : un seul panneau qui traverse
+/// Dialogue d'import VS Launcher (design : un seul panneau qui traverse
 /// <see cref="AdoptVslStep"/>, un seul panneau du début à la fin) : sélection des
-/// installations et moteurs détectés par <see cref="VslDetector"/>, progression par élément,
-/// rapport final groupé par catégorie. Ouvert depuis les Réglages ou depuis le rappel de premier
-/// lancement de l'Accueil (voir <c>HomeViewModel.FirstRun</c>) une fois la détection déjà faite :
-/// il n'y a pas d'étape de chargement, le
+/// installations et versions du jeu détectées par <see cref="VslDetector"/>, progression par
+/// élément, rapport final groupé par catégorie. Ouvert depuis les Réglages ou depuis le rappel de
+/// premier lancement de l'Accueil (voir <c>HomeViewModel.FirstRun</c>) une fois la détection déjà
+/// faite : il n'y a pas d'étape de chargement, le
 /// <see cref="VslDetectionResult"/> est déjà connu à la construction.
 /// </summary>
 /// <remarks>
+/// <para>
+/// L'écran s'appelle « Importer » et la classe s'appelle <c>AdoptVslViewModel</c> : la divergence
+/// est assumée depuis l'arbitrage du 2026-08-14, qui ne renomme que ce qui s'affiche (voir
+/// <see cref="VslAdoptionService"/> pour le raisonnement complet). Ce que le mot promet — une copie,
+/// et le dossier VS Launcher d'origine intact — est affiché sous le titre à l'étape de sélection
+/// plutôt que laissé à deviner.
+/// </para>
+/// <para>
 /// Implémente <see cref="IProgress{T}"/> directement et
 /// repasse chaque mise à jour par <see cref="IUiDispatcher.Post"/> : <see cref="VslAdoptionService.AdoptAsync"/>
 /// tourne sur des continuations qui peuvent reprendre sur n'importe quel fil.
+/// </para>
 /// </remarks>
 public sealed partial class AdoptVslViewModel : ObservableObject, IProgress<VslAdoptionProgress>, IDisposable
 {
@@ -94,7 +103,7 @@ public sealed partial class AdoptVslViewModel : ObservableObject, IProgress<VslA
     [ObservableProperty]
     private AdoptVslStep _step = AdoptVslStep.Selection;
 
-    /// <summary>Résumé affiché en en-tête de l'étape de sélection (« 3 installations et 2 moteurs détectés »).</summary>
+    /// <summary>Résumé affiché en en-tête de l'étape de sélection (« 3 installations et 2 versions du jeu détectées »).</summary>
     public string SummaryText { get; }
 
     public ObservableCollection<VslInstallationSelectionRowViewModel> InstallationRows { get; }

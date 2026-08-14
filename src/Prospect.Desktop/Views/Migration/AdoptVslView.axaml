@@ -9,12 +9,18 @@
              x:DataType="vm:AdoptVslViewModel">
 
   <!-- Un seul panneau qui traverse AdoptVslStep (voir AdoptVslViewModel) : sélection (cases à
-       cocher, installations puis moteurs), progression par élément, rapport final groupé par
-       catégorie. Un seul panneau qui traverse toutes les étapes, sans étape de chargement : la
-       détection est déjà faite avant l'ouverture du dialogue. -->
+       cocher, installations puis versions du jeu), progression par élément, rapport final groupé
+       par catégorie. Un seul panneau qui traverse toutes les étapes, sans étape de chargement : la
+       détection est déjà faite avant l'ouverture du dialogue.
+
+       L'écran s'appelle « Importer » depuis l'arbitrage du 2026-08-14 ; le fichier, la classe et
+       les clés de ressources gardent « AdoptVsl », le renommage est de surface. Ce que le mot
+       promet est écrit noir sur blanc sous le titre (Dialog_AdoptVsl_CopyNotice) : une COPIE, et
+       le dossier VS Launcher d'origine ne bouge pas. C'est la question que se pose quiconque a
+       encore ses parties en cours de l'autre côté. -->
 
   <Border Width="520" MaxHeight="680" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
-          Background="{DynamicResource GlassMenu}" BorderBrush="{DynamicResource GlassEdge}"
+          Background="{DynamicResource GlassDialog}" BorderBrush="{DynamicResource GlassEdge}"
           BorderThickness="1" BoxShadow="{DynamicResource GlassElevMenu}">
     <DockPanel>
       <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="22,18">
@@ -25,6 +31,9 @@
           <TextBlock Text="{Binding SummaryText}" TextWrapping="Wrap"
                      FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsCaption}"
                      Foreground="{DynamicResource Text3}"
+                     IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Selection}" />
+          <TextBlock Text="{StaticResource Dialog_AdoptVsl_CopyNotice}" Margin="0,4,0,0" TextWrapping="Wrap" LineHeight="18"
+                     FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text2}"
                      IsVisible="{Binding Step, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Selection}" />
         </StackPanel>
       </Border>
