@@ -25,6 +25,7 @@ namespace Prospect.Core.GameVersions.Inno;
 internal sealed class InnoRecordReader
 {
     private readonly byte[] _data;
+    private int _position;
 
     /// <summary>Construit le curseur sur un bloc déjà décompressé.</summary>
     /// <param name="data">Contenu du bloc.</param>
@@ -35,11 +36,8 @@ internal sealed class InnoRecordReader
         _data = data;
     }
 
-    /// <summary>Position courante, en octets depuis le début du bloc.</summary>
-    public int Position { get; private set; }
-
     /// <summary>Octets restants à lire.</summary>
-    public int Remaining => _data.Length - Position;
+    public int Remaining => _data.Length - _position;
 
     /// <summary>Lit <paramref name="count"/> octets bruts.</summary>
     public ReadOnlySpan<byte> Read(int count)
@@ -47,11 +45,11 @@ internal sealed class InnoRecordReader
         if (count < 0 || count > Remaining)
         {
             throw InnoFormatException.Corrupt(
-                $"lecture de {count} octets à la position {Position} alors qu'il en reste {Remaining}");
+                $"lecture de {count} octets à la position {_position} alors qu'il en reste {Remaining}");
         }
 
-        var span = _data.AsSpan(Position, count);
-        Position += count;
+        var span = _data.AsSpan(_position, count);
+        _position += count;
 
         return span;
     }
@@ -62,20 +60,11 @@ internal sealed class InnoRecordReader
     /// <summary>Lit un octet.</summary>
     public byte ReadByte() => Read(1)[0];
 
-    /// <summary>Lit un entier non signé 16 bits.</summary>
-    public ushort ReadUInt16() => BinaryPrimitives.ReadUInt16LittleEndian(Read(2));
-
     /// <summary>Lit un entier non signé 32 bits.</summary>
     public uint ReadUInt32() => BinaryPrimitives.ReadUInt32LittleEndian(Read(4));
 
-    /// <summary>Lit un entier signé 32 bits.</summary>
-    public int ReadInt32() => BinaryPrimitives.ReadInt32LittleEndian(Read(4));
-
     /// <summary>Lit un entier non signé 64 bits.</summary>
     public ulong ReadUInt64() => BinaryPrimitives.ReadUInt64LittleEndian(Read(8));
-
-    /// <summary>Lit un entier signé 64 bits.</summary>
-    public long ReadInt64() => BinaryPrimitives.ReadInt64LittleEndian(Read(8));
 
     /// <summary>
     /// Lit une chaîne préfixée de sa longueur EN OCTETS, sans la décoder.
