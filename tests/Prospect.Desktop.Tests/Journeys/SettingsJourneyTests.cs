@@ -82,11 +82,17 @@ public sealed class SettingsJourneyTests
         settingsService.Current.Backdrop.ShouldBe(otherBackdrop.Key);
 
         // ── Étape 4 : la langue, elle, attend le prochain démarrage — et l'écran le dit ──
-        settings.General.SelectedLanguageIndex.ShouldBe(0);
-        settings.General.SelectedLanguageIndex = 1;
+        // Le rang de départ n'est PAS supposé : une installation neuve déduit sa langue de la
+        // culture d'interface du système (voir IUiCulture), donc il vaut français ici et anglais
+        // sur une CI en en-US. Ce que le parcours vérifie est le basculement vers l'AUTRE langue.
+        var startingIndex = settings.General.SelectedLanguageIndex;
+        var otherIndex = startingIndex == 0 ? 1 : 0;
+        var otherLanguage = otherIndex == 1 ? ProspectSettings.English : ProspectSettings.French;
+
+        settings.General.SelectedLanguageIndex = otherIndex;
         window.Pump();
 
-        settings.General.SelectedLanguage.ShouldBe(ProspectSettings.English);
+        settings.General.SelectedLanguage.ShouldBe(otherLanguage);
         window.ShowsText(JourneyHarness.ResourceText("Settings_LanguageRestartHint")).ShouldBeTrue(
             "un réglage qui ne s'applique pas tout de suite doit le dire, sinon il passe pour cassé");
 
@@ -98,7 +104,7 @@ public sealed class SettingsJourneyTests
             provider.GetRequiredService<Prospect.Core.Settings.Migrations.SettingsMigrationPipeline>(),
             provider.GetRequiredService<Prospect.Core.Common.IUiCulture>());
         await reloaded.LoadAsync();
-        reloaded.Current.Language.ShouldBe(ProspectSettings.English);
+        reloaded.Current.Language.ShouldBe(otherLanguage);
         reloaded.Current.Theme.ShouldBe(ThemePreference.Dark);
         reloaded.Current.Backdrop.ShouldBe(otherBackdrop.Key);
 
