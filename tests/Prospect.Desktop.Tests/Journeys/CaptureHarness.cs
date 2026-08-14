@@ -68,6 +68,11 @@ public sealed class CaptureHarness
         Save(window, $"browser-{variant}");
 
         var card = browser.Results.First(entry => entry.Name == "Carry On");
+        await card.OpenCommand.ExecuteAsync(null);
+        window.Pump();
+        Save(window, $"mod-detail-{variant}");
+
+        shell.Overlay.Close();
         await card.InstallCommand.ExecuteAsync(null);
         window.Pump();
         Save(window, $"dialog-{variant}");
