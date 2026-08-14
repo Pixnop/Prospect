@@ -417,15 +417,21 @@ un Inno Setup 6.5 réorganise franchement son en-tête, et le lire avec la grill
 donnerait pas une erreur mais des chemins et des tailles absurdes.
 
 Elle ne pose que le jeu. Seules les entrées destinées à `{app}` sont écrites. Les onze
-polices que le script installe dans le dossier système, ses neuf valeurs de registre (toutes
-HKCU : un chemin d'installation et deux gestionnaires de protocole `vintagestoryjoin` et
-`vintagestorymodinstall`), ses deux raccourcis et son lancement final sont traversés puis
-laissés de côté. Aucun n'est nécessaire pour que le jeu démarre, et la démonstration ne
-demande aucun pari : le build Linux du même jeu est un `.tar.gz` sans le moindre effet de
-bord, que Prospect installe déjà comme ça. Le runtime .NET 10, lui, est une vraie
-dépendance du jeu, mais elle n'est pas DANS l'installeur (le script la télécharge chez
-Microsoft), et Prospect la détecte déjà au lancement (`Core/Runtime/DotnetLocator`, qui lit
-le `Vintagestory.runtimeconfig.json` du build installé).
+polices que le script installe dans le dossier de polices du système, ses neuf valeurs de
+registre (toutes HKCU : un chemin d'installation et deux gestionnaires de protocole
+`vintagestoryjoin` et `vintagestorymodinstall`), ses deux raccourcis et son lancement final
+sont traversés puis laissés de côté. Aucun n'est nécessaire pour que le jeu démarre, et la
+démonstration ne demande aucun pari : le build Linux du même jeu est un `.tar.gz` sans le
+moindre effet de bord, que Prospect installe déjà comme ça.
+
+Les polices méritent une phrase de plus, parce que la question se pose naturellement. Le
+script les installe DEUX fois, à partir des mêmes entrées de données : une fois dans le
+dossier système, une fois sous `{app}\assets\game\fonts\`. Ne pas les poser dans le système
+ne prive donc le jeu de rien, il embarque les siennes, et l'étage live le vérifie en les
+comptant plutôt qu'en le supposant. Le runtime .NET 10, lui, est une vraie dépendance du
+jeu, mais elle n'est pas DANS l'installeur (le script la télécharge chez Microsoft), et
+Prospect la détecte déjà au lancement (`Core/Runtime/DotnetLocator`, qui lit le
+`Vintagestory.runtimeconfig.json` du build installé).
 
 ##### Le repli, et ce qu'il implique
 

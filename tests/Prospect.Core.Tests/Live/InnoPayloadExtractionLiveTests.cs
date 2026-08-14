@@ -1,9 +1,7 @@
 using System.IO.Abstractions;
-using System.Text.Json;
 
 using Prospect.Core.GameVersions;
 using Prospect.Core.GameVersions.Inno;
-using Prospect.Core.Http;
 
 using Shouldly;
 
@@ -19,36 +17,32 @@ namespace Prospect.Tests.Live;
 /// <para>
 /// C'est le seul test qui puisse trancher la question qui compte. Les fixtures synthétiques
 /// prouvent que le lecteur est cohérent avec une écriture du format faite par nous ; elles ne
-/// peuvent pas prouver que cette grille est celle du compilateur Inno Setup. Ici, la preuve est
+/// peuvent pas prouver que cette grille est celle du compilateur Inno Setup. Ici la preuve est
 /// arithmétique et ne laisse aucune place au doute : chaque fichier que l'installeur DÉCLARE est
-/// reconstitué, et son empreinte SHA-256 est comparée à celle que l'installeur publie pour lui. Une
-/// grille de lecture fausse d'un seul octet ferait tomber la toute première.
+/// reconstitué, et son empreinte SHA-256 comparée à celle que l'installeur publie pour lui. Une
+/// grille fausse d'un seul octet ferait tomber la toute première.
 /// </para>
 /// <para>
 /// Relevé du 2026-08-14 sur la 1.22.6 : format de données 6.4.3, 20 098 entrées de fichier,
-/// 20 085 emplacements, 862,6 Mio de charge utile en un unique bloc LZMA2 solide, et 20 085
-/// empreintes sur 20 085 vérifiées.
+/// 20 085 emplacements, 862,6 Mio de charge utile en un unique bloc LZMA2 solide, 20 085 empreintes
+/// sur 20 085 vérifiées et 20 084 fichiers posés sous <c>{app}</c> (tout sauf le sondeur de runtime
+/// .NET, seule entrée destinée à <c>{tmp}</c>).
 /// </para>
 /// <para>
-/// Le coût est celui d'un vrai téléchargement de 570 Mo, d'où l'opt-in habituel plus une porte
-/// supplémentaire : <see cref="InstallerPathVariable"/> permet de désigner un installeur déjà
-/// présent sur la machine, et rien n'est téléchargé dans ce cas.
+/// L'installeur n'est pas téléchargé : voir <see cref="LocalInstallerFactAttribute"/> pour la
+/// variable qui le désigne, et pourquoi ce test ne va pas le chercher lui-même.
 /// </para>
 /// </remarks>
 [Trait("Category", "Live")]
 public sealed class InnoPayloadExtractionLiveTests(ITestOutputHelper output)
 {
-    /// <summary>Variable qui désigne un installeur déjà téléchargé, pour éviter d'en reprendre un.</summary>
-    public const string InstallerPathVariable = "PROSPECT_LIVE_INSTALLER";
-
-    private const string CatalogUrl = "https://api.vintagestory.at/stable.json";
-
-    [LiveFact]
+    [LocalInstallerFact]
     public async Task TheOfficialInstaller_GivesUpTheWholeGameWithoutBeingRun()
     {
-        var fileSystem = new FileSystem();
-        var installerPath = await ResolveInstallerAsync(fileSystem);
+        var installerPath = LocalInstallerFactAttribute.InstallerPath!;
+        output.WriteLine($"Installeur lu : {installerPath}");
 
+        var fileSystem = new FileSystem();
         var target = fileSystem.Path.Combine(
             fileSystem.Path.GetTempPath(),
             "prospect-inno-live-" + Guid.NewGuid().ToString("N"));
@@ -56,9 +50,8 @@ public sealed class InnoPayloadExtractionLiveTests(ITestOutputHelper output)
         try
         {
             var reports = new List<GameInstallProgress>();
-            var extractor = new InnoPayloadExtractor(fileSystem);
 
-            await extractor.ExtractAsync(
+            await new InnoPayloadExtractor(fileSystem).ExtractAsync(
                 installerPath,
                 target,
                 new CollectingProgress(reports.Add),
@@ -73,7 +66,6 @@ public sealed class InnoPayloadExtractionLiveTests(ITestOutputHelper output)
             fileSystem.File.Exists(fileSystem.Path.Combine(target, "Vintagestory.dll")).ShouldBeTrue();
             fileSystem.File.Exists(fileSystem.Path.Combine(target, "Vintagestory.runtimeconfig.json")).ShouldBeTrue();
             fileSystem.Directory.Exists(fileSystem.Path.Combine(target, "Lib")).ShouldBeTrue();
-            fileSystem.Directory.Exists(fileSystem.Path.Combine(target, "assets")).ShouldBeTrue();
 
             fileSystem.Directory
                 .GetFiles(fileSystem.Path.Combine(target, "assets"), "version-*.txt")
@@ -83,8 +75,20 @@ public sealed class InnoPayloadExtractionLiveTests(ITestOutputHelper output)
             // chiffres signalerait une lecture qui s'est arrêtée en route sans le dire.
             written.Length.ShouldBeGreaterThan(15_000);
 
+            // Rien de ce que le script pose hors du dossier du jeu : son sondeur de runtime .NET va
+            // dans {tmp}, il n'a aucune raison d'atterrir dans une version installée.
+            written.ShouldNotContain(path => path.Contains("netcorecheck", StringComparison.OrdinalIgnoreCase));
+
+            // Les polices, elles, RESTENT. Le script les installe deux fois, dans le dossier de
+            // polices du système ET sous {app}, à partir des mêmes entrées de données. Ne pas les
+            // poser dans le système ne prive donc le jeu de rien : il embarque les siennes, et c'est
+            // ce que ce compte vérifie plutôt que de le supposer.
+            fileSystem.Directory
+                .GetFiles(fileSystem.Path.Combine(target, "assets", "game", "fonts"), "*.ttf")
+                .Length.ShouldBe(11);
+
             reports.ShouldNotBeEmpty();
-            reports.ShouldAllBe(r => !r.IsEstimated);
+            reports.ShouldAllBe(report => !report.IsEstimated && !report.RunsVendorInstaller);
             reports[^1].Ratio.ShouldBe(1d);
         }
         finally
@@ -95,60 +99,6 @@ public sealed class InnoPayloadExtractionLiveTests(ITestOutputHelper output)
             }
         }
     }
-
-    private async Task<string> ResolveInstallerAsync(FileSystem fileSystem)
-    {
-        if (Environment.GetEnvironmentVariable(InstallerPathVariable) is { Length: > 0 } local)
-        {
-            fileSystem.File.Exists(local).ShouldBeTrue($"{InstallerPathVariable} désigne « {local} », qui n'existe pas.");
-            output.WriteLine($"Installeur local : {local}");
-
-            return local;
-        }
-
-        using var client = new HttpClient();
-        client.DefaultRequestHeaders.UserAgent.ParseAdd(LiveModDb.LiveUserAgent);
-
-        using var catalog = JsonDocument.Parse(await client.GetStringAsync(new Uri(CatalogUrl)));
-        var (version, windows) = catalog.RootElement
-            .EnumerateObject()
-            .Select(p => (p.Name, Entry: p.Value))
-            .First(p => p.Entry.TryGetProperty("windows", out _));
-
-        var windowsEntry = windows.GetProperty("windows");
-        var url = windowsEntry.GetProperty("urls").GetProperty("cdn").GetString()!;
-        var expectedMd5 = windowsEntry.GetProperty("md5").GetString()!;
-
-        var cached = fileSystem.Path.Combine(
-            fileSystem.Path.GetTempPath(),
-            windowsEntry.GetProperty("filename").GetString()!);
-
-        if (fileSystem.File.Exists(cached) && Md5Checksum.Matches(expectedMd5, await Md5Async(fileSystem, cached)))
-        {
-            output.WriteLine($"Installeur {version} déjà en cache : {cached}");
-
-            return cached;
-        }
-
-        output.WriteLine($"Téléchargement de l'installeur {version} depuis {url}");
-        var response = await client.GetAsync(new Uri(url), HttpCompletionOption.ResponseHeadersRead);
-        response.EnsureSuccessStatusCode();
-
-        var file = fileSystem.File.Create(cached);
-        await using (file.ConfigureAwait(false))
-        {
-            await response.Content.CopyToAsync(file);
-        }
-
-        Md5Checksum
-            .Matches(expectedMd5, await Md5Async(fileSystem, cached))
-            .ShouldBeTrue("l'installeur téléchargé ne correspond pas à l'empreinte du catalogue");
-
-        return cached;
-    }
-
-    private static Task<string> Md5Async(FileSystem fileSystem, string path)
-        => Md5Checksum.ComputeAsync(fileSystem, path, 1 << 20, CancellationToken.None);
 
     private sealed class CollectingProgress(Action<GameInstallProgress> report) : IProgress<GameInstallProgress>
     {
