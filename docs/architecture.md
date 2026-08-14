@@ -971,6 +971,35 @@ la mise à jour » et non « Annuler ». Et aucun mot d'ingénieur n'atteint l'�
 de fichiers et les chemins restent, eux, tels quels, parce que ce sont des valeurs que
 l'utilisateur retrouve sur son disque ou sur le site.
 
+#### La forme d'un message long, et celle d'un titre
+
+Le vocabulaire fixé, restait la construction des phrases, et elle dérivait dans un sens précis :
+la plupart des messages de plusieurs phrases commençaient par la RÉSERVE et finissaient par la
+conclusion. « L'installeur s'est terminé sans erreur, mais… » ; « Le lancement continue, mais… » ;
+« Publiés sur le ModDB, mais sans version pour… ». Un utilisateur qui lit une bannière d'erreur en
+diagonale reçoit alors exactement le contraire du message.
+
+L'ordre est donc fixé, et c'est celui d'un rapport : **le verdict en première phrase, courte ; le
+détail ensuite ; la voie de sortie en dernier.** « L'installation n'a rien laissé au bon endroit.
+L'installeur s'est terminé sans erreur, mais le jeu n'est pas dans « … » : il a probablement été
+posé par-dessus une installation existante. Rien n'a été marqué comme installé, désinstalle
+l'ancienne copie puis réessaie. » Le modèle à imiter existait déjà, `Settings_AccountsIntro` :
+il annonce à quoi sert la connexion avant d'expliquer comment elle marche.
+
+Les titres suivent une règle à deux branches, et elle est binaire pour ne pas se rediscuter à
+chaque dialogue. Un panneau qui montre un ÉTAT porte un nom : « Options de l'instance »,
+« Diagnostic de l'instance », « Sauvegardes ». Un dialogue qui engage une ACTION pose une question
+et NOMME son objet : « Supprimer « Homestead » ? », « Installer « Carry On » ? », « Renommer
+« Homestead » ? ». La conséquence pratique est que ces titres-là se calculent
+(`DialogsText.RenameTitle`, `DuplicateTitle`, `DeleteTitle`…) au lieu de vivre dans les
+dictionnaires statiques : un titre qui ne peut pas nommer son objet n'est pas un titre d'action.
+Deux dialogues traînaient encore un infinitif sans objet — « Renommer l'instance », « Dupliquer
+l'instance » —, qui laissait deviner laquelle quand deux cartes se ressemblent.
+
+Enfin, un libellé ne peut pas être exactement un autre libellé qui dit autre chose. Le tri du
+navigateur de mods s'appelait « Mise à jour », mot pour mot la pastille qui signale qu'une mise à
+jour EXISTE pour un mod : c'est « Dernière mise à jour ».
+
 Les règles restent : aucun code-behind au-delà d'`InitializeComponent`, ViewModels
 constructibles sans UI (testables en headless), textes centralisés dans les dictionnaires
 de ressources par langue et dans `UiText`. La voix du produit est spécifiée dans le readme du design :

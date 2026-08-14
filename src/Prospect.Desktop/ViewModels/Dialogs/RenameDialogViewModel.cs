@@ -36,7 +36,15 @@ public sealed partial class RenameDialogViewModel : ObservableObject
         _overlay = overlay;
         _requestRefresh = requestRefresh;
         _name = currentName;
+        Title = UiText.Dialogs.RenameTitle(currentName);
     }
+
+    /// <summary>
+    /// Titre du dialogue : une question qui NOMME l'instance, comme tous les dialogues qui engagent
+    /// une action. Il est figé sur le nom d'ouverture et ne suit pas la saisie — c'est bien de
+    /// celle-là qu'on parle, quoi qu'on tape dans le champ.
+    /// </summary>
+    public string Title { get; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Error))]

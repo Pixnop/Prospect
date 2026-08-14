@@ -12,7 +12,7 @@
           BorderThickness="1" BoxShadow="{DynamicResource GlassElevMenu}">
     <StackPanel>
       <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="22,18">
-        <TextBlock Text="{StaticResource Dialog_Rename_Title}"
+        <TextBlock Text="{Binding Title}" TextWrapping="Wrap"
                    FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
                    FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
       </Border>

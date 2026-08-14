@@ -88,7 +88,7 @@ public sealed class EnglishStartupHeadlessTests
 
         var texts = VisibleTexts(window);
         texts.ShouldContain("No instances");
-        texts.ShouldContain("An instance keeps a game version, its mods and its saves to itself. Create your first one to get started.");
+        texts.ShouldContain("An instance keeps a game version, its mods and its worlds to itself. Create your first one to get started.");
 
         window.Close();
     }

@@ -118,6 +118,17 @@ internal abstract class DialogsText
 
     internal abstract string DuplicateProgressLabel(int filesCopied, int totalFiles);
 
+    /// <summary>
+    /// Titre du dialogue de renommage. Calculé et non statique depuis la passe de grammaire des
+    /// titres : tout dialogue qui engage une action sur un objet NOMMÉ pose une question et nomme
+    /// l'objet, comme <see cref="DeleteTitle"/> et <see cref="RestoreBackupTitle"/> le faisaient
+    /// déjà. « Renommer l'instance » laissait deviner laquelle quand deux cartes se ressemblent.
+    /// </summary>
+    internal abstract string RenameTitle(string instanceName);
+
+    /// <summary>Titre du dialogue de duplication, même règle que <see cref="RenameTitle"/>.</summary>
+    internal abstract string DuplicateTitle(string sourceName);
+
     internal abstract string DeleteTitle(string instanceName);
 
     internal abstract string DeleteMessage(string instanceName);

@@ -46,7 +46,7 @@
   <x:String x:Key="Home_SortName">Name</x:String>
   <x:String x:Key="Home_NewInstance">New instance</x:String>
   <x:String x:Key="Home_EmptyTitle">No instances</x:String>
-  <x:String x:Key="Home_EmptyDescription">An instance keeps a game version, its mods and its saves to itself. Create your first one to get started.</x:String>
+  <x:String x:Key="Home_EmptyDescription">An instance keeps a game version, its mods and its worlds to itself. Create your first one to get started.</x:String>
   <x:String x:Key="Home_NoResultsTitle">Nothing found</x:String>
   <x:String x:Key="Home_ClearFilter">Clear the filter</x:String>
   <x:String x:Key="Home_BrokenSectionTitle">Instances that would not load</x:String>
@@ -89,16 +89,16 @@
   <x:String x:Key="Wizard_Step4_Version">Version</x:String>
   <x:String x:Key="Wizard_Step4_Icon">Icon</x:String>
   <x:String x:Key="Wizard_Step4_Location">Location</x:String>
-  <x:String x:Key="Wizard_Step4_Note">The instance folder is created right away, ready for mods and saves.</x:String>
+  <x:String x:Key="Wizard_Step4_Note">The instance folder is created right away, ready for mods and worlds.</x:String>
 
   <!-- ── Dialogues de carte ──────────────────────────────────────────────────────── -->
   <x:String x:Key="Dialog_Cancel">Cancel</x:String>
 
-  <x:String x:Key="Dialog_Rename_Title">Rename the instance</x:String>
+  <!-- Voir le fichier français : les titres de ces deux dialogues sont calculés depuis la passe de
+       grammaire des titres, parce qu'ils nomment l'instance. -->
   <x:String x:Key="Dialog_Rename_Label">Instance name</x:String>
   <x:String x:Key="Dialog_Rename_Confirm">Rename</x:String>
 
-  <x:String x:Key="Dialog_Duplicate_Title">Duplicate the instance</x:String>
   <x:String x:Key="Dialog_Duplicate_Label">Name of the copy</x:String>
   <x:String x:Key="Dialog_Duplicate_Confirm">Duplicate</x:String>
   <x:String x:Key="Dialog_Duplicate_CancelCopy">Cancel the copy</x:String>
@@ -107,7 +107,7 @@
 
   <!-- ── Écran Versions ──────────────────────────────────────────────────────────── -->
   <x:String x:Key="Versions_Title">Game versions</x:String>
-  <x:String x:Key="Versions_CheckForUpdates">Check for new releases</x:String>
+  <x:String x:Key="Versions_CheckForUpdates">Check for new versions</x:String>
   <x:String x:Key="Versions_Retry">Try again</x:String>
   <x:String x:Key="Versions_ClearFilter">Clear the filter</x:String>
   <x:String x:Key="Versions_SearchPlaceholder">Filter by version…</x:String>
@@ -123,7 +123,7 @@
   <x:String x:Key="Versions_CancelInstall">Cancel the install</x:String>
   <x:String x:Key="Versions_InstalledBadge">installed</x:String>
   <x:String x:Key="Versions_EmptyTitle">No versions</x:String>
-  <x:String x:Key="Versions_EmptyDescription">No version matches the current filter. Widen it, or check the catalog for new releases.</x:String>
+  <x:String x:Key="Versions_EmptyDescription">No version matches the current filter. Widen it, or check the catalog for new versions.</x:String>
 
   <!-- ── Dialogue de désinstallation ─────────────────────────────────────────────── -->
   <x:String x:Key="Dialog_Uninstall_Confirm">Uninstall</x:String>
@@ -199,7 +199,8 @@
   <x:String x:Key="Mods_OpenOnModDb">Open on ModDB</x:String>
   <x:String x:Key="Mods_OpenFailed">Your browser could not be opened. Copy the address below to get there by hand.</x:String>
   <x:String x:Key="Mods_Sort_Downloads">Downloads</x:String>
-  <x:String x:Key="Mods_Sort_Updated">Updated</x:String>
+  <!-- Voir le fichier français : le critère de tri se distingue de la pastille d'état. -->
+  <x:String x:Key="Mods_Sort_Updated">Last updated</x:String>
   <x:String x:Key="Mods_Sort_Trending">Trending</x:String>
   <x:String x:Key="Mods_Sort_Name">Name</x:String>
   <x:String x:Key="Mods_Offline_Title">ModDB unreachable</x:String>
@@ -218,7 +219,7 @@
   <x:String x:Key="Mods_Plan_FileName">file:</x:String>
   <x:String x:Key="Mods_Plan_Dependencies">Missing dependencies</x:String>
   <x:String x:Key="Mods_Plan_Release">Version to install</x:String>
-  <x:String x:Key="Mods_Plan_Changelog">Release notes</x:String>
+  <x:String x:Key="Mods_Plan_Changelog">Version notes</x:String>
   <x:String x:Key="Mods_Plan_NoChangelog">The author published nothing for this version.</x:String>
   <x:String x:Key="Mods_Plan_InstallAnyway">Install anyway</x:String>
   <x:String x:Key="Mods_Plan_NoDependencies">This mod needs nothing else.</x:String>
@@ -289,7 +290,10 @@
   <x:String x:Key="Settings_BackdropHint">The change applies right away.</x:String>
 
   <!-- Jeu -->
-  <x:String x:Key="Settings_GameSectionTitle">Where the data lives</x:String>
+  <!-- Un NOM, comme ses quatre frères de section (Appearance, Downloads, Vintage Story account,
+       First launch) et comme le français : « Where the data lives » était la seule proposition de
+       la colonne. -->
+  <x:String x:Key="Settings_GameSectionTitle">Data location</x:String>
   <x:String x:Key="Settings_GameDataPathLabel">Data folder</x:String>
   <x:String x:Key="Settings_GameOpenFolder">Open the folder</x:String>
   <x:String x:Key="Settings_GameRelocateHint">Instances, game versions and downloaded files all live under this folder. Moving it is not possible yet.</x:String>

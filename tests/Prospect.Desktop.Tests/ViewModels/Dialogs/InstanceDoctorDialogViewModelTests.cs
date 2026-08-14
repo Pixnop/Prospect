@@ -223,7 +223,7 @@ public sealed class InstanceDoctorDialogViewModelTests
 
         var row = dialog.Groups.ShouldHaveSingleItem().Rows.ShouldHaveSingleItem();
         row.Severity.ShouldBe(InstanceDoctorSeverity.Warning);
-        row.Message.ShouldBe("Compatibilité de version de jeu inconnue : lance une vérification des mises à jour pour en savoir plus.");
+        row.Message.ShouldBe("Compatibilité inconnue. Aucun mod de l'instance n'a été confronté à sa version du jeu. Lance une vérification des mises à jour pour le savoir.");
     }
 
     [Fact]

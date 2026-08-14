@@ -201,9 +201,9 @@ public sealed class EnglishUiTextTests
         English.Mods.DependenciesNotOnModDb(["configlib", "vsimgui"])
             .ShouldBe("Not found on ModDB: configlib, vsimgui. Install them by hand if the mod turns out to need them.");
         English.Mods.DependenciesWithoutCompatibleRelease(["CarryOnLib"], "1.22.6")
-            .ShouldBe("On ModDB, but with no release for Vintage Story 1.22.6: CarryOnLib. Its author has published nothing for this game version. Those compatibility boxes are ticked by hand and fall behind, so you can still install the latest published release, knowing what you are doing.");
+            .ShouldBe("No version for Vintage Story 1.22.6: CarryOnLib. It is on ModDB all right, but its author has published nothing for this game version, and those compatibility boxes are ticked by hand, so they fall behind. You can still install the latest published version, knowing what you are doing.");
         English.Mods.DependenciesWithoutCompatibleRelease(["CarryOnLib", "Config lib"], "1.22.6")
-            .ShouldBe("On ModDB, but with no release for Vintage Story 1.22.6: CarryOnLib, Config lib. Their authors have published nothing for this game version. Those compatibility boxes are ticked by hand and fall behind, so you can still install the latest published release, knowing what you are doing.");
+            .ShouldBe("No version for Vintage Story 1.22.6: CarryOnLib, Config lib. They are on ModDB all right, but their authors have published nothing for this game version, and those compatibility boxes are ticked by hand, so they fall behind. You can still install the latest published version, knowing what you are doing.");
         English.Mods.DisabledDependencies(["configlib"])
             .ShouldBe("There but disabled: configlib. Turn it back on from the instance's Mods tab.");
         English.Mods.DisabledDependencies(["configlib", "vsimgui"])
@@ -214,9 +214,9 @@ public sealed class EnglishUiTextTests
     public void Versions_UninstallDependents_AgreesTheVerbWithTheList()
     {
         English.Versions.UninstallDependents(["Homestead"])
-            .ShouldBe("Instance “Homestead” uses this version and will no longer start.");
+            .ShouldBe("Instance “Homestead” uses this version and will no longer launch.");
         English.Versions.UninstallDependents(["Homestead", "Sandbox"])
-            .ShouldBe("Instances “Homestead” and “Sandbox” use this version and will no longer start.");
+            .ShouldBe("Instances “Homestead” and “Sandbox” use this version and will no longer launch.");
     }
 
     // ── Formats composés ─────────────────────────────────────────────────────────────────────
@@ -259,9 +259,9 @@ public sealed class EnglishUiTextTests
     public void Doctor_CompatibilityMessage_AgreesInNumberAndKeepsTheVersionUntouched()
     {
         English.Instance.Doctor.CompatibilityMessage(new ModCompatibilityDoctorResult(2, 1, 0, 3), "1.21.3")
-            .ShouldBe("1 mod whose compatibility with 1.21.3 is not confirmed. Check for mod updates to find out more.");
+            .ShouldBe("1 mod with unconfirmed compatibility. Its author has not declared it for 1.21.3. Check for mod updates to find out more.");
         English.Instance.Doctor.CompatibilityMessage(new ModCompatibilityDoctorResult(1, 1, 1, 3), "1.21.3")
-            .ShouldBe("2 mods whose compatibility with 1.21.3 is not confirmed. Check for mod updates to find out more.");
+            .ShouldBe("2 mods with unconfirmed compatibility. Their authors have not declared them for 1.21.3. Check for mod updates to find out more.");
         English.Instance.Doctor.CompatibilityMessage(new ModCompatibilityDoctorResult(0, 0, 2, 2), "1.21.3")
             .ShouldBe(English.Instance.Doctor.CompatibilityUnknown);
         // Verdict sain : aucune ligne, jamais un message rassurant inutile.

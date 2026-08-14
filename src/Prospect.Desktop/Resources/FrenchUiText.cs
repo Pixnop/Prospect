@@ -81,7 +81,7 @@ internal sealed class FrenchWizardText : WizardText
     internal override string SummaryNoVersion => "Choisis une version du jeu à l'étape précédente.";
 
     internal override string NameBeingDeleted
-        => "Une instance de ce nom est en cours de suppression. Attends qu'elle soit terminée, ou choisis un autre nom.";
+        => "Ce nom est encore pris. Une instance qui le portait est en cours de suppression : attends la fin, ou choisis-en un autre.";
 
     internal override IReadOnlyList<string> StepLabels { get; } = ["Nom", "Version", "Icône", "Résumé"];
 
@@ -117,6 +117,10 @@ internal sealed class FrenchDialogsText : DialogsText
     internal override string DuplicateProgressLabel(int filesCopied, int totalFiles)
         => totalFiles == 0 ? "Préparation de la copie…" : $"Copie des fichiers ({filesCopied}/{totalFiles})";
 
+    internal override string RenameTitle(string instanceName) => $"Renommer « {instanceName} » ?";
+
+    internal override string DuplicateTitle(string sourceName) => $"Dupliquer « {sourceName} » ?";
+
     internal override string DeleteTitle(string instanceName) => $"Supprimer « {instanceName} » ?";
 
     internal override string DeleteMessage(string instanceName)
@@ -128,12 +132,12 @@ internal sealed class FrenchDialogsText : DialogsText
         => totalFiles == 0 ? DeleteInProgress : $"Suppression des fichiers ({deletedFiles}/{totalFiles})";
 
     internal override string DeletePartialFailure(string directory)
-        => $"La suppression n'a pas pu aller jusqu'au bout : il reste des fichiers dans « {directory} ». Ferme le jeu s'il tourne encore, puis réessaie.";
+        => $"La suppression est incomplète. Des fichiers restent dans « {directory} ». Ferme le jeu s'il tourne encore, puis réessaie.";
 
     internal override string RestoreBackupTitle(string instanceName) => $"Restaurer « {instanceName} » ?";
 
     internal override string RestoreBackupMessage(string instanceName, string dateText)
-        => $"L'état actuel de « {instanceName} » sera d'abord sauvegardé par sécurité, puis remplacé par la sauvegarde du {dateText}. Mondes, configs et mods reviendront exactement à cet état.";
+        => $"« {instanceName} » reviendra à son état du {dateText}. Mondes, configs et mods compris. L'état actuel est sauvegardé avant, par sécurité.";
 
     internal override string DeleteBackupTitle(string dateText) => $"Supprimer la sauvegarde du {dateText} ?";
 }
@@ -166,7 +170,7 @@ internal sealed class FrenchToastsText : ToastsText
     internal override string AutoBackupFailedTitle => "Sauvegarde automatique ratée";
 
     internal override string AutoBackupFailedMessage
-        => "Le lancement continue, mais aucune sauvegarde n'a été prise avant. Vérifie l'espace disque disponible.";
+        => "Aucune sauvegarde n'a été prise. Le lancement continue quand même, sans filet cette fois. Vérifie l'espace disque disponible.";
 }
 
 internal sealed class FrenchHomeText : HomeText
@@ -241,13 +245,13 @@ internal sealed class FrenchVersionsText : VersionsText
         => "Le catalogue est injoignable. Seules les versions déjà installées sont affichées.";
 
     internal override string InstallLandedElsewhere(string targetDirectory)
-        => $"L'installeur s'est terminé sans erreur, mais le jeu n'est pas dans « {targetDirectory} ». "
-            + "Il a probablement été installé par-dessus une installation existante de Vintage Story. "
-            + "Rien n'a été marqué comme installé.";
+        => "L'installation n'a rien laissé au bon endroit. L'installeur s'est terminé sans erreur, mais le jeu "
+            + $"n'est pas dans « {targetDirectory} » : il a probablement été posé par-dessus une installation "
+            + "existante de Vintage Story. Rien n'a été marqué comme installé, désinstalle l'ancienne copie puis réessaie.";
 
     internal override string ArchiveMissingExecutable(string targetDirectory)
-        => "L'archive du jeu a été extraite sans erreur, mais elle ne contenait pas l'exécutable attendu "
-            + $"à l'endroit attendu dans « {targetDirectory} ». Rien n'a été marqué comme installé.";
+        => "L'installation n'a pas abouti. L'archive du jeu s'est extraite sans erreur, mais l'exécutable "
+            + $"n'est pas là où il devrait être dans « {targetDirectory} ». Rien n'a été marqué comme installé, réessaie.";
 
     internal override string Subtitle(int installedCount, string totalSize) => installedCount switch
     {
@@ -275,7 +279,7 @@ internal sealed class FrenchVersionsText : VersionsText
         => $"installation · ~{percent.ToString(CultureInfo.InvariantCulture)} %";
 
     internal override string InstallerPromptNotice
-        => "L'installeur du jeu peut ouvrir sa propre fenêtre et proposer de désinstaller une ancienne version. Réponds non : Prospect installe dans son propre dossier et ne touche pas à ton jeu existant.";
+        => "Réponds non si une fenêtre propose de désinstaller une ancienne version. C'est l'installeur du jeu qui l'ouvre, pas Prospect. Prospect installe dans son propre dossier et ne touche pas à ton jeu existant.";
 
     internal override string BrokenReason(GameInstallBrokenReason reason) => reason switch
     {
@@ -295,7 +299,7 @@ internal sealed class FrenchVersionsText : VersionsText
         => totalFiles == 0 ? UninstallInProgress : $"Suppression des fichiers ({deletedFiles}/{totalFiles})";
 
     internal override string UninstallPartialFailure(string directory)
-        => $"La désinstallation n'a pas pu aller jusqu'au bout : il reste des fichiers dans « {directory} ». Ferme le jeu s'il tourne encore, puis réessaie.";
+        => $"La désinstallation est incomplète. Des fichiers restent dans « {directory} ». Ferme le jeu s'il tourne encore, puis réessaie.";
 
     internal override string UninstallDependents(IReadOnlyList<string> instanceNames)
     {
@@ -374,10 +378,10 @@ internal sealed class FrenchDoctorText(ModsText mods) : DoctorText(mods)
     internal override string AllClearDescription => "Aucun problème détecté sur les cinq vérifications locales.";
 
     internal override string CompatibilityUnknown
-        => "Compatibilité de version de jeu inconnue : lance une vérification des mises à jour pour en savoir plus.";
+        => "Compatibilité inconnue. Aucun mod de l'instance n'a été confronté à sa version du jeu. Lance une vérification des mises à jour pour le savoir.";
 
     internal override string RuntimeIndeterminate
-        => "Le composant .NET dont cette version a besoin n'a pas pu être identifié. Le lancement le dira si besoin.";
+        => "Composant .NET indéterminé. Prospect n'a pas su lequel cette version du jeu réclame. Le lancement le dira si ça bloque.";
 
     internal override string ErrorsGroupTitle(int count) => count == 1 ? "1 point à corriger" : $"{count} points à corriger";
 
@@ -414,8 +418,8 @@ internal sealed class FrenchDoctorText(ModsText mods) : DoctorText(mods)
         var uncertain = compatibility.ApproximateCount + compatibility.UnknownCount;
 
         return uncertain == 1
-            ? $"1 mod dont la compatibilité avec {gameVersionText} n'est pas confirmée. Lance une vérification des mises à jour pour en savoir plus."
-            : $"{uncertain} mods dont la compatibilité avec {gameVersionText} n'est pas confirmée. Lance une vérification des mises à jour pour en savoir plus.";
+            ? $"1 mod à la compatibilité non confirmée. Son auteur ne l'a pas déclaré pour {gameVersionText}. Lance une vérification des mises à jour pour en savoir plus."
+            : $"{uncertain} mods à la compatibilité non confirmée. Leurs auteurs ne les ont pas déclarés pour {gameVersionText}. Lance une vérification des mises à jour pour en savoir plus.";
     }
 
     internal override string DiskSpaceLow(string availableText)
@@ -450,7 +454,7 @@ internal sealed class FrenchAccountText : AccountText
     internal override string UnknownPlayerName => "ce compte";
 
     internal override string SignOutConfirmMessage
-        => "Ta session sera effacée de cet ordinateur. Le jeu démarrera sans multijoueur tant que tu ne te reconnecteras pas.";
+        => "Ta session sera effacée de cet ordinateur. Le jeu se lancera sans multijoueur tant que tu ne t'es pas connecté à nouveau.";
 
     internal override string SignOutConfirmTitle(string playerName) => $"Déconnecter « {playerName} » ?";
 
@@ -498,7 +502,7 @@ internal sealed class FrenchModsText : ModsText
     internal override string OfflineEmptyTitle => "Aucun résultat hors ligne";
 
     internal override string OfflineEmptyDescription
-        => "Le ModDB est injoignable et la liste gardée en mémoire est trop ancienne pour servir. Vérifie ta connexion, puis réessaie.";
+        => "Le ModDB est injoignable. La liste gardée en mémoire est trop ancienne pour servir. Vérifie ta connexion, puis réessaie.";
 
     internal override string CheckUpdatesFailedTitle => "Vérification impossible";
 
@@ -529,8 +533,8 @@ internal sealed class FrenchModsText : ModsText
 
     internal override string IncompatibleReleaseWarning(string gameVersion, IReadOnlyList<string> taggedVersions)
         => taggedVersions.Count == 0
-            ? $"L'auteur n'a déclaré cette version compatible avec aucune version du jeu. Elle peut très bien fonctionner en {gameVersion}, mais rien ne l'affirme."
-            : $"L'auteur a déclaré cette version pour {CompatibleVersions(taggedVersions)}, pas pour {gameVersion}. Les compatibilités sont cochées à la main et prennent du retard : elle fonctionnera peut-être, à tes risques.";
+            ? $"Rien ne garantit que cette version fonctionne. Son auteur ne l'a déclarée pour aucune version du jeu. Elle peut très bien tourner en {gameVersion}, à tes risques."
+            : $"Cette version n'est pas déclarée pour {gameVersion}. Son auteur l'a publiée pour {CompatibleVersions(taggedVersions)}. Les compatibilités sont cochées à la main et prennent du retard : elle fonctionnera peut-être, à tes risques.";
 
     internal override string InstallAnywayReason(IReadOnlyList<string> taggedVersions)
         => taggedVersions.Count == 0
@@ -586,6 +590,14 @@ internal sealed class FrenchModsText : ModsText
         _ => string.Empty,
     };
 
+    // DÉRIVE CONNUE, LAISSÉE EN PLACE FAUTE DE PLACE, au sens propre. Le glossaire tranche pour
+    // « client et serveur » (c'est déjà ce que dit SideLabel(ModDbSide) sur la carte du navigateur),
+    // donc le même mod se décrit de deux façons selon l'écran. La correction a été essayée et
+    // annulée : le libellé long ajoute une quarantaine de points à la colonne Auto de droite de la
+    // rangée de mods, ce qui écrase la colonne * du milieu jusqu'à faire déborder l'auteur et les
+    // pastilles de journal (deux gardes d'invariants de boîtes le montrent à 960 points). Corriger
+    // le mot demande d'abord de donner un budget de largeur à cette rangée, ce qui est un chantier
+    // à part. À reprendre avec lui.
     internal override string SideLabel(ModSide? side) => side switch
     {
         ModSide.Client => "client",
@@ -630,7 +642,7 @@ internal sealed class FrenchModsText : ModsText
             : $"La version {currentVersion} installée dans « {instanceName} » sera remplacée par la version {version}. Son état activé ou désactivé est conservé.";
 
     internal override string ApproximateWarning(string gameVersion)
-        => $"Aucune version n'est déclarée compatible avec {gameVersion} : celle-ci est proposée parce qu'elle cible la même série. L'auteur ne l'a pas confirmée, elle peut ne pas fonctionner.";
+        => $"Aucune version n'est déclarée pour {gameVersion}. Celle-ci est proposée parce qu'elle cible la même série. Son auteur ne l'a pas confirmée, elle peut ne pas fonctionner.";
 
     internal override string DependencyReason(ModDependencyIssue? issue) => issue?.Status switch
     {
@@ -648,9 +660,10 @@ internal sealed class FrenchModsText : ModsText
     internal override string DependenciesWithoutCompatibleRelease(IReadOnlyList<string> names, string gameVersion)
         => names.Count == 0
             ? string.Empty
-            : $"Publié{(names.Count > 1 ? "s" : string.Empty)} sur le ModDB, mais sans version pour Vintage Story {gameVersion} : {string.Join(", ", names)}. "
-                + $"{(names.Count > 1 ? "Leurs auteurs n'ont" : "Son auteur n'a")} rien publié pour cette version du jeu. "
-                + "Les compatibilités sont cochées à la main et prennent du retard : tu peux quand même installer la dernière version publiée, en connaissance de cause.";
+            : $"Aucune version pour Vintage Story {gameVersion} : {string.Join(", ", names)}. "
+                + $"{(names.Count > 1 ? "Ces mods existent bien sur le ModDB, mais leurs auteurs n'ont" : "Ce mod existe bien sur le ModDB, mais son auteur n'a")} "
+                + "rien publié pour cette version du jeu, et les compatibilités sont cochées à la main, donc elles prennent du retard. "
+                + "Tu peux quand même installer la dernière version publiée, en connaissance de cause.";
 
     internal override string DisabledDependencies(IReadOnlyList<string> identifiers)
         => identifiers.Count == 0
