@@ -283,7 +283,7 @@ internal sealed class EnglishVersionsText : VersionsText
         => $"installing · ~{percent.ToString(CultureInfo.InvariantCulture)}%";
 
     internal override string InstallerPromptNotice
-        => "Answer no if a window offers to uninstall an older version. The game's own installer opens it, not Prospect. Prospect installs into its own folder and leaves your existing game alone.";
+        => "Answer no if a window offers to uninstall an older version. The game's own installer opens it, not Prospect, and yes would uninstall a version you already have. Prospect installs into its own folder and leaves the rest alone.";
 
     internal override string BrokenReason(GameInstallBrokenReason reason) => reason switch
     {
