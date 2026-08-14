@@ -267,64 +267,62 @@ internal sealed class InnoPayloadExtractor
         ref int lastPercent,
         CancellationToken cancellationToken)
     {
+        var position = 0UL;
+        for (; index <= last; index++)
         {
-            var position = 0UL;
-            for (; index <= last; index++)
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var planned = plan.Files[index];
+            var entry = planned.Entry;
+
+            if (entry.FileOffset < position)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                throw InnoFormatException.Corrupt("les entrées d'un bloc ne se suivent pas");
+            }
 
-                var planned = plan.Files[index];
-                var entry = planned.Entry;
+            Discard(chunk, entry.FileOffset - position);
+            position = entry.FileOffset;
 
-                if (entry.FileOffset < position)
+            var size = (int)entry.FileSize;
+            var buffer = ArrayPool<byte>.Shared.Rent(size);
+            try
+            {
+                ReadExactly(chunk, buffer.AsSpan(0, size));
+                position += entry.FileSize;
+
+                var content = buffer.AsSpan(0, size);
+                if (entry.CallInstructionOptimized)
                 {
-                    throw InnoFormatException.Corrupt("les entrées d'un bloc ne se suivent pas");
+                    InnoCallInstructionFilter.Unfilter(content);
                 }
 
-                Discard(chunk, entry.FileOffset - position);
-                position = entry.FileOffset;
+                VerifyChecksum(content, entry, planned.RelativePaths[0]);
 
-                var size = (int)entry.FileSize;
-                var buffer = ArrayPool<byte>.Shared.Rent(size);
-                try
+                foreach (var relativePath in planned.RelativePaths)
                 {
-                    ReadExactly(chunk, buffer.AsSpan(0, size));
-                    position += entry.FileSize;
-
-                    var content = buffer.AsSpan(0, size);
-                    if (entry.CallInstructionOptimized)
-                    {
-                        InnoCallInstructionFilter.Unfilter(content);
-                    }
-
-                    VerifyChecksum(content, entry, planned.RelativePaths[0]);
-
-                    foreach (var relativePath in planned.RelativePaths)
-                    {
-                        Write(root, relativePath, content);
-                    }
+                    Write(root, relativePath, content);
                 }
-                finally
-                {
-                    ArrayPool<byte>.Shared.Return(buffer);
-                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
 
-                written += size;
+            written += size;
 
-                if (progress is null || plan.TotalBytes <= 0)
-                {
-                    continue;
-                }
+            if (progress is null || plan.TotalBytes <= 0)
+            {
+                continue;
+            }
 
-                // Un rapport par point de pourcentage : vingt mille fichiers, et chaque rapport
-                // repasse par le dispatcher de l'interface.
-                var ratio = Math.Clamp((double)written / plan.TotalBytes, 0d, 1d);
-                var percent = (int)(ratio * 100d);
-                if (percent != lastPercent)
-                {
-                    lastPercent = percent;
-                    progress.Report(GameInstallProgress.ForInstalling(ratio));
-                }
+            // Un rapport par point de pourcentage : vingt mille fichiers, et chaque rapport
+            // repasse par le dispatcher de l'interface.
+            var ratio = Math.Clamp((double)written / plan.TotalBytes, 0d, 1d);
+            var percent = (int)(ratio * 100d);
+            if (percent != lastPercent)
+            {
+                lastPercent = percent;
+                progress.Report(GameInstallProgress.ForInstalling(ratio));
             }
         }
 
