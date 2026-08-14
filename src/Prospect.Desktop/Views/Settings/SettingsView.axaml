@@ -188,6 +188,11 @@
                     <TextBlock Text="{StaticResource Settings_VslCardTitle}"
                                FontSize="{StaticResource FsBodySm}" FontWeight="{StaticResource FwMedium}"
                                Foreground="{DynamicResource Text1}" />
+                    <!-- Ce que « importer » veut dire, dit avant le clic : une copie, et le dossier
+                         d'origine ne bouge pas. Le dialogue le redit à l'étape de sélection ; ici,
+                         c'est pour qui hésite encore à l'ouvrir. -->
+                    <TextBlock Text="{StaticResource Settings_VslCardDescription}" TextWrapping="Wrap" MaxWidth="420"
+                               LineHeight="18" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
                     <TextBlock Text="{Binding VslStatusText}" TextWrapping="Wrap" MaxWidth="420"
                                FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}"
                                Foreground="{DynamicResource Text3}"

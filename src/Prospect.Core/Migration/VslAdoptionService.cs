@@ -16,11 +16,19 @@ namespace Prospect.Core.Migration;
 /// </summary>
 /// <remarks>
 /// <para>
+/// <b>Le nom de code n'est plus le nom d'écran.</b> L'interface dit « importer » depuis l'arbitrage
+/// du 2026-08-14 (voir le glossaire de docs/architecture.md) ; les types, méthodes et clés de ce
+/// domaine gardent « adoption ». Le renommage est de surface, pas un refactor : rien ne gagnerait à
+/// faire bouger une hiérarchie de types pour un choix de vocabulaire, et le mot d'écran a été retenu
+/// justement parce qu'il DIT ce que fait ce service, décrit au paragraphe suivant.
+/// </para>
+/// <para>
 /// <b>Adoption non destructive.</b> Les données d'une installation sont toujours COPIÉES, jamais
 /// déplacées : VS Launcher reste intact après une adoption, l'utilisateur peut continuer à s'en
 /// servir ou revenir en arrière sans rien avoir perdu. C'est un choix délibéré plutôt qu'une
 /// prudence par défaut — un déplacement économiserait de l'espace disque, mais transformerait un
-/// essai de Prospect en migration à sens unique.
+/// essai de Prospect en migration à sens unique. C'est aussi la promesse que l'écran affiche
+/// désormais en toutes lettres, sous son titre.
 /// </para>
 /// <para>
 /// <b>Adoption optionnelle des moteurs, pari assumé.</b> Copier un moteur déjà présent sous VS

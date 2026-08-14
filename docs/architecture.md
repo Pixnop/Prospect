@@ -923,9 +923,25 @@ chaîne s'y aligne, dans les deux langues.
 | Démarrer le jeu | lancer, lancement | launch | démarrer, start, run |
 | Une installation du jeu | version du jeu | game version | installation, moteur, engine |
 | Un dossier VS Launcher repris | installation VS Launcher | VS Launcher install | instance |
+| Reprendre un dossier VS Launcher | importer | import | adopter, adopt, migrer, reprendre |
 | Tourne des deux côtés | client et serveur | client and server | universel, universal |
 | Ouvrir une session de compte | se connecter | sign in | — |
 | Joignabilité du réseau | connexion, hors ligne | connection, offline | reconnecte-toi (se lit « reconnecte ton compte ») |
+
+La ligne « importer » est un arbitrage du 2026-08-14, et elle porte sa propre leçon. « Adopter »
+était le seul mot de son espèce dans le produit : aucun autre écran n'employait de métaphore, et
+surtout celle-ci ne disait pas ce qui se passe — ni si le dossier VS Launcher est copié, déplacé ou
+modifié. C'est précisément la question que se pose quelqu'un qui a encore ses parties en cours de
+l'autre côté. « Importer » le dit, et l'écran l'écrit maintenant noir sur blanc sous son titre :
+une copie, le dossier d'origine ni modifié ni déplacé.
+
+Ce que ce renommage NE touche pas : les identifiants. `VslAdoptionService`, `AdoptVslViewModel`,
+`MigrationText.AdoptingEnginesPhase`, les clés `Dialog_AdoptVsl_*` restent tels quels, et les
+endroits où le nom de code et le nom d'écran divergent désormais le disent en docstring. La règle
+qui en sort vaut pour les prochains arbitrages de vocabulaire : un mot d'écran se change dans les
+dictionnaires et les tables de textes, pas dans une hiérarchie de types. Le coût d'un refactor de
+surface se paie en conflits et en revue, pour zéro gain de lisibilité une fois la divergence
+documentée.
 
 Deux règles de forme accompagnent le tableau. Un bouton dit son EFFET et jamais le mécanisme :
 « Se connecter » et non « Valider le code », « Annuler l'installation » et non « Annuler », « Arrêter

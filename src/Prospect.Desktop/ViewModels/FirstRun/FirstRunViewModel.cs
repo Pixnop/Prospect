@@ -11,10 +11,11 @@ namespace Prospect.Desktop.ViewModels.FirstRun;
 /// <summary>
 /// Rappel de premier lancement (design/architecture : « checklist de premier lancement ») porté
 /// par <see cref="Home.HomeViewModel"/> et affiché dans son état vide (aucune instance) : quand
-/// <see cref="VslDetector"/> trouve quelque chose, une carte propose « Adopter tes installations
+/// <see cref="VslDetector"/> trouve quelque chose, une carte propose « Importer tes installations
 /// VS Launcher » ; sinon la carte reste simplement masquée, l'Accueil ne montre que son état vide
-/// habituel. Le flux d'adoption lui-même est <see cref="AdoptVslViewModel"/>, identique à celui
-/// ouvert depuis les Réglages : ce ViewModel ne fait que lancer la détection et l'ouvrir.
+/// habituel. Le flux d'import lui-même est <see cref="AdoptVslViewModel"/> (nom de code inchangé,
+/// voir sa remarque de classe), identique à celui ouvert depuis les Réglages : ce ViewModel ne fait
+/// que lancer la détection et l'ouvrir.
 /// </summary>
 public sealed partial class FirstRunViewModel : ObservableObject
 {

@@ -110,12 +110,12 @@ public sealed class EnglishUiTextTests
     }
 
     [Theory]
-    [InlineData(0, 0, "no installs and no engines found")]
-    [InlineData(1, 1, "1 install and 1 engine found")]
-    [InlineData(2, 3, "2 installs and 3 engines found")]
-    public void Migration_DetectionSummary_AgreesInNumberOnBothHalves(int installations, int engines, string expected)
+    [InlineData(0, 0, "no installs and no game versions found")]
+    [InlineData(1, 1, "1 install and 1 game version found")]
+    [InlineData(2, 3, "2 installs and 3 game versions found")]
+    public void Migration_DetectionSummary_AgreesInNumberOnBothHalves(int installations, int gameVersions, string expected)
     {
-        English.Migration.DetectionSummary(installations, engines).ShouldBe(expected);
+        English.Migration.DetectionSummary(installations, gameVersions).ShouldBe(expected);
     }
 
     // ── Décomptes et énumérations ────────────────────────────────────────────────────────────
@@ -286,11 +286,11 @@ public sealed class EnglishUiTextTests
     [Fact]
     public void Migration_CompletedToastDescription_CoversEveryCombination()
     {
-        English.Migration.CompletedToastDescription(0, 0).ShouldBe("Nothing was adopted, see the report.");
+        English.Migration.CompletedToastDescription(0, 0).ShouldBe("Nothing was imported. The report says why, line by line.");
         English.Migration.CompletedToastDescription(1, 0).ShouldBe("1 instance created.");
         English.Migration.CompletedToastDescription(2, 0).ShouldBe("2 instances created.");
-        English.Migration.CompletedToastDescription(0, 1).ShouldBe("1 engine adopted.");
-        English.Migration.CompletedToastDescription(2, 3).ShouldBe("2 instance(s) created, 3 engine(s) adopted.");
+        English.Migration.CompletedToastDescription(0, 1).ShouldBe("1 game version imported.");
+        English.Migration.CompletedToastDescription(2, 3).ShouldBe("2 instance(s) created, 3 game version(s) imported.");
     }
 
     [Fact]

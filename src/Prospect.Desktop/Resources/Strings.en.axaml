@@ -244,22 +244,24 @@
   <x:String x:Key="Mods_Row_Update">Update</x:String>
   <x:String x:Key="Mods_UpdatePlan_Confirm">Update</x:String>
 
-  <!-- ── Dialogue d'adoption VS Launcher ─────────────────────────────────────────── -->
-  <x:String x:Key="Dialog_AdoptVsl_Title">Adopt your VS Launcher installs</x:String>
+  <!-- ── Dialogue d'import VS Launcher (voir le fichier français pour l'arbitrage) ─── -->
+  <x:String x:Key="Dialog_AdoptVsl_Title">Import your VS Launcher installs</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_CopyNotice">Your VS Launcher folders are copied, never changed or moved. VS Launcher keeps working exactly as before.</x:String>
   <x:String x:Key="Dialog_AdoptVsl_Cancel">Cancel</x:String>
-  <x:String x:Key="Dialog_AdoptVsl_Confirm">Adopt</x:String>
-  <x:String x:Key="Dialog_AdoptVsl_CancelAdoption">Cancel the adoption</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_Confirm">Import</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_CancelAdoption">Cancel the import</x:String>
   <x:String x:Key="Dialog_AdoptVsl_Close">Done</x:String>
   <x:String x:Key="Dialog_AdoptVsl_InstallationsSectionTitle">Installs</x:String>
-  <x:String x:Key="Dialog_AdoptVsl_EnginesSectionTitle">Engines</x:String>
-  <x:String x:Key="Dialog_AdoptVsl_EnginesNotice">These files are copied from VS Launcher exactly as they are. Unlike a download, nothing checks that they are intact: if in doubt, uninstall the version and download it again from the Versions screen.</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_EnginesSectionTitle">Game versions</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_EnginesNotice">Nothing checks that these files are intact. They are copied exactly as they are, where a download is checked on arrival. If in doubt, uninstall the version and download it again from the Versions screen.</x:String>
 
   <!-- ── Réglages ────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Settings_Title">Settings</x:String>
   <x:String x:Key="Settings_GeneralSectionTitle">General</x:String>
   <x:String x:Key="Settings_VslCardTitle">VS Launcher</x:String>
+  <x:String x:Key="Settings_VslCardDescription">Importing a VS Launcher install makes a copy inside Prospect. The original folder is neither changed nor moved.</x:String>
   <x:String x:Key="Settings_VslPickFolder">Choose a folder…</x:String>
-  <x:String x:Key="Settings_VslOpenAdoption">Adopt your VS Launcher installs</x:String>
+  <x:String x:Key="Settings_VslOpenAdoption">Import your VS Launcher installs</x:String>
   <x:String x:Key="Settings_VslDetecting">Looking for installs…</x:String>
 
   <!-- Onglets -->
@@ -324,7 +326,7 @@
 
   <!-- ── Rappel de premier lancement (Accueil, état vide) ───────────────────────── -->
   <x:String x:Key="FirstRun_VslCardTitle">Coming from VS Launcher?</x:String>
-  <x:String x:Key="FirstRun_VslOpenAdoption">Adopt your VS Launcher installs</x:String>
+  <x:String x:Key="FirstRun_VslOpenAdoption">Import your VS Launcher installs</x:String>
 
   <!-- ── Écran de premier lancement ─────────────────────────────────────────────── -->
   <x:String x:Key="FirstRun_Description">Before you create your first instance, let's make sure everything is ready: the data folder, a game version installed, and your account if you mean to play multiplayer.</x:String>

@@ -791,7 +791,7 @@ internal sealed class FrenchMigrationText : MigrationText
 {
     internal override string Starting => "Préparation…";
 
-    internal override string CompletedToastTitle => "Adoption terminée";
+    internal override string CompletedToastTitle => "Import terminé";
 
     internal override string ModCount(int count) => count switch
     {
@@ -809,14 +809,14 @@ internal sealed class FrenchMigrationText : MigrationText
             _ => $"{installationCount} installations",
         };
 
-        var engines = gameVersionCount switch
+        var gameVersions = gameVersionCount switch
         {
-            0 => "aucun moteur",
-            1 => "1 moteur",
-            _ => $"{gameVersionCount} moteurs",
+            0 => "aucune version du jeu",
+            1 => "1 version du jeu",
+            _ => $"{gameVersionCount} versions du jeu",
         };
 
-        return $"{installations} et {engines} détectés";
+        return $"{installations} et {gameVersions} détectées";
     }
 
     internal override string AdoptingInstallationsPhase(int completedItems, int totalItems, string? currentItemLabel)
@@ -826,18 +826,18 @@ internal sealed class FrenchMigrationText : MigrationText
 
     internal override string AdoptingEnginesPhase(int completedItems, int totalItems, string? currentItemLabel)
         => string.IsNullOrEmpty(currentItemLabel)
-            ? $"Moteurs {completedItems}/{totalItems}"
-            : $"Moteurs {completedItems}/{totalItems} · {currentItemLabel}";
+            ? $"Versions du jeu {completedItems}/{totalItems}"
+            : $"Versions du jeu {completedItems}/{totalItems} · {currentItemLabel}";
 
     internal override string FilesCopied(int filesCopied, int totalFiles) => $"{filesCopied}/{totalFiles} fichiers";
 
     internal override string CompletedToastDescription(int adoptedInstallations, int adoptedEngines)
         => (adoptedInstallations, adoptedEngines) switch
         {
-            (0, 0) => "Rien n'a été adopté, voir le rapport.",
+            (0, 0) => "Rien n'a été importé. Le rapport dit pourquoi, ligne par ligne.",
             (_, 0) => adoptedInstallations == 1 ? "1 instance créée." : $"{adoptedInstallations} instances créées.",
-            (0, _) => adoptedEngines == 1 ? "1 moteur adopté." : $"{adoptedEngines} moteurs adoptés.",
-            _ => $"{adoptedInstallations} instance(s) créée(s), {adoptedEngines} moteur(s) adopté(s).",
+            (0, _) => adoptedEngines == 1 ? "1 version du jeu importée." : $"{adoptedEngines} versions du jeu importées.",
+            _ => $"{adoptedInstallations} instance(s) créée(s), {adoptedEngines} version(s) du jeu importée(s).",
         };
 
     internal override string InstallationsAdoptedGroupTitle(int count)
@@ -850,13 +850,13 @@ internal sealed class FrenchMigrationText : MigrationText
         => count == 1 ? "1 installation en échec" : $"{count} installations en échec";
 
     internal override string EnginesAdoptedGroupTitle(int count)
-        => count == 1 ? "1 moteur adopté" : $"{count} moteurs adoptés";
+        => count == 1 ? "1 version du jeu importée" : $"{count} versions du jeu importées";
 
     internal override string EnginesSkippedGroupTitle(int count)
-        => count == 1 ? "1 moteur ignoré" : $"{count} moteurs ignorés";
+        => count == 1 ? "1 version du jeu ignorée" : $"{count} versions du jeu ignorées";
 
     internal override string EnginesFailedGroupTitle(int count)
-        => count == 1 ? "1 moteur en échec" : $"{count} moteurs en échec";
+        => count == 1 ? "1 version du jeu en échec" : $"{count} versions du jeu en échec";
 }
 
 internal sealed class FrenchSettingsText : SettingsText
@@ -902,7 +902,7 @@ internal sealed class FrenchFirstRunText : FirstRunText
 
     internal override string InstallVersionAction => "Installer";
 
-    internal override string AdoptAction => "Adopter";
+    internal override string AdoptAction => "Importer";
 
     internal override string NoVersionInstalled => "aucune installée";
 

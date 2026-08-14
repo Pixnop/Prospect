@@ -816,7 +816,7 @@ internal sealed class EnglishMigrationText : MigrationText
 {
     internal override string Starting => "Getting ready…";
 
-    internal override string CompletedToastTitle => "Adoption done";
+    internal override string CompletedToastTitle => "Import done";
 
     internal override string ModCount(int count) => count switch
     {
@@ -834,14 +834,14 @@ internal sealed class EnglishMigrationText : MigrationText
             _ => $"{installationCount} installs",
         };
 
-        var engines = gameVersionCount switch
+        var gameVersions = gameVersionCount switch
         {
-            0 => "no engines",
-            1 => "1 engine",
-            _ => $"{gameVersionCount} engines",
+            0 => "no game versions",
+            1 => "1 game version",
+            _ => $"{gameVersionCount} game versions",
         };
 
-        return $"{installations} and {engines} found";
+        return $"{installations} and {gameVersions} found";
     }
 
     internal override string AdoptingInstallationsPhase(int completedItems, int totalItems, string? currentItemLabel)
@@ -851,18 +851,18 @@ internal sealed class EnglishMigrationText : MigrationText
 
     internal override string AdoptingEnginesPhase(int completedItems, int totalItems, string? currentItemLabel)
         => string.IsNullOrEmpty(currentItemLabel)
-            ? $"Engines {completedItems}/{totalItems}"
-            : $"Engines {completedItems}/{totalItems} · {currentItemLabel}";
+            ? $"Game versions {completedItems}/{totalItems}"
+            : $"Game versions {completedItems}/{totalItems} · {currentItemLabel}";
 
     internal override string FilesCopied(int filesCopied, int totalFiles) => $"{filesCopied}/{totalFiles} files";
 
     internal override string CompletedToastDescription(int adoptedInstallations, int adoptedEngines)
         => (adoptedInstallations, adoptedEngines) switch
         {
-            (0, 0) => "Nothing was adopted, see the report.",
+            (0, 0) => "Nothing was imported. The report says why, line by line.",
             (_, 0) => adoptedInstallations == 1 ? "1 instance created." : $"{adoptedInstallations} instances created.",
-            (0, _) => adoptedEngines == 1 ? "1 engine adopted." : $"{adoptedEngines} engines adopted.",
-            _ => $"{adoptedInstallations} instance(s) created, {adoptedEngines} engine(s) adopted.",
+            (0, _) => adoptedEngines == 1 ? "1 game version imported." : $"{adoptedEngines} game versions imported.",
+            _ => $"{adoptedInstallations} instance(s) created, {adoptedEngines} game version(s) imported.",
         };
 
     internal override string InstallationsAdoptedGroupTitle(int count)
@@ -875,13 +875,13 @@ internal sealed class EnglishMigrationText : MigrationText
         => count == 1 ? "1 install failed" : $"{count} installs failed";
 
     internal override string EnginesAdoptedGroupTitle(int count)
-        => count == 1 ? "1 engine adopted" : $"{count} engines adopted";
+        => count == 1 ? "1 game version imported" : $"{count} game versions imported";
 
     internal override string EnginesSkippedGroupTitle(int count)
-        => count == 1 ? "1 engine skipped" : $"{count} engines skipped";
+        => count == 1 ? "1 game version skipped" : $"{count} game versions skipped";
 
     internal override string EnginesFailedGroupTitle(int count)
-        => count == 1 ? "1 engine failed" : $"{count} engines failed";
+        => count == 1 ? "1 game version failed" : $"{count} game versions failed";
 }
 
 internal sealed class EnglishSettingsText : SettingsText
@@ -925,7 +925,7 @@ internal sealed class EnglishFirstRunText : FirstRunText
 
     internal override string InstallVersionAction => "Install";
 
-    internal override string AdoptAction => "Adopt";
+    internal override string AdoptAction => "Import";
 
     internal override string NoVersionInstalled => "none installed";
 
