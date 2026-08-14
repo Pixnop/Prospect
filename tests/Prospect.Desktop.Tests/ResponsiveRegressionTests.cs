@@ -609,6 +609,57 @@ public sealed class ResponsiveRegressionTests
         window.Close();
     }
 
+    /// <summary>
+    /// La confirmation de retrait, dont l'en-tête porte désormais une vignette à côté d'un titre qui
+    /// NOMME son objet. Le cas dur est celui-là : un nom de mod trop long à côté d'une tuile de
+    /// quarante points, dans un dialogue de 440 points de large, plus l'encadré qui nomme les mods
+    /// qui casseraient.
+    /// </summary>
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UninstallModDialog_HoldsItsBoxes(bool light)
+    {
+        using var provider = ResponsiveScenario.CreateProvider(out var fileSystem, out _);
+        provider.SeedInstalledVersion(fileSystem, "1.21.3");
+        var window = ResponsiveScenario.ShowWindow(provider, light ? ThemeVariant.Light : ThemeVariant.Dark);
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var home = provider.GetRequiredService<HomeViewModel>();
+
+        var record = await ResponsiveScenario.CreateInstanceAsync(shell, home, ResponsiveScenario.LongInstanceName, "1.21.3");
+        var mods = provider.GetRequiredService<IInstalledModRepository>();
+        ModDbDoubles.SeedMod(
+            fileSystem,
+            mods.GetModsDirectory(record.Slug),
+            "cartomap-1.0.0.zip",
+            ModDbDoubles.ModInfo("cartomap", "Extension de cartographie détaillée pour la région nord du monde"));
+        ModDbDoubles.SeedMod(
+            fileSystem,
+            mods.GetModsDirectory(record.Slug),
+            "extrainfo-1.0.0.zip",
+            ModDbDoubles.ModInfo("extrainfo", "Extra Info", dependency: "cartomap"));
+
+        shell.ShowInstanceDetail(record.Slug);
+        var detail = shell.CurrentPage.ShouldBeOfType<InstanceDetailViewModel>();
+        await detail.InitializeCommand.ExecuteAsync(null);
+        detail.SelectTabCommand.Execute(InstanceDetailTab.Mods);
+        window.Settle();
+
+        await detail.ModsTab.Mods.Single(row => row.Mod.Identity == "cartomap").RemoveCommand.ExecuteAsync(null);
+        window.Settle();
+
+        var dialog = shell.Overlay.Active.ShouldBeOfType<UninstallModDialogViewModel>();
+        dialog.HasDependents.ShouldBeTrue();
+        await dialog.Thumbnail.LoadCompletion;
+        window.Settle();
+
+        window.ShouldHoldLayoutInvariantsAtEverySize(
+            light ? "Confirmation de retrait d'un mod, thème clair" : "Confirmation de retrait d'un mod");
+
+        Application.Current!.RequestedThemeVariant = ThemeVariant.Dark;
+        window.Close();
+    }
+
     [AvaloniaFact]
     public async Task ModBrowser_Offline_HoldsItsBoxes()
     {
