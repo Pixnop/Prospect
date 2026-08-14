@@ -97,6 +97,49 @@ public sealed class ModDbClient : IModDbClient, IDisposable
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Prend le MÊME verrou que <see cref="GetCatalogAsync"/> : sans lui, une lecture de confort
+    /// pourrait tomber au milieu d'un relevé qui réécrit <c>_memoryCache</c>. Elle ne le garde en
+    /// revanche que le temps de la lecture, puisqu'il n'y a rien à aller chercher derrière.
+    /// </remarks>
+    public async Task<ModDbCatalog?> TryGetCachedCatalogAsync(CancellationToken cancellationToken = default)
+    {
+        await _mutex.WaitAsync(cancellationToken).ConfigureAwait(false);
+        ModDbCacheDocument? document;
+        bool isFresh;
+        try
+        {
+            document = _memoryCache;
+            if (document is null)
+            {
+                document = await ReadCacheAsync(cancellationToken).ConfigureAwait(false);
+
+                // Mémorisé même périmé : le relevé qui suivra le remplacera de toute façon, et
+                // sans ça chaque ouverture d'un onglet Mods relirait trois mégaoctets et demi.
+                _memoryCache = document;
+            }
+
+            isFresh = document is not null && IsFresh(document.RetrievedUtc);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Un cache illisible est un cache absent : cet appel ne sert qu'à décorer.
+            return null;
+        }
+        finally
+        {
+            _mutex.Release();
+        }
+
+        return document is null
+            ? null
+            : new ModDbCatalog(
+                ModDbMapper.ToSummaries(document.Mods),
+                document.RetrievedUtc,
+                isFresh ? ModDbFreshness.Cached : ModDbFreshness.Stale);
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<ModDbTag>> GetTagsAsync(bool forceRefresh = false, CancellationToken cancellationToken = default)
     {
         var (document, _) = await GetCacheDocumentAsync(forceRefresh, cancellationToken).ConfigureAwait(false);

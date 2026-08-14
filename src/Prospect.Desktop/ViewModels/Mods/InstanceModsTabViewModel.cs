@@ -35,6 +35,7 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
     private readonly IToastService _toasts;
     private readonly IExternalUrlOpener _urlOpener;
     private readonly IModLogoCache _logoCache;
+    private readonly IModLogoDirectory _logoDirectory;
 
     private InstanceUpdateReport? _lastReport;
     private InstanceLogInsights _logInsights = InstanceLogInsights.None;
@@ -53,7 +54,8 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
         IOverlayService overlay,
         IToastService toasts,
         IExternalUrlOpener urlOpener,
-        IModLogoCache logoCache)
+        IModLogoCache logoCache,
+        IModLogoDirectory logoDirectory)
     {
         ArgumentException.ThrowIfNullOrEmpty(slug);
         ArgumentNullException.ThrowIfNull(repository);
@@ -68,6 +70,7 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
         ArgumentNullException.ThrowIfNull(toasts);
         ArgumentNullException.ThrowIfNull(urlOpener);
         ArgumentNullException.ThrowIfNull(logoCache);
+        ArgumentNullException.ThrowIfNull(logoDirectory);
 
         _slug = slug;
         _repository = repository;
@@ -82,6 +85,7 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
         _toasts = toasts;
         _urlOpener = urlOpener;
         _logoCache = logoCache;
+        _logoDirectory = logoDirectory;
         _instanceName = slug;
         ModsDirectoryText = repository.GetModsDirectory(slug);
 
@@ -168,6 +172,10 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
             await EnsureLogInsightsAsync(mods, cancellationToken).ConfigureAwait(true);
             var displayNames = ModLogBadgePresenter.DisplayNames(mods);
 
+            // Le rescan reconstruit des rangées NEUVES plutôt que de réécrire les anciennes (voir
+            // OnIsEnabledChanged) : sans cette disposition, chaque bascule d'interrupteur laisserait
+            // derrière elle un chargement de vignette pour une rangée déjà jetée.
+            DisposeRows();
             Mods.Clear();
             foreach (var mod in mods)
             {
@@ -177,7 +185,8 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
                     RequestUninstallAsync,
                     RequestUpdateAsync,
                     FindUpdateResult(mod),
-                    ModLogBadgePresenter.Describe(mod, _logInsights, displayNames)));
+                    ModLogBadgePresenter.Describe(mod, _logInsights, displayNames),
+                    new ModThumbnailViewModel(mod.Provenance?.ModId, _logoDirectory, _logoCache)));
             }
 
             HasMods = Mods.Count > 0;
@@ -385,7 +394,8 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
                 releaseId => _installService.PrepareAsync(_slug, modIdString, releaseId: releaseId, cancellationToken: CancellationToken.None),
                 _overlay,
                 _urlOpener,
-                _logoCache));
+                _logoCache,
+                _logoDirectory));
         }
         catch (ModReleaseNotFoundException exception)
         {
@@ -426,7 +436,7 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
     {
         var impact = await _installService.PrepareUninstallAsync(_slug, row.Mod, CancellationToken.None).ConfigureAwait(true);
 
-        _overlay.Show(new UninstallModDialogViewModel(impact, () => ConfirmUninstallAsync(row), _overlay));
+        _overlay.Show(new UninstallModDialogViewModel(impact, () => ConfirmUninstallAsync(row), _overlay, _logoDirectory, _logoCache));
     }
 
     private async Task ConfirmUninstallAsync(InstalledModRowViewModel row)
@@ -451,7 +461,8 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
         {
             var plan = await _installService.PrepareUpdateAsync(_slug, updateResult, cancellationToken: CancellationToken.None).ConfigureAwait(true);
 
-            _overlay.Show(new ModUpdatePlanDialogViewModel(plan, selection => ApplyUpdateAsync(row, plan, selection), _overlay));
+            _overlay.Show(new ModUpdatePlanDialogViewModel(
+                plan, selection => ApplyUpdateAsync(row, plan, selection), _overlay, _logoDirectory, _logoCache));
         }
         catch (Exception exception) when (exception is ModDbApiException or ModDbUnavailableException or DownloadFailedException or ModInstallFailedException)
         {
@@ -505,16 +516,32 @@ public sealed partial class InstanceModsTabViewModel : ObservableObject, IDispos
         _logInsightsCache.Invalidate(_slug);
     }
 
-    /// <summary>Libère le jeton d'annulation d'un éventuel « Tout mettre à jour » en cours.</summary>
-    public void Dispose() => _updateAllCancellation?.Dispose();
+    /// <summary>
+    /// Libère le jeton d'annulation d'un éventuel « Tout mettre à jour » en cours, et les rangées
+    /// affichées : quitter la page de détail pendant qu'une vignette se télécharge ne doit pas
+    /// laisser la requête derrière soi.
+    /// </summary>
+    public void Dispose()
+    {
+        _updateAllCancellation?.Dispose();
+        DisposeRows();
+    }
+
+    private void DisposeRows()
+    {
+        foreach (var row in Mods)
+        {
+            row.Dispose();
+        }
+    }
 }
 
 /// <summary>
-/// Une ligne de mod installé (design/components/launcher/ModRow.jsx) : icône extraite de l'archive,
-/// nom, auteur, version, côté, badge de provenance, badge « non identifié » le cas échéant, et état
-/// de mise à jour ModDB (à jour, mise à jour disponible, inconnu du ModDB, non identifiable).
+/// Une ligne de mod installé (design/components/launcher/ModRow.jsx) : vignette, nom, auteur,
+/// version, côté, badge de provenance, badge « non identifié » le cas échéant, et état de mise à
+/// jour ModDB (à jour, mise à jour disponible, inconnu du ModDB, non identifiable).
 /// </summary>
-public sealed partial class InstalledModRowViewModel : ObservableObject
+public sealed partial class InstalledModRowViewModel : ObservableObject, IDisposable
 {
     private readonly Func<InstalledModRowViewModel, bool, Task> _toggle;
     private readonly Func<InstalledModRowViewModel, Task> _remove;
@@ -533,13 +560,20 @@ public sealed partial class InstalledModRowViewModel : ObservableObject
     /// Ce que le journal du dernier lancement dit de ce mod, ou <see cref="ModLogBadges.None"/>
     /// quand il n'en dit rien — c'est le cas sain, et le cas d'une instance jamais lancée.
     /// </param>
+    /// <param name="thumbnail">
+    /// Vignette du mod, ou <see cref="ModThumbnailViewModel.None"/>. Elle n'existe que pour un mod
+    /// que Prospect a lui-même installé, parce que c'est la PROVENANCE qui porte l'identifiant de
+    /// fiche ModDB : un zip déposé à la main dans le dossier garde le pictogramme générique, et
+    /// c'est cohérent avec le badge de provenance que la même rangée affiche à droite.
+    /// </param>
     public InstalledModRowViewModel(
         InstalledMod installedMod,
         Func<InstalledModRowViewModel, bool, Task> toggle,
         Func<InstalledModRowViewModel, Task> remove,
         Func<InstalledModRowViewModel, Task> update,
         ModUpdateResult? updateResult,
-        ModLogBadges? logBadges = null)
+        ModLogBadges? logBadges = null,
+        ModThumbnailViewModel? thumbnail = null)
     {
         ArgumentNullException.ThrowIfNull(installedMod);
         ArgumentNullException.ThrowIfNull(toggle);
@@ -558,6 +592,7 @@ public sealed partial class InstalledModRowViewModel : ObservableObject
         HasSide = installedMod.Info is not null;
         FileNameText = installedMod.FileName;
         Icon = installedMod.Icon;
+        Thumbnail = thumbnail ?? ModThumbnailViewModel.None;
 
         IsFromModDb = installedMod.Provenance is not null;
         ProvenanceText = IsFromModDb ? UiText.Mods.ProvenanceModDb : UiText.Mods.ProvenanceManual;
@@ -611,7 +646,16 @@ public sealed partial class InstalledModRowViewModel : ObservableObject
     public string FileNameText { get; }
 
     /// <summary>Icône extraite de l'archive, ou <see langword="null"/>.</summary>
+    /// <remarks>
+    /// Lue par <c>ModArchiveReader</c> et rendue par le repository, mais affichée nulle part : la
+    /// vignette de la rangée passe par <see cref="Thumbnail"/>, c'est-à-dire par le cache d'images
+    /// et ses budgets d'octets. Décoder ces octets-là serait un chemin de décodage de plus, hors
+    /// de tout plafond, pour des images que rien ne réduit à la taille d'affichage.
+    /// </remarks>
     public byte[]? Icon { get; }
+
+    /// <summary>Vignette du mod, ou le pictogramme générique quand il n'y a rien à montrer.</summary>
+    public ModThumbnailViewModel Thumbnail { get; }
 
     /// <summary>Vrai si Prospect a installé ce mod depuis le ModDB, faux s'il a été déposé à la main.</summary>
     public bool IsFromModDb { get; }
@@ -681,4 +725,7 @@ public sealed partial class InstalledModRowViewModel : ObservableObject
 
     [RelayCommand]
     private Task UpdateAsync() => _update(this);
+
+    /// <summary>Annule le chargement de vignette encore en vol. Voir <see cref="ModThumbnailViewModel.Dispose"/>.</summary>
+    public void Dispose() => Thumbnail.Dispose();
 }

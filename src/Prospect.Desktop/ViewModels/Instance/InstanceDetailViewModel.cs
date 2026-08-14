@@ -66,7 +66,8 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         IUiDispatcher dispatcher,
         IClock clock,
         IExternalUrlOpener urlOpener,
-        IModLogoCache logoCache)
+        IModLogoCache logoCache,
+        IModLogoDirectory logoDirectory)
     {
         ArgumentException.ThrowIfNullOrEmpty(slug);
         ArgumentNullException.ThrowIfNull(instanceService);
@@ -89,6 +90,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(urlOpener);
         ArgumentNullException.ThrowIfNull(logoCache);
+        ArgumentNullException.ThrowIfNull(logoDirectory);
 
         _slug = slug;
         _instanceService = instanceService;
@@ -129,7 +131,7 @@ public sealed partial class InstanceDetailViewModel : ObservableObject, IDisposa
         ModsTab = new InstanceModsTabViewModel(
             slug, mods, modInstallService, updateChecker, updateCache,
             logInsights, logInsightsCache, launcher.GetLogFilePath(slug),
-            clock, overlay, toasts, urlOpener, logoCache);
+            clock, overlay, toasts, urlOpener, logoCache, logoDirectory);
         ModsTab.BrowseRequested += (_, instanceSlug) => BrowseModsRequested?.Invoke(this, instanceSlug);
 
         _tracker.StatusChanged += OnTrackerStatusChanged;

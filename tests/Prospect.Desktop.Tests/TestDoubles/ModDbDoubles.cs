@@ -77,6 +77,18 @@ internal static class ModDbDoubles
     public static IModLogoCache CreateLogoCache(HttpMessageHandler? handler = null)
         => new ModLogoCache(new HttpClient(handler ?? new FakeModDbHandler(), disposeHandler: false));
 
+    /// <summary>
+    /// Le vrai <see cref="ModLogoDirectory"/> sur un client neuf : il ne rend donc AUCUNE vignette
+    /// tant que rien n'a relevé de catalogue, ce qui est exactement l'état d'une installation qui
+    /// n'a jamais ouvert le navigateur. Les tests qui veulent des vignettes posent un
+    /// <see cref="FakeModLogoDirectory"/>.
+    /// </summary>
+    public static IModLogoDirectory CreateLogoDirectory(IModDbClient? client = null)
+        => new ModLogoDirectory(client ?? CreateClient(
+            new MockFileSystem(),
+            new AppPaths(new FakeAppEnvironment()),
+            new FakeClock(DateTimeOffset.UnixEpoch)));
+
     /// <summary>Pose une archive de mod valide dans le dossier <c>data/Mods/</c> d'une instance.</summary>
     public static void SeedMod(
         MockFileSystem fileSystem,
@@ -274,6 +286,12 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
     public byte[] LogoBytes { get; set; } = LogoPngBytes;
 
     /// <summary>
+    /// Octets servis POUR UNE URL donnée, quand <see cref="LogoBytes"/> ne suffit pas : une capture
+    /// d'écran veut des vignettes qu'on distingue les unes des autres, pas trois fois le même carré.
+    /// </summary>
+    public Func<Uri, byte[]>? LogoBytesFor { get; set; }
+
+    /// <summary>
     /// Nombre de logos réellement demandés. C'est la mesure qui prouve la paresse du rendu : une
     /// grille qui matérialise tout le catalogue demande un logo par fiche, une grille fenêtrée n'en
     /// demande que pour les cartes construites.
@@ -333,7 +351,7 @@ internal sealed class FakeModDbHandler : HttpMessageHandler
             }
 
             var bytes = isLogo
-                ? LogoBytes
+                ? LogoBytesFor?.Invoke(url) ?? LogoBytes
                 : url.AbsolutePath switch
                 {
                     "/carryon_1.14.3.zip" => CarryOnArchive,

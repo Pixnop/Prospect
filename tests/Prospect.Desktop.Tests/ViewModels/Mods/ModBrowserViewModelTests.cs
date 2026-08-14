@@ -45,7 +45,7 @@ public sealed class ModBrowserViewModelTests
         var toasts = new RecordingToastService();
 
         var opener = new FakeExternalUrlOpener();
-        var browser = new ModBrowserViewModel(client, installService, mods, instances, opener, overlay, toasts, logoCache);
+        var browser = new ModBrowserViewModel(client, installService, mods, instances, opener, overlay, toasts, logoCache, ModDbDoubles.CreateLogoDirectory());
 
         return new Fixture(browser, handler, overlay, toasts, mods, fileSystem, opener, record.Slug);
     }
@@ -421,13 +421,14 @@ public sealed class ModBrowserViewModelTests
         var toasts = new RecordingToastService();
         var logoCache = ModDbDoubles.CreateLogoCache();
 
-        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(null!, installService, mods, instances, opener, overlay, toasts, logoCache));
-        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, null!, mods, instances, opener, overlay, toasts, logoCache));
-        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, null!, instances, opener, overlay, toasts, logoCache));
-        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, mods, null!, opener, overlay, toasts, logoCache));
-        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, mods, instances, null!, overlay, toasts, logoCache));
-        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, mods, instances, opener, null!, toasts, logoCache));
-        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, mods, instances, opener, overlay, null!, logoCache));
-        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, mods, instances, opener, overlay, toasts, null!));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(null!, installService, mods, instances, opener, overlay, toasts, logoCache, ModDbDoubles.CreateLogoDirectory()));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, null!, mods, instances, opener, overlay, toasts, logoCache, ModDbDoubles.CreateLogoDirectory()));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, null!, instances, opener, overlay, toasts, logoCache, ModDbDoubles.CreateLogoDirectory()));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, mods, null!, opener, overlay, toasts, logoCache, ModDbDoubles.CreateLogoDirectory()));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, mods, instances, null!, overlay, toasts, logoCache, ModDbDoubles.CreateLogoDirectory()));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, mods, instances, opener, null!, toasts, logoCache, ModDbDoubles.CreateLogoDirectory()));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, mods, instances, opener, overlay, null!, logoCache, ModDbDoubles.CreateLogoDirectory()));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, mods, instances, opener, overlay, toasts, null!, ModDbDoubles.CreateLogoDirectory()));
+        Should.Throw<ArgumentNullException>(() => new ModBrowserViewModel(client, installService, mods, instances, opener, overlay, toasts, logoCache, null!));
     }
 }

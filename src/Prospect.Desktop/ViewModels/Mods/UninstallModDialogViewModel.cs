@@ -12,7 +12,7 @@ namespace Prospect.Desktop.ViewModels.Mods;
 /// dépendent » : l'utilisateur doit pouvoir décider sur ce qu'il lit, exactement comme pour la
 /// désinstallation d'une version du jeu.
 /// </summary>
-public sealed partial class UninstallModDialogViewModel
+public sealed partial class UninstallModDialogViewModel : IDisposable
 {
     private readonly Func<Task> _confirm;
     private readonly IOverlayService _overlay;
@@ -21,7 +21,14 @@ public sealed partial class UninstallModDialogViewModel
     /// <param name="impact">Résultat de la vérification inverse.</param>
     /// <param name="confirm">Action de désinstallation.</param>
     /// <param name="overlay">Panneau modal, pour se refermer.</param>
-    public UninstallModDialogViewModel(ModUninstallImpact impact, Func<Task> confirm, IOverlayService overlay)
+    /// <param name="logoDirectory">Annuaire des logos, ou <see langword="null"/> pour un dialogue sans vignette.</param>
+    /// <param name="images">Cache d'images, ou <see langword="null"/> pour un dialogue sans vignette.</param>
+    public UninstallModDialogViewModel(
+        ModUninstallImpact impact,
+        Func<Task> confirm,
+        IOverlayService overlay,
+        IModLogoDirectory? logoDirectory = null,
+        IModLogoCache? images = null)
     {
         ArgumentNullException.ThrowIfNull(impact);
         ArgumentNullException.ThrowIfNull(confirm);
@@ -30,11 +37,21 @@ public sealed partial class UninstallModDialogViewModel
         _confirm = confirm;
         _overlay = overlay;
 
+        // Même règle que la rangée qui a ouvert ce dialogue : la vignette vient de la PROVENANCE,
+        // donc un mod déposé à la main garde le pictogramme. Retirer un mod est une décision, et
+        // ce dialogue doit montrer la même chose que la rangée d'où on vient — pas mieux.
+        Thumbnail = logoDirectory is null || images is null
+            ? ModThumbnailViewModel.None
+            : new ModThumbnailViewModel(impact.Target.Provenance?.ModId, logoDirectory, images);
+
         Title = UiText.Mods.UninstallTitle(impact.Target.DisplayName);
         Message = UiText.Mods.UninstallMessage(impact.Target.FileName);
         HasDependents = impact.HasDependents;
         DependentsMessage = UiText.Mods.UninstallDependents(impact.DependentNames);
     }
+
+    /// <summary>Vignette du mod à retirer, ou le pictogramme générique.</summary>
+    public ModThumbnailViewModel Thumbnail { get; }
 
     public string Title { get; }
 
@@ -51,4 +68,7 @@ public sealed partial class UninstallModDialogViewModel
 
     [RelayCommand]
     private Task Confirm() => _confirm();
+
+    /// <summary>Annule le chargement de vignette encore en vol (l'overlay dispose ce qu'il ferme).</summary>
+    public void Dispose() => Thumbnail.Dispose();
 }

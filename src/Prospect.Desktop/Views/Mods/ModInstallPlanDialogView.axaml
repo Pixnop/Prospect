@@ -30,15 +30,30 @@
          dispositif est le même, seul le motif change (et il est déjà dans ReasonText). -->
     <DataTemplate x:Key="DependencyRowTemplate" x:DataType="vm:ModDependencyChoiceViewModel">
       <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="12,10">
-        <Grid ColumnDefinitions="Auto,*,Auto">
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto">
           <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalAlignment="Center" />
-          <StackPanel Grid.Column="1" Margin="6,0,8,0" VerticalAlignment="Center">
+          <!-- Même tuile que partout ailleurs, à la taille d'une rangée. Une dépendance que le
+               ModDB ne publie pas n'a pas de fiche, donc pas de logo : elle garde le pictogramme,
+               et le motif écrit juste à côté dit déjà pourquoi. -->
+          <Border Grid.Column="1" Width="30" Height="30" Margin="6,0,0,0" CornerRadius="{StaticResource RadiusSm}"
+                  Background="{DynamicResource GlassItem}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1"
+                  ClipToBounds="True" VerticalAlignment="Center">
+            <Panel>
+              <Path Width="15" Height="15" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Data="{StaticResource Icon.package}" Stroke="{DynamicResource Text4}"
+                    StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round"
+                    IsVisible="{Binding !Thumbnail.HasLogo}" />
+              <Image Width="30" Height="30" Stretch="UniformToFill" Source="{Binding Thumbnail.Bitmap}"
+                     IsVisible="{Binding Thumbnail.HasLogo}" />
+            </Panel>
+          </Border>
+          <StackPanel Grid.Column="2" Margin="10,0,8,0" VerticalAlignment="Center">
             <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"
                        FontSize="{StaticResource FsBodySm}" Foreground="{DynamicResource Text1}" />
             <TextBlock Text="{Binding ReasonText}" Margin="0,2,0,0" TextWrapping="Wrap" LineHeight="16"
                        FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text4}" />
           </StackPanel>
-          <TextBlock Grid.Column="2" Text="{Binding VersionText}" VerticalAlignment="Center"
+          <TextBlock Grid.Column="3" Text="{Binding VersionText}" VerticalAlignment="Center"
                      FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}"
                      Foreground="{DynamicResource Text3}" />
         </Grid>
@@ -51,9 +66,26 @@
           BorderThickness="1" BoxShadow="{DynamicResource GlassElevMenu}">
     <DockPanel>
       <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="22,18">
-        <TextBlock Text="{Binding Title}" TextWrapping="Wrap"
-                   FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
-                   FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+        <!-- Le titre NOMME son objet (docs/architecture.md, « la forme d'un titre ») ; la vignette
+             le montre. Elle est à la taille de la carte du navigateur d'où l'on vient le plus
+             souvent, pour que ce soit visiblement le même mod. -->
+        <Grid ColumnDefinitions="Auto,*">
+          <Border Grid.Column="0" Width="40" Height="40" CornerRadius="{StaticResource RadiusSm}"
+                  Background="{DynamicResource GlassItem}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1"
+                  ClipToBounds="True" VerticalAlignment="Center">
+            <Panel>
+              <Path Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Data="{StaticResource Icon.package}" Stroke="{DynamicResource Text4}"
+                    StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round"
+                    IsVisible="{Binding !Thumbnail.HasLogo}" />
+              <Image Width="40" Height="40" Stretch="UniformToFill" Source="{Binding Thumbnail.Bitmap}"
+                     IsVisible="{Binding Thumbnail.HasLogo}" />
+            </Panel>
+          </Border>
+          <TextBlock Grid.Column="1" Text="{Binding Title}" TextWrapping="Wrap" Margin="14,0,0,0" VerticalAlignment="Center"
+                     FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                     FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+        </Grid>
       </Border>
 
       <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource GlassEdge}"

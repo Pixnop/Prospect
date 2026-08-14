@@ -6,6 +6,7 @@ using Prospect.Core.Instances.Migrations;
 using Prospect.Core.ModDb;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Resources;
+using Prospect.Desktop.Services;
 using Prospect.Desktop.Tests.TestDoubles;
 using Prospect.Desktop.ViewModels.Mods;
 
@@ -71,7 +72,8 @@ public sealed class ModInstallPlanDialogViewModelTests
             _ => Task.FromResult(plan),
             new RecordingOverlayService(),
             new FakeExternalUrlOpener(),
-            new FakeModLogoCache());
+            new FakeModLogoCache(),
+            new FakeModLogoDirectory());
 
     /// <summary>
     /// Le libellé suit ce que l'opération FAIT : ajouter tant que rien n'est installé, remplacer dès
@@ -208,7 +210,7 @@ public sealed class ModInstallPlanDialogViewModelTests
         string Slug,
         ModInstallService InstallService);
 
-    private static async Task<Fixture> CreateAsync()
+    private static async Task<Fixture> CreateAsync(IModLogoDirectory? logoDirectory = null)
     {
         var fileSystem = new MockFileSystem();
         var clock = new FakeClock(Now);
@@ -232,7 +234,8 @@ public sealed class ModInstallPlanDialogViewModelTests
             new FakeExternalUrlOpener(),
             overlay,
             new RecordingToastService(),
-            ModDbDoubles.CreateLogoCache(handler));
+            ModDbDoubles.CreateLogoCache(handler),
+            logoDirectory ?? ModDbDoubles.CreateLogoDirectory());
 
         await browser.InitializeCommand.ExecuteAsync(null);
 
@@ -254,7 +257,8 @@ public sealed class ModInstallPlanDialogViewModelTests
             releaseId => fixture.InstallService.PrepareAsync(fixture.Slug, modIdString, releaseId: releaseId, cancellationToken: CancellationToken.None),
             fixture.Overlay,
             new FakeExternalUrlOpener(),
-            new FakeModLogoCache());
+            new FakeModLogoCache(),
+            new FakeModLogoDirectory());
     }
 
     private static async Task<ModInstallPlanDialogViewModel> OpenAsync(Fixture fixture)
@@ -660,5 +664,65 @@ public sealed class ModInstallPlanDialogViewModelTests
 
         var installed = await fixture.Mods.ScanAsync(fixture.Slug, CancellationToken.None);
         installed.Select(mod => mod.Provenance?.ModIdString).ShouldBe(["carryon"]);
+    }
+
+    // ── Vignettes ────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// L'en-tête montre CE QU'ON INSTALLE, à côté du titre qui le nomme. L'identifiant vient du
+    /// plan lui-même : c'est le domaine qui l'a résolu, le dialogue ne cherche rien.
+    /// </summary>
+    [Fact]
+    public async Task LEnTete_DemandeLeLogoDuModDuPlan()
+    {
+        var directory = new FakeModLogoDirectory((890, "https://moddbcdn.vintagestory.at/CarryOnLogo.png"));
+        using var dialog = new ModInstallPlanDialogViewModel(
+            PlanWith("1.22.6"),
+            "Homestead 1.22",
+            (_, _) => Task.CompletedTask,
+            _ => Task.FromResult(PlanWith("1.22.6")),
+            new RecordingOverlayService(),
+            new FakeExternalUrlOpener(),
+            new FakeModLogoCache(),
+            directory);
+
+        await dialog.Thumbnail.LoadCompletion;
+
+        directory.RequestedModIds.ShouldBe([890]);
+    }
+
+    /// <summary>
+    /// Le volet des dépendances NOMME des mods : il peut donc les montrer. Chaque ligne demande sa
+    /// propre fiche, y compris les lignes « installer quand même ».
+    /// </summary>
+    [Fact]
+    public async Task LesDependances_DemandentChacuneLeurLogo()
+    {
+        var directory = new FakeModLogoDirectory((4687, "https://moddbcdn.vintagestory.at/carryonlib.png"));
+        var fixture = await CreateAsync(directory);
+        var dialog = await OpenAsync(fixture);
+
+        var dependency = dialog.Dependencies.Concat(dialog.InstallableAnyway).ShouldHaveSingleItem();
+        await dependency.Thumbnail.LoadCompletion;
+
+        directory.RequestedModIds.ShouldContain(4687);
+    }
+
+    /// <summary>
+    /// Changer de release recalcule les dépendances : les anciennes lignes sont jetées, donc
+    /// disposées, sinon chaque aller-retour dans le sélecteur laisserait une vignette en vol.
+    /// </summary>
+    [Fact]
+    public async Task ChangerDeRelease_RemplaceLesLignesDeDependanceEtLeursVignettes()
+    {
+        var fixture = await CreateAsync(new FakeModLogoDirectory((4687, "https://moddbcdn.vintagestory.at/carryonlib.png")));
+        var dialog = await OpenAsync(fixture);
+        var before = dialog.Dependencies.Concat(dialog.InstallableAnyway).Single();
+
+        dialog.SelectedRelease = dialog.Releases.Single(release => release.ReleaseId == OlderReleaseId);
+        await dialog.ReloadCompletion;
+
+        dialog.Dependencies.Concat(dialog.InstallableAnyway)
+            .ShouldNotContain(row => ReferenceEquals(row, before), "les lignes de dépendance sont reconstruites");
     }
 }

@@ -784,6 +784,51 @@ ouvertures répétées de fiches laissent la mémoire gérée et le nombre d'abo
 `ModCardViewModel`, `InstanceCardViewModel`, `InstanceDetailViewModel` et
 `DownloadItemViewModel`, et de `ShellViewModel.Navigate` qui dispose la page sortante.
 
+#### Le logo d'un mod, partout où la donnée le permet
+
+Les cartes du navigateur montraient le logo d'un mod ; aucun autre écran ne le faisait, alors que
+presque tous en nomment. La rangée de l'onglet Mods d'une instance était le cas le plus visible : une
+caisse générique pour tous les mods, y compris ceux que Prospect venait d'installer depuis le ModDB.
+
+La donnée qui manquait n'est pas le logo, c'est le CHEMIN vers lui. Le navigateur tient l'entrée de
+catalogue de chaque carte, donc son `LogoUrl` ; les autres écrans ne connaissent qu'un identifiant de
+fiche, celui de la provenance d'un mod installé (`ModProvenance.ModId`) ou celui d'un élément de plan
+(`ModInstallItem.ModDbModId`). `ModLogoIndex` (Core) est la table qui relie les deux, et
+`IModLogoDirectory` (Desktop) la construit une fois par session.
+
+Trois règles la tiennent, et chacune répond à un risque précis.
+
+Elle lit le catalogue MÉMORISÉ et jamais le réseau (`IModDbClient.TryGetCachedCatalogAsync`, qui sert
+même un cache périmé). L'onglet Mods vit d'un scan disque et n'émettait aucun appel à l'ouverture :
+lui faire télécharger trois mégaoctets et demi de catalogue pour décorer ses rangées serait un échange
+que personne n'a demandé. La contrepartie est assumée et visible : une installation dont le catalogue
+n'a jamais été relevé n'affiche de vignettes nulle part ailleurs que dans le navigateur, jusqu'à la
+première ouverture de celui-ci.
+
+Tout passe par `IModLogoCache` à la largeur de la carte du navigateur (`MaxLogoWidth`), sans
+exception. La clé du cache est `largeur|url` : décoder la même image à une seconde largeur en ferait
+une seconde entrée, donc un budget consommé deux fois. Un mod vu dans le navigateur, retrouvé dans
+l'onglet Mods, puis dans un plan d'installation et dans une confirmation de retrait occupe UNE entrée.
+Le coût de cette feature n'est donc pas la somme de ses surfaces, mais le nombre de mods DISTINCTS
+qu'une session regarde. Mesuré au pire cas (`ModLogoBudgetTests`, vignettes carrées de 480 px, quatre-
+vingts mods installés dont aucun n'est dans la fenêtre du navigateur) : 11,25 Mio pour 180 entrées,
+soit 47 % du budget de vignettes et 35 % du plafond d'entrées. Aucun élargissement n'est nécessaire.
+
+Et le pictogramme générique reste un ÉTAT, pas un échec. Il couvre indistinctement le mod déposé à la
+main (aucune provenance, donc aucune fiche), la fiche sans logo (un tiers du catalogue), le catalogue
+jamais relevé et le réseau coupé. La tuile garde sa taille dans tous les cas, donc un chargement qui
+aboutit en retard ne fait jamais sauter la ligne sous le curseur.
+
+Ce qui n'a PAS été enrichi l'est pour des raisons de donnée, pas de goût. Les lignes du docteur ne
+portent que des phrases déjà composées, et les mods qu'elles nomment sont soit des dépendances
+ABSENTES (donc sans provenance), soit des archives illisibles : elles n'afficheraient que des
+pictogrammes, au prix d'une dépendance que ce diagnostic hors ligne n'a pas. Le popover
+Téléchargements ne connaît d'une opération que son libellé (`DownloadRequest`), partagé avec les six
+cents mégaoctets d'une version du jeu qui n'a pas de logo du tout ; lui en donner un demanderait de
+porter une identité de mod jusque dans le Core du téléchargement, pour décorer une ligne qui vit
+quelques secondes. Les toasts, enfin, sont des titres et des messages, et disparaissent en cinq
+secondes.
+
 ### Les profondeurs de verre, et qui a droit à laquelle
 
 Le système de surfaces (`Styles/Tokens/Glass.axaml`) n'a qu'un levier, l'alpha : la composition est

@@ -97,11 +97,23 @@
             <Border Classes="modRow" Classes.off="{Binding !IsEnabled}" Padding="16,12"
                     BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}">
               <Grid ColumnDefinitions="Auto,*,Auto">
+                <!-- Même tuile que la carte du navigateur (ModBrowserView), à la taille de la
+                     rangée : pictogramme générique toujours présent dans l'arbre, masqué une fois
+                     les pixels obtenus. Le logo n'existe que pour un mod installé par Prospect,
+                     dont la provenance porte l'identifiant de fiche ; un zip déposé à la main
+                     garde le pictogramme, ce que le badge de provenance dit déjà en toutes
+                     lettres à droite de la même rangée. -->
                 <Border Grid.Column="0" Width="30" Height="30" CornerRadius="{StaticResource RadiusSm}"
-                        Background="{DynamicResource GlassItem}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1">
-                  <Path Width="15" Height="15" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
-                        Data="{StaticResource Icon.package}" Stroke="{DynamicResource Text3}"
-                        StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round" />
+                        Background="{DynamicResource GlassItem}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1"
+                        ClipToBounds="True">
+                  <Panel>
+                    <Path Width="15" Height="15" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+                          Data="{StaticResource Icon.package}" Stroke="{DynamicResource Text3}"
+                          StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round"
+                          IsVisible="{Binding !Thumbnail.HasLogo}" />
+                    <Image Width="30" Height="30" Stretch="UniformToFill" Source="{Binding Thumbnail.Bitmap}"
+                           IsVisible="{Binding Thumbnail.HasLogo}" />
+                  </Panel>
                 </Border>
 
                 <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
