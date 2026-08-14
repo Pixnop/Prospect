@@ -298,6 +298,170 @@ public sealed class InnoPayloadExtractorTests
     }
 
     /// <summary>
+    /// Un installeur RÉEL ne contient pas que des fichiers : langues, messages, permissions, types,
+    /// composants, tâches, répertoires, icônes, entrées ini, entrées de registre, suppressions et
+    /// exécutions se suivent dans le même bloc, sans index. La table des fichiers ne commence que là
+    /// où finit celle des répertoires, donc une erreur d'un seul octet dans n'importe lequel de ces
+    /// enregistrements déplace tout ce qui suit.
+    /// </summary>
+    [Theory]
+    [InlineData("6.4.0.1")]
+    [InlineData("6.4.2")]
+    [InlineData("6.4.3")]
+    public async Task Extraction_WalksEveryOtherKindOfEntryWithoutLosingItsPlace(string dataVersion)
+    {
+        var fileSystem = FileSystemWith(new SyntheticInnoInstaller
+        {
+            DataVersion = dataVersion,
+            WithEveryEntryType = true,
+        }
+            .Add(@"{app}\Vintagestory.exe", Encoding.UTF8.GetBytes("client"))
+            .Add(@"{app}\Lib\0Harmony.dll", Encoding.UTF8.GetBytes("harmony"))
+            .Build());
+
+        await Extract(fileSystem);
+
+        fileSystem.File.ReadAllText(Path("Vintagestory.exe")).ShouldBe("client");
+        fileSystem.File.ReadAllText(Path(@"Lib\0Harmony.dll")).ShouldBe("harmony");
+    }
+
+    /// <summary>
+    /// Le même installeur complet, mais compressé comme le vrai : en-têtes en LZMA1, données en
+    /// LZMA2.
+    /// </summary>
+    [Fact]
+    public async Task Extraction_WalksEveryKindOfEntryThroughCompressedBlocksToo()
+    {
+        var fileSystem = FileSystemWith(new SyntheticInnoInstaller
+        {
+            WithEveryEntryType = true,
+            CompressHeaders = true,
+            CompressPayload = true,
+        }
+            .Add(@"{app}\Vintagestory.exe", Encoding.UTF8.GetBytes("client"))
+            .Build());
+
+        await Extract(fileSystem);
+
+        fileSystem.File.ReadAllText(Path("Vintagestory.exe")).ShouldBe("client");
+    }
+
+    /// <summary>
+    /// Les CRC des blocs ne servent pas qu'à détecter un fichier abîmé : ils confirment surtout que
+    /// la lecture a commencé au bon endroit. Un octet retourné dans l'en-tête doit donc arrêter
+    /// l'extraction, pas la laisser produire des chemins vraisemblables.
+    /// </summary>
+    [Fact]
+    public async Task Extraction_RefusesABlockWhoseChecksumDoesNotMatch()
+    {
+        var installer = new SyntheticInnoInstaller()
+            .Add(@"{app}\Vintagestory.exe", Encoding.UTF8.GetBytes("client"))
+            .Build();
+
+        // Le premier bloc commence juste après la chaîne d'identification de 64 octets, elle-même
+        // précédée de son CRC et de sa taille : on abîme un octet de sa charge utile.
+        var start = IndexOfIdString(installer) + 64 + 9 + 4;
+        installer[start] ^= 0xFF;
+
+        var fileSystem = FileSystemWith(installer);
+
+        var exception = await Should.ThrowAsync<InnoFormatException>(() => Extract(fileSystem));
+
+        exception.Message.ShouldContain("CRC32");
+    }
+
+    [Fact]
+    public async Task Extraction_RefusesAnInstallerThatStopsInTheMiddleOfItsHeader()
+    {
+        var installer = new SyntheticInnoInstaller()
+            .Add(@"{app}\Vintagestory.exe", Encoding.UTF8.GetBytes("client"))
+            .Build();
+
+        var fileSystem = FileSystemWith(installer[..(IndexOfIdString(installer) + 70)]);
+
+        await Should.ThrowAsync<InnoFormatException>(() => Extract(fileSystem));
+    }
+
+    /// <summary>
+    /// Un installeur protégé par mot de passe chiffre ses blocs de données. Prospect ne sait pas les
+    /// lire et le dit, plutôt que d'écrire des fichiers de bruit dont les empreintes échoueraient
+    /// une par une.
+    /// </summary>
+    [Fact]
+    public async Task Extraction_RefusesEncryptedData()
+    {
+        var fileSystem = FileSystemWith(new SyntheticInnoInstaller
+        {
+            MarkEncrypted = true,
+        }
+            .Add(@"{app}\Vintagestory.exe", Encoding.UTF8.GetBytes("client"))
+            .Build());
+
+        var exception = await Should.ThrowAsync<InnoFormatException>(() => Extract(fileSystem));
+
+        exception.Message.ShouldContain("chiffr");
+    }
+
+    /// <summary>
+    /// Une méthode de compression que le lecteur ne connaît pas est refusée franchement. bzip2 et
+    /// deflate existent dans le format et Prospect ne les a jamais rencontrés dans un installeur du
+    /// jeu : les accepter à moitié serait pire que de passer la main.
+    /// </summary>
+    [Theory]
+    [InlineData((byte)1)] // zlib
+    [InlineData((byte)2)] // bzip2
+    public async Task Extraction_RefusesACompressionItCannotDecode(byte compression)
+    {
+        var fileSystem = FileSystemWith(new SyntheticInnoInstaller
+        {
+            Compression = compression,
+            CompressPayload = true,
+        }
+            .Add(@"{app}\Vintagestory.exe", Encoding.UTF8.GetBytes("client"))
+            .Build());
+
+        var exception = await Should.ThrowAsync<InnoFormatException>(() => Extract(fileSystem));
+
+        exception.Message.ShouldContain("compression");
+    }
+
+    [Fact]
+    public async Task Extraction_RefusesAnInstallerWhoseDataBlockIsNotWhereItSaysItIs()
+    {
+        var installer = new SyntheticInnoInstaller()
+            .Add(@"{app}\Vintagestory.exe", Encoding.UTF8.GetBytes("client"))
+            .Build();
+
+        // Le marqueur « zlb » du bloc de données, juste après la table de décalages du chargeur.
+        var magic = installer.AsSpan().IndexOf(new byte[] { 0x7A, 0x6C, 0x62, 0x1A });
+        installer[magic] = 0x00;
+
+        var exception = await Should.ThrowAsync<InnoFormatException>(() => Extract(FileSystemWith(installer)));
+
+        exception.Message.ShouldContain("marqueur");
+    }
+
+    /// <summary>
+    /// Un flux de données plus court que ce que la table annonce doit lever, et non rendre un
+    /// fichier tronqué que l'empreinte rejetterait avec un message moins clair.
+    /// </summary>
+    [Fact]
+    public async Task Extraction_RefusesAPayloadThatStopsShort()
+    {
+        var installer = new SyntheticInnoInstaller()
+            .Add(@"{app}\Vintagestory.exe", new byte[4096])
+            .Build();
+
+        var magic = installer.AsSpan().IndexOf(new byte[] { 0x7A, 0x6C, 0x62, 0x1A });
+        var truncated = installer[..(magic + 100)].Concat(installer[(magic + 4096 + 4)..]).ToArray();
+
+        await Should.ThrowAsync<InnoFormatException>(() => Extract(FileSystemWith(truncated)));
+    }
+
+    private static int IndexOfIdString(byte[] installer)
+        => installer.AsSpan().IndexOf(Encoding.ASCII.GetBytes("Inno Setup Setup Data ("));
+
+    /// <summary>
     /// L'avancement est MESURÉ et non estimé : toutes les tailles sont connues avant de commencer,
     /// donc le dénominateur est exact et la barre n'a pas à s'excuser d'un tilde.
     /// </summary>

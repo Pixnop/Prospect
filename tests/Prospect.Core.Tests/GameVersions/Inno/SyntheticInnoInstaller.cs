@@ -49,6 +49,25 @@ internal sealed class SyntheticInnoInstaller
     /// <summary>Vrai pour compresser les blocs d'en-tête en LZMA1, comme le fait le vrai outil.</summary>
     public bool CompressHeaders { get; set; }
 
+    /// <summary>
+    /// Vrai pour écrire une entrée de CHAQUE type que le format prévoit, et pas seulement des
+    /// fichiers.
+    /// </summary>
+    /// <remarks>
+    /// Ce n'est pas un raffinement. Le bloc d'en-tête n'a pas d'index : la table des fichiers ne
+    /// commence que là où finit celle des répertoires, qui commence là où finissent les tâches, et
+    /// ainsi de suite. Un installeur réduit à des fichiers ne met donc à l'épreuve aucun des
+    /// enregistrements intermédiaires, et une erreur d'un octet dans la lecture d'une tâche ou d'une
+    /// entrée de registre ne se verrait qu'en production, sur l'installeur réel.
+    /// </remarks>
+    public bool WithEveryEntryType { get; set; }
+
+    /// <summary>
+    /// Vrai pour marquer les données comme chiffrées, ce qui arrive quand l'installeur est protégé
+    /// par un mot de passe.
+    /// </summary>
+    public bool MarkEncrypted { get; set; }
+
     /// <summary>Ajoute un fichier au script.</summary>
     /// <param name="destination">Destination complète, constantes comprises (<c>{app}\x.txt</c>).</param>
     /// <param name="content">Contenu du fichier.</param>
@@ -244,22 +263,24 @@ internal sealed class SyntheticInnoInstaller
             writer.String(string.Empty);
         }
 
-        // Langues, messages, permissions, types, composants, tâches : aucun.
-        for (var i = 0; i < 6; i++)
-        {
-            writer.UInt32(0);
-        }
+        var others = WithEveryEntryType ? 1u : 0u;
 
-        writer.UInt32(0);                        // répertoires
+        writer.UInt32(others);                   // langues
+        writer.UInt32(others);                   // messages
+        writer.UInt32(others);                   // permissions
+        writer.UInt32(others);                   // types
+        writer.UInt32(others);                   // composants
+        writer.UInt32(others);                   // tâches
+        writer.UInt32(others);                   // répertoires
         writer.UInt32((uint)_entries.Count);     // fichiers
         writer.UInt32((uint)dataEntryCount);     // emplacements
-
-        // Icônes, ini, registre, suppressions, suppressions de désinstallation, exécutions,
-        // exécutions de désinstallation : aucune.
-        for (var i = 0; i < 7; i++)
-        {
-            writer.UInt32(0);
-        }
+        writer.UInt32(others);                   // icônes
+        writer.UInt32(others);                   // entrées ini
+        writer.UInt32(others);                   // entrées de registre
+        writer.UInt32(others);                   // suppressions
+        writer.UInt32(others);                   // suppressions de désinstallation
+        writer.UInt32(others);                   // exécutions
+        writer.UInt32(others);                   // exécutions de désinstallation
 
         writer.Zero(20); // intervalle de versions Windows
 
@@ -287,6 +308,17 @@ internal sealed class SyntheticInnoInstaller
         writer.Zero(8);  // taille affichée
         writer.Zero(version >= Encode(6, 4, 0, 1) ? 6 : 7); // options
 
+        if (WithEveryEntryType)
+        {
+            WriteLanguage(writer);
+            WriteMessage(writer);
+            writer.String(string.Empty);                 // permission
+            WriteType(writer);
+            WriteComponent(writer);
+            WriteTask(writer);
+            WriteDirectory(writer);
+        }
+
         for (var i = 0; i < _entries.Count; i++)
         {
             var entry = _entries[i];
@@ -308,10 +340,180 @@ internal sealed class SyntheticInnoInstaller
             writer.Zero(1);                              // type
         }
 
+        if (WithEveryEntryType)
+        {
+            WriteIcon(writer);
+            WriteIni(writer);
+            WriteRegistry(writer);
+            WriteDelete(writer);
+            WriteDelete(writer);
+            WriteRun(writer);
+            WriteRun(writer);
+        }
+
         writer.UInt32(0); // images d'assistant
         writer.UInt32(0); // images d'assistant, petit format
 
+        // Setup embarque la bibliothèque de décompression pour les méthodes qui ne sont pas dans son
+        // propre binaire. LZMA en fait partie, deflate et bzip2 non.
+        if (Compression is 1 or 2)
+        {
+            writer.String("fausse bibliothèque");
+        }
+
         return writer.ToArray();
+    }
+
+    private static void WriteCondition(BlockWriter writer)
+    {
+        // Composants, tâches, langues, contrôle, puis les deux procédures encadrant l'installation.
+        for (var i = 0; i < 6; i++)
+        {
+            writer.String(string.Empty);
+        }
+    }
+
+    private static void WriteLanguage(BlockWriter writer)
+    {
+        writer.String("default");        // nom
+        writer.String("Français");       // nom affiché
+        for (var i = 0; i < 4; i++)
+        {
+            writer.String("Segoe UI");   // polices
+        }
+
+        writer.String(string.Empty);     // données
+        writer.String(string.Empty);     // licence
+        writer.String(string.Empty);     // info avant
+        writer.String(string.Empty);     // info après
+        writer.UInt32(0x040C);           // identifiant de langue
+        writer.Zero(16);                 // quatre tailles de police
+        writer.Zero(1);                  // droite à gauche
+    }
+
+    private static void WriteMessage(BlockWriter writer)
+    {
+        writer.String("LaunchProgram");
+        writer.String("Lancer %1");
+        writer.Zero(4); // langue
+    }
+
+    private static void WriteType(BlockWriter writer)
+    {
+        writer.String("full");
+        writer.String("Installation complète");
+        writer.String(string.Empty); // langues
+        writer.String(string.Empty); // contrôle
+        writer.Zero(20);             // versions Windows
+        writer.Zero(1);              // drapeaux
+        writer.Zero(1);              // type
+        writer.Zero(8);              // taille
+    }
+
+    private static void WriteComponent(BlockWriter writer)
+    {
+        writer.String("game");
+        writer.String("Le jeu");
+        writer.String("full");
+        writer.String(string.Empty); // langues
+        writer.String(string.Empty); // contrôle
+        writer.Zero(8);              // espace disque supplémentaire
+        writer.Zero(4);              // niveau
+        writer.Zero(1);              // utilisé
+        writer.Zero(20);             // versions Windows
+        writer.Zero(1);              // drapeaux
+        writer.Zero(8);              // taille
+    }
+
+    private static void WriteTask(BlockWriter writer)
+    {
+        writer.String("desktopicon");
+        writer.String("Créer une icône sur le Bureau");
+        writer.String("Icônes supplémentaires :");
+        writer.String(string.Empty); // composants
+        writer.String(string.Empty); // langues
+        writer.String(string.Empty); // contrôle
+        writer.Zero(4);              // niveau
+        writer.Zero(1);              // utilisé
+        writer.Zero(20);             // versions Windows
+        writer.Zero(1);              // drapeaux
+    }
+
+    private static void WriteDirectory(BlockWriter writer)
+    {
+        writer.String(@"{app}\Mods");
+        WriteCondition(writer);
+        writer.Zero(4);  // attributs
+        writer.Zero(20); // versions Windows
+        writer.Zero(2);  // permission
+        writer.Zero(1);  // drapeaux
+    }
+
+    private static void WriteIcon(BlockWriter writer)
+    {
+        writer.String(@"{userprograms}\Vintage Story");
+        writer.String(@"{app}\Vintagestory.exe");
+        writer.String(string.Empty); // paramètres
+        writer.String(string.Empty); // dossier de travail
+        writer.String(string.Empty); // fichier d'icône
+        writer.String(string.Empty); // commentaire
+        WriteCondition(writer);
+        writer.String(string.Empty); // identifiant de modèle utilisateur
+        writer.Zero(16);             // CLSID d'activation
+        writer.Zero(20);             // versions Windows
+        writer.Zero(4);              // index d'icône
+        writer.Zero(4);              // commande d'affichage
+        writer.Zero(1);              // fermeture à la sortie
+        writer.Zero(2);              // raccourci clavier
+        writer.Zero(1);              // drapeaux
+    }
+
+    private static void WriteIni(BlockWriter writer)
+    {
+        writer.String(@"{app}\settings.ini");
+        writer.String("Client");
+        writer.String("Path");
+        writer.String(@"{app}");
+        WriteCondition(writer);
+        writer.Zero(20); // versions Windows
+        writer.Zero(1);  // drapeaux
+    }
+
+    private static void WriteRegistry(BlockWriter writer)
+    {
+        writer.String(@"Software\Anego Studios\Vintage Story");
+        writer.String("InstallPath");
+        writer.String(@"{app}");
+        WriteCondition(writer);
+        writer.Zero(20); // versions Windows
+        writer.Zero(4);  // ruche
+        writer.Zero(2);  // permission
+        writer.Zero(1);  // type de valeur
+        writer.Zero(2);  // drapeaux
+    }
+
+    private static void WriteDelete(BlockWriter writer)
+    {
+        writer.String(@"{app}\obsolete.dll");
+        WriteCondition(writer);
+        writer.Zero(20); // versions Windows
+        writer.Zero(1);  // cible
+    }
+
+    private static void WriteRun(BlockWriter writer)
+    {
+        writer.String(@"{app}\Vintagestory.exe");
+        writer.String(string.Empty); // paramètres
+        writer.String(string.Empty); // dossier de travail
+        writer.String(string.Empty); // identifiant d'exécution unique
+        writer.String(string.Empty); // message d'état
+        writer.String(string.Empty); // verbe
+        writer.String("{cm:LaunchProgram}");
+        WriteCondition(writer);
+        writer.Zero(20); // versions Windows
+        writer.Zero(4);  // commande d'affichage
+        writer.Zero(1);  // condition d'attente
+        writer.Zero(2);  // drapeaux
     }
 
     private byte[] BuildSecondaryBlock(List<Location> locations, ulong chunkSize)
@@ -340,6 +542,11 @@ internal sealed class SyntheticInnoInstaller
                     flags |= 1 << 2;
                 }
 
+                if (MarkEncrypted)
+                {
+                    flags |= 1 << 3;
+                }
+
                 if (CompressPayload)
                 {
                     flags |= 1 << 4;
@@ -352,6 +559,11 @@ internal sealed class SyntheticInnoInstaller
                 if (location.CallInstructionOptimized)
                 {
                     flags |= 1 << 4;
+                }
+
+                if (MarkEncrypted)
+                {
+                    flags |= 1 << 6;
                 }
 
                 if (CompressPayload)

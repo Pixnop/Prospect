@@ -19,14 +19,6 @@ public sealed class InnoFormatException : Exception
     {
     }
 
-    /// <summary>Construit l'exception à partir d'une cause de plus bas niveau.</summary>
-    /// <param name="message">Ce qui n'a pas pu être lu, en clair.</param>
-    /// <param name="innerException">Cause d'origine.</param>
-    public InnoFormatException(string message, Exception innerException)
-        : base(message, innerException)
-    {
-    }
-
     /// <summary>Format ou version que Prospect ne prétend pas savoir lire.</summary>
     public static InnoFormatException Unsupported(string reason)
         => new($"Installeur Inno Setup non pris en charge par l'extraction : {reason}.");

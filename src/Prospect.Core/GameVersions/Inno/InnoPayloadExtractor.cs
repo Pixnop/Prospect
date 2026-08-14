@@ -237,8 +237,37 @@ internal sealed class InnoPayloadExtractor
                 last++;
             }
 
-            using var chunk = OpenChunk(installer, offsets, script, plan.Files[index].Entry);
+            // Un bloc stocké tel quel se lit DANS le flux de l'installeur : il n'y a pas d'objet
+            // séparé à refermer, et le refermer fermerait le fichier sous nos pieds.
+            var chunk = OpenChunk(installer, offsets, script, plan.Files[index].Entry);
+            var ownsChunk = !ReferenceEquals(chunk, installer);
 
+            try
+            {
+                index = ExtractChunk(chunk, plan, index, last, root, progress, ref written, ref lastPercent, cancellationToken);
+            }
+            finally
+            {
+                if (ownsChunk)
+                {
+                    chunk.Dispose();
+                }
+            }
+        }
+    }
+
+    private int ExtractChunk(
+        Stream chunk,
+        ExtractionPlan plan,
+        int index,
+        int last,
+        string root,
+        IProgress<GameInstallProgress>? progress,
+        ref long written,
+        ref int lastPercent,
+        CancellationToken cancellationToken)
+    {
+        {
             var position = 0UL;
             for (; index <= last; index++)
             {
@@ -298,6 +327,8 @@ internal sealed class InnoPayloadExtractor
                 }
             }
         }
+
+        return index;
     }
 
     private static Stream OpenChunk(
@@ -317,7 +348,7 @@ internal sealed class InnoPayloadExtractor
 
         if (!entry.Compressed)
         {
-            return new NonDisposingStream(installer);
+            return installer;
         }
 
         return script.Compression switch
@@ -420,43 +451,4 @@ internal sealed class InnoPayloadExtractor
     private readonly record struct PlannedFile(InnoDataEntry Entry, IReadOnlyList<string> RelativePaths);
 
     private sealed record ExtractionPlan(IReadOnlyList<PlannedFile> Files, long TotalBytes);
-
-    /// <summary>
-    /// Enveloppe qui empêche la fermeture du flux de l'installeur quand un bloc est stocké sans
-    /// compression et donc lu directement.
-    /// </summary>
-    private sealed class NonDisposingStream : Stream
-    {
-        private readonly Stream _inner;
-
-        public NonDisposingStream(Stream inner) => _inner = inner;
-
-        public override bool CanRead => true;
-
-        public override bool CanSeek => false;
-
-        public override bool CanWrite => false;
-
-        public override long Length => throw new NotSupportedException();
-
-        public override long Position
-        {
-            get => throw new NotSupportedException();
-            set => throw new NotSupportedException();
-        }
-
-        public override int Read(byte[] buffer, int offset, int count) => _inner.Read(buffer, offset, count);
-
-        public override int Read(Span<byte> buffer) => _inner.Read(buffer);
-
-        public override void Flush()
-        {
-        }
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    }
 }
