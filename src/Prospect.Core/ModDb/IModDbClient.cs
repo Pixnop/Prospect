@@ -19,6 +19,33 @@ public interface IModDbClient
     /// <exception cref="ModDbUnavailableException">API injoignable et aucun cache exploitable.</exception>
     Task<ModDbCatalog> GetCatalogAsync(bool forceRefresh = false, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Le catalogue DÉJÀ mémorisé, mémoire ou disque, sans jamais toucher au réseau, ou
+    /// <see langword="null"/> quand rien n'a encore été relevé sur cette installation.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Distinct de <see cref="GetCatalogAsync"/> sur le seul point qui compte pour ses appelants :
+    /// celui-ci ne DÉCLENCHE rien. Il sert les écrans qui ont besoin d'un renseignement de confort
+    /// sur un mod (son logo) sans avoir la moindre raison d'aller chercher trois mégaoctets et demi
+    /// de catalogue pour l'obtenir. L'onglet Mods d'une instance vit d'un scan disque et
+    /// n'émettait, avant lui, aucun appel réseau à l'ouverture : lui en faire émettre un pour
+    /// décorer ses rangées serait un échange perdant.
+    /// </para>
+    /// <para>
+    /// Le cache PÉRIMÉ est servi sans réserve, contrairement à <see cref="GetCatalogAsync"/> qui
+    /// tenterait un relevé d'abord. Un logo de fiche ne se démode pas à l'heure, et l'alternative
+    /// n'est pas « un logo plus frais » mais « pas de logo du tout ».
+    /// </para>
+    /// </remarks>
+    /// <param name="cancellationToken">Annulation.</param>
+    /// <returns>
+    /// Un catalogue de fraîcheur <see cref="ModDbFreshness.Cached"/> ou
+    /// <see cref="ModDbFreshness.Stale"/>, jamais <see cref="ModDbFreshness.Live"/>, ou
+    /// <see langword="null"/>. Ne lève pour aucune panne : un cache illisible est un cache absent.
+    /// </returns>
+    Task<ModDbCatalog?> TryGetCachedCatalogAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Le vocabulaire des catégories (<c>/api/tags</c>), pour la barre de filtres.</summary>
     /// <exception cref="ModDbUnavailableException">API injoignable et aucun cache exploitable.</exception>
     Task<IReadOnlyList<ModDbTag>> GetTagsAsync(bool forceRefresh = false, CancellationToken cancellationToken = default);

@@ -15,9 +15,27 @@
           BorderThickness="1" BoxShadow="{DynamicResource GlassElevMenu}">
     <StackPanel>
       <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="22,18">
-        <TextBlock Text="{Binding Title}" TextWrapping="Wrap"
-                   FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
-                   FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+        <!-- La vignette montre CE QU'ON RETIRE, à côté du titre qui le nomme : sur une instance qui
+             porte trois mods aux noms voisins, c'est le seul élément non textuel de la
+             confirmation. Même règle que la rangée d'où vient le clic — pas de provenance, pas de
+             logo — pour que le dialogue ne prétende pas en savoir plus qu'elle. -->
+        <Grid ColumnDefinitions="Auto,*">
+          <Border Grid.Column="0" Width="40" Height="40" CornerRadius="{StaticResource RadiusSm}"
+                  Background="{DynamicResource GlassItem}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1"
+                  ClipToBounds="True" VerticalAlignment="Center">
+            <Panel>
+              <Path Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Data="{StaticResource Icon.package}" Stroke="{DynamicResource Text4}"
+                    StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round"
+                    IsVisible="{Binding !Thumbnail.HasLogo}" />
+              <Image Width="40" Height="40" Stretch="UniformToFill" Source="{Binding Thumbnail.Bitmap}"
+                     IsVisible="{Binding Thumbnail.HasLogo}" />
+            </Panel>
+          </Border>
+          <TextBlock Grid.Column="1" Text="{Binding Title}" TextWrapping="Wrap" Margin="14,0,0,0" VerticalAlignment="Center"
+                     FontFamily="{DynamicResource FontDisplay}" FontSize="{StaticResource FsHeading}"
+                     FontWeight="{StaticResource FwSemibold}" Foreground="{DynamicResource Text1}" />
+        </Grid>
       </Border>
 
       <StackPanel Margin="22" Spacing="14">

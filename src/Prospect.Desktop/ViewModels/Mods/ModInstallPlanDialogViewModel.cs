@@ -34,6 +34,8 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
     private readonly Func<int, Task<ModInstallPlan>> _reprepare;
     private readonly Func<ModInstallPlan, IReadOnlyCollection<string>, Task> _confirm;
     private readonly IOverlayService _overlay;
+    private readonly IModLogoCache _images;
+    private readonly IModLogoDirectory _logoDirectory;
     private readonly string _instanceName;
 
     private bool _isApplyingPlan;
@@ -45,7 +47,8 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
     /// <param name="reprepare">Recalcule le plan pour une autre release.</param>
     /// <param name="overlay">Panneau modal, pour se refermer.</param>
     /// <param name="urlOpener">Ouverture des liens présents dans un changelog.</param>
-    /// <param name="images">Cache d'images, pour les illustrations d'un changelog.</param>
+    /// <param name="images">Cache d'images, pour les illustrations d'un changelog et pour les vignettes.</param>
+    /// <param name="logoDirectory">Annuaire des logos, pour la vignette du mod et celles de ses dépendances.</param>
     public ModInstallPlanDialogViewModel(
         ModInstallPlan plan,
         string instanceName,
@@ -53,7 +56,8 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
         Func<int, Task<ModInstallPlan>> reprepare,
         IOverlayService overlay,
         IExternalUrlOpener urlOpener,
-        IModLogoCache images)
+        IModLogoCache images,
+        IModLogoDirectory logoDirectory)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(confirm);
@@ -61,11 +65,19 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(urlOpener);
         ArgumentNullException.ThrowIfNull(images);
+        ArgumentNullException.ThrowIfNull(logoDirectory);
 
         _confirm = confirm;
         _reprepare = reprepare;
         _overlay = overlay;
         _instanceName = instanceName;
+        _images = images;
+        _logoDirectory = logoDirectory;
+
+        // La vignette de l'en-tête est construite UNE FOIS : changer de release dans le sélecteur
+        // recalcule tout le reste du dialogue, mais pas la fiche, donc pas son logo. La rebâtir à
+        // chaque recalcul redemanderait la même image au cache pour rien.
+        Thumbnail = new ModThumbnailViewModel(plan.Primary.ModDbModId, logoDirectory, images);
 
         _plan = plan;
         _allReleases = plan.AvailableReleases
@@ -92,6 +104,9 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
         // su retenir : la plus récente compatible quand il y en a une, la meilleure publiée sinon.
         ApplyPlan(plan);
     }
+
+    /// <summary>Vignette du mod à installer, ou le pictogramme générique. Ne change jamais de fiche.</summary>
+    public ModThumbnailViewModel Thumbnail { get; }
 
     /// <summary>Plan courant : celui du dernier calcul, pas forcément celui de la construction.</summary>
     [ObservableProperty]
@@ -245,6 +260,17 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
         {
             release.Dispose();
         }
+
+        Thumbnail.Dispose();
+        DisposeDependencyRows();
+    }
+
+    private void DisposeDependencyRows()
+    {
+        foreach (var dependency in Dependencies.Concat(InstallableAnyway))
+        {
+            dependency.Dispose();
+        }
     }
 
     partial void OnSelectedReleaseChanged(ModReleaseChoiceViewModel? value)
@@ -317,13 +343,18 @@ public sealed partial class ModInstallPlanDialogViewModel : ObservableObject, ID
             ShowApproximateWarning = plan.Primary.IsApproximateMatch && !plan.Primary.IsDeclaredIncompatible;
             ApproximateWarning = UiText.Mods.ApproximateWarning(plan.GameVersion.ToString());
 
+            // Un changement de release change les dépendances (elles se lisent dans le modinfo.json
+            // de l'archive téléchargée) : les anciennes lignes sont jetées, donc disposées, sinon
+            // chaque aller-retour dans le sélecteur laisserait une vignette en vol derrière lui.
+            DisposeDependencyRows();
+
             Dependencies = plan.MissingDependencies
-                .Select(item => new ModDependencyChoiceViewModel(item, plan.Issues))
+                .Select(item => new ModDependencyChoiceViewModel(item, plan.Issues, _logoDirectory, _images))
                 .ToArray();
             HasDependencies = Dependencies.Count > 0;
 
             InstallableAnyway = plan.InstallableAnyway
-                .Select(dependency => ModDependencyChoiceViewModel.ForInstallAnyway(dependency))
+                .Select(dependency => ModDependencyChoiceViewModel.ForInstallAnyway(dependency, _logoDirectory, _images))
                 .ToArray();
             HasInstallableAnyway = InstallableAnyway.Count > 0;
 
@@ -508,12 +539,23 @@ internal static class UnresolvedDependencyMessages
 }
 
 /// <summary>Une dépendance manquante, cochable, dans le dialogue de confirmation.</summary>
-public sealed partial class ModDependencyChoiceViewModel : ObservableObject
+public sealed partial class ModDependencyChoiceViewModel : ObservableObject, IDisposable
 {
     /// <summary>Construit la ligne.</summary>
     /// <param name="item">Release résolue pour cette dépendance.</param>
     /// <param name="issues">Diagnostic complet, pour expliquer pourquoi elle est proposée.</param>
-    public ModDependencyChoiceViewModel(ModInstallItem item, IReadOnlyList<ModDependencyIssue> issues)
+    /// <param name="logoDirectory">Annuaire des logos, ou <see langword="null"/> pour une ligne sans vignette.</param>
+    /// <param name="images">Cache d'images, ou <see langword="null"/> pour une ligne sans vignette.</param>
+    /// <remarks>
+    /// Les deux derniers paramètres sont optionnels, et c'est le seul endroit du chantier où ils le
+    /// sont : une dépendance se nomme dans plusieurs dialogues, et un test qui vérifie un LIBELLÉ
+    /// n'a aucune raison de câbler de quoi charger une image.
+    /// </remarks>
+    public ModDependencyChoiceViewModel(
+        ModInstallItem item,
+        IReadOnlyList<ModDependencyIssue> issues,
+        IModLogoDirectory? logoDirectory = null,
+        IModLogoCache? images = null)
     {
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(issues);
@@ -521,12 +563,13 @@ public sealed partial class ModDependencyChoiceViewModel : ObservableObject
         ModIdString = item.ModIdString;
         DisplayName = item.DisplayName;
         VersionText = item.Version.ToString();
+        Thumbnail = CreateThumbnail(item.ModDbModId, logoDirectory, images);
 
         var issue = issues.FirstOrDefault(candidate => string.Equals(candidate.ModIdString, item.ModIdString, StringComparison.OrdinalIgnoreCase));
         ReasonText = UiText.Mods.DependencyReason(issue);
     }
 
-    private ModDependencyChoiceViewModel(UnresolvedModDependency dependency)
+    private ModDependencyChoiceViewModel(UnresolvedModDependency dependency, IModLogoDirectory? logoDirectory, IModLogoCache? images)
     {
         var item = dependency.BestAvailable!;
         ModIdString = dependency.ModIdString;
@@ -534,7 +577,13 @@ public sealed partial class ModDependencyChoiceViewModel : ObservableObject
         VersionText = item.Version.ToString();
         ReasonText = UiText.Mods.InstallAnywayReason(dependency.BestAvailableGameVersions);
         IsDeclaredIncompatible = true;
+        Thumbnail = CreateThumbnail(item.ModDbModId, logoDirectory, images);
     }
+
+    private static ModThumbnailViewModel CreateThumbnail(int modDbModId, IModLogoDirectory? logoDirectory, IModLogoCache? images)
+        => logoDirectory is null || images is null
+            ? ModThumbnailViewModel.None
+            : new ModThumbnailViewModel(modDbModId, logoDirectory, images);
 
     /// <summary>
     /// Ligne « installer quand même » d'une dépendance publiée sans release compatible : même
@@ -549,7 +598,10 @@ public sealed partial class ModDependencyChoiceViewModel : ObservableObject
     /// attaché à la ligne, et la provenance continue de marquer l'installation
     /// (<c>ModProvenance.DeclaredIncompatible</c>) — mais le défaut devient « ça marchera ».
     /// </remarks>
-    public static ModDependencyChoiceViewModel ForInstallAnyway(UnresolvedModDependency dependency)
+    public static ModDependencyChoiceViewModel ForInstallAnyway(
+        UnresolvedModDependency dependency,
+        IModLogoDirectory? logoDirectory = null,
+        IModLogoCache? images = null)
     {
         ArgumentNullException.ThrowIfNull(dependency);
         if (dependency.BestAvailable is null)
@@ -557,7 +609,7 @@ public sealed partial class ModDependencyChoiceViewModel : ObservableObject
             throw new ArgumentException("Cette dépendance n'a aucune release à proposer.", nameof(dependency));
         }
 
-        return new ModDependencyChoiceViewModel(dependency);
+        return new ModDependencyChoiceViewModel(dependency, logoDirectory, images);
     }
 
     public string ModIdString { get; }
@@ -565,6 +617,9 @@ public sealed partial class ModDependencyChoiceViewModel : ObservableObject
     public string DisplayName { get; }
 
     public string VersionText { get; }
+
+    /// <summary>Vignette de la dépendance, ou le pictogramme générique.</summary>
+    public ModThumbnailViewModel Thumbnail { get; }
 
     /// <summary>Pourquoi cette dépendance est proposée : absente, trop ancienne, signalée par le ModDB.</summary>
     public string ReasonText { get; }
@@ -574,4 +629,7 @@ public sealed partial class ModDependencyChoiceViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isSelected = true;
+
+    /// <summary>Annule le chargement de vignette encore en vol.</summary>
+    public void Dispose() => Thumbnail.Dispose();
 }

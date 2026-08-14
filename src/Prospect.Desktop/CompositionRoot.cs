@@ -137,6 +137,13 @@ public static class CompositionRoot
         services.AddSingleton<IModLogoCache>(provider => new ModLogoCache(
             CreateHttpClient(httpMessageHandler, TimeSpan.FromSeconds(15))));
 
+        // Où trouver le logo d'un mod qu'on ne connaît que par son identifiant de fiche : les
+        // écrans qui ne sont pas le navigateur (onglet Mods d'une instance, dialogues d'un plan,
+        // retrait). Singleton parce que sa table se construit une fois pour la session, et adossé
+        // au seul CACHE du client ModDB : aucune de ces surfaces n'émet d'appel réseau pour
+        // décorer une rangée (voir ModLogoDirectory).
+        services.AddSingleton<IModLogoDirectory, ModLogoDirectory>();
+
         // Sélecteur de fichiers du système (export des journaux, choix de dossier des réglages).
         // Fabrique vers MainWindow plutôt que la fenêtre elle-même : voir la remarque
         // d'AvaloniaFilePickerService sur le cycle que la résolution directe créerait avec
@@ -201,7 +208,8 @@ public static class CompositionRoot
             provider.GetRequiredService<IUiDispatcher>(),
             provider.GetRequiredService<IClock>(),
             provider.GetRequiredService<IExternalUrlOpener>(),
-            provider.GetRequiredService<IModLogoCache>()));
+            provider.GetRequiredService<IModLogoCache>(),
+            provider.GetRequiredService<IModLogoDirectory>()));
 
         // Fenêtre.
         services.AddSingleton<MainWindow>();

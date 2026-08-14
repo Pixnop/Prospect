@@ -33,7 +33,7 @@ public sealed class InstanceModsTabViewModelTests
         string Slug,
         string LogPath);
 
-    private static async Task<Fixture> CreateAsync()
+    private static async Task<Fixture> CreateAsync(IModLogoDirectory? logoDirectory = null)
     {
         var fileSystem = new MockFileSystem();
         var clock = new FakeClock(Now);
@@ -55,7 +55,8 @@ public sealed class InstanceModsTabViewModelTests
         return new Fixture(
             new InstanceModsTabViewModel(
                 record.Slug, mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath,
-                clock, overlay, toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()),
+                clock, overlay, toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache(handler),
+                logoDirectory ?? ModDbDoubles.CreateLogoDirectory()),
             mods,
             handler,
             updateCache,
@@ -654,26 +655,141 @@ public sealed class InstanceModsTabViewModelTests
         var logPath = fileSystem.Path.Combine(Paths.LogsDirectory, "instance-slug.log");
 
         Should.Throw<ArgumentException>(() => new InstanceModsTabViewModel(
-            string.Empty, mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            string.Empty, mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache(), ModDbDoubles.CreateLogoDirectory()));
         Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
-            "slug", null!, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            "slug", null!, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache(), ModDbDoubles.CreateLogoDirectory()));
         Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
-            "slug", mods, null!, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            "slug", mods, null!, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache(), ModDbDoubles.CreateLogoDirectory()));
         Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
-            "slug", mods, installService, null!, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            "slug", mods, installService, null!, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache(), ModDbDoubles.CreateLogoDirectory()));
         Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
-            "slug", mods, installService, updateChecker, null!, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            "slug", mods, installService, updateChecker, null!, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache(), ModDbDoubles.CreateLogoDirectory()));
         Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
-            "slug", mods, installService, updateChecker, updateCache, null!, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            "slug", mods, installService, updateChecker, updateCache, null!, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache(), ModDbDoubles.CreateLogoDirectory()));
         Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
-            "slug", mods, installService, updateChecker, updateCache, logInsights, null!, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            "slug", mods, installService, updateChecker, updateCache, logInsights, null!, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache(), ModDbDoubles.CreateLogoDirectory()));
         Should.Throw<ArgumentException>(() => new InstanceModsTabViewModel(
-            "slug", mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, string.Empty, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            "slug", mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, string.Empty, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache(), ModDbDoubles.CreateLogoDirectory()));
         Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
-            "slug", mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, null!, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            "slug", mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, null!, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache(), ModDbDoubles.CreateLogoDirectory()));
         Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
-            "slug", mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, null!, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            "slug", mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, null!, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache(), ModDbDoubles.CreateLogoDirectory()));
         Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
-            "slug", mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, null!, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache()));
+            "slug", mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, null!, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache(), ModDbDoubles.CreateLogoDirectory()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
+            "slug", mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), null!, ModDbDoubles.CreateLogoDirectory()));
+        Should.Throw<ArgumentNullException>(() => new InstanceModsTabViewModel(
+            "slug", mods, installService, updateChecker, updateCache, logInsights, logInsightsCache, logPath, clock, fixture.Overlay, fixture.Toasts, new FakeExternalUrlOpener(), ModDbDoubles.CreateLogoCache(), null!));
+    }
+
+    // ── Vignettes des rangées ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Le cas que le propriétaire décrivait : une rangée montrait une caisse générique alors que le
+    /// logo réel existe pour tout mod venu du ModDB. L'identifiant vient de la PROVENANCE, la seule
+    /// donnée locale qui rattache un zip à une fiche.
+    /// </summary>
+    [Fact]
+    public async Task RefreshAsync_ModVenuDuModDb_DemandeSonLogoParLIdentifiantDeProvenance()
+    {
+        var directory = new FakeModLogoDirectory((792, "https://moddbcdn.vintagestory.at/betterruins.png"));
+        var fixture = await CreateAsync(directory);
+        SeedModDbMod(fixture, "betterruins-1.0.0.zip", "betterruins", "BetterRuins", modDbModId: 792);
+
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+        await fixture.Tab.Mods.Single().Thumbnail.LoadCompletion;
+
+        directory.RequestedModIds.ShouldBe([792]);
+    }
+
+    /// <summary>
+    /// Un zip déposé à la main garde le pictogramme générique, et rien n'est même demandé pour lui :
+    /// c'est un état honnête, cohérent avec le badge de provenance de la même rangée.
+    /// </summary>
+    [Fact]
+    public async Task RefreshAsync_ModDeposeALaMain_NeDemandeAucunLogo()
+    {
+        var directory = new FakeModLogoDirectory((792, "https://moddbcdn.vintagestory.at/betterruins.png"));
+        var fixture = await CreateAsync(directory);
+        SeedMod(fixture, "betterruins-1.0.0.zip", "betterruins", "BetterRuins");
+
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+        await fixture.Tab.Mods.Single().Thumbnail.LoadCompletion;
+
+        fixture.Tab.Mods.Single().IsFromModDb.ShouldBeFalse();
+        fixture.Tab.Mods.Single().Thumbnail.HasLogo.ShouldBeFalse();
+        directory.RequestedModIds.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// L'annuaire vide est l'état d'une installation qui n'a jamais ouvert le navigateur, et celui
+    /// d'une session hors ligne : la liste s'affiche entière, sans erreur ni trou de mise en page.
+    /// </summary>
+    [Fact]
+    public async Task RefreshAsync_SansCatalogueMemorise_ListeQuandMemeLesMods()
+    {
+        var fixture = await CreateAsync();
+        SeedModDbMod(fixture, "betterruins-1.0.0.zip", "betterruins", "BetterRuins", modDbModId: 792);
+
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+        await fixture.Tab.Mods.Single().Thumbnail.LoadCompletion;
+
+        fixture.Tab.HasMods.ShouldBeTrue();
+        fixture.Tab.Mods.Single().Thumbnail.HasLogo.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Un rescan construit des rangées NEUVES : sans disposition des anciennes, chaque bascule
+    /// d'interrupteur laisserait un chargement de vignette derrière elle.
+    /// </summary>
+    [Fact]
+    public async Task RefreshAsync_Rejoue_DisposeLesVignettesDesRangeesJetees()
+    {
+        var directory = new FakeModLogoDirectory((792, "https://moddbcdn.vintagestory.at/betterruins.png"));
+        var fixture = await CreateAsync(directory);
+        SeedModDbMod(fixture, "betterruins-1.0.0.zip", "betterruins", "BetterRuins", modDbModId: 792);
+
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+        var first = fixture.Tab.Mods.Single();
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+
+        fixture.Tab.Mods.Single().ShouldNotBeSameAs(first);
+        first.Thumbnail.ShouldNotBeSameAs(fixture.Tab.Mods.Single().Thumbnail);
+    }
+
+    /// <summary>
+    /// Le dialogue de retrait montre la MÊME chose que la rangée d'où vient le clic : ni plus, ni
+    /// moins. Il nomme un mod, il peut donc le montrer.
+    /// </summary>
+    [Fact]
+    public async Task RequestUninstall_PorteLaVignetteDuModVise()
+    {
+        var directory = new FakeModLogoDirectory((792, "https://moddbcdn.vintagestory.at/betterruins.png"));
+        var fixture = await CreateAsync(directory);
+        SeedModDbMod(fixture, "betterruins-1.0.0.zip", "betterruins", "BetterRuins", modDbModId: 792);
+        await fixture.Tab.RefreshCommand.ExecuteAsync(null);
+
+        await fixture.Tab.Mods.Single().RemoveCommand.ExecuteAsync(null);
+
+        var dialog = fixture.Overlay.Active.ShouldBeOfType<UninstallModDialogViewModel>();
+        await dialog.Thumbnail.LoadCompletion;
+        directory.RequestedModIds.ShouldContain(792);
+    }
+
+    /// <summary>Pose un zip ET sa provenance : la forme d'un mod que Prospect a installé lui-même.</summary>
+    private static void SeedModDbMod(Fixture fixture, string fileName, string modId, string name, int modDbModId)
+    {
+        SeedMod(fixture, fileName, modId, name);
+        fixture.FileSystem.AddFile(
+            fixture.Mods.GetProvenanceFilePath(fixture.Slug),
+            new MockFileData($$"""
+            {
+              "schemaVersion": 1,
+              "mods": [
+                { "fileName": "{{fileName}}", "modId": {{modDbModId}}, "modIdString": "{{modId}}",
+                  "releaseId": 1, "fileId": 1, "version": "1.0.0", "installedUtc": "2026-08-01T09:00:00+00:00" }
+              ]
+            }
+            """));
     }
 }

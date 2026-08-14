@@ -295,6 +295,106 @@ public sealed class ModDbClientTests
         catalog.Mods.Count.ShouldBe(3);
     }
 
+    // ── Lecture du seul cache, pour les surfaces qui décorent ───────────────────────
+
+    /// <summary>
+    /// L'onglet Mods d'une instance n'émettait aucun appel à l'ouverture : il vit d'un scan disque.
+    /// C'est l'invariant que cette lecture protège, et c'est la seule raison pour laquelle elle
+    /// existe à côté de <c>GetCatalogAsync</c>.
+    /// </summary>
+    [Fact]
+    public async Task TryGetCachedCatalogAsync_NothingCached_ReturnsNullWithoutTouchingTheNetwork()
+    {
+        using var handler = CatalogHandler();
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+
+        var catalog = await client.TryGetCachedCatalogAsync(CancellationToken.None);
+
+        catalog.ShouldBeNull();
+        handler.Requests.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task TryGetCachedCatalogAsync_FreshDiskCacheFromAnEarlierSession_ServesItOffline()
+    {
+        var fileSystem = new MockFileSystem();
+        var clock = new FakeClock(Noon);
+        using (var first = CreateClient(CatalogHandler(), fileSystem, clock))
+        {
+            await first.GetCatalogAsync(cancellationToken: CancellationToken.None);
+        }
+
+        clock.UtcNow = Noon.AddMinutes(30);
+        using var offline = new FakeHttpMessageHandler(_ => throw new HttpRequestException("réseau coupé"));
+        using var second = CreateClient(offline, fileSystem, clock);
+
+        var catalog = await second.TryGetCachedCatalogAsync(CancellationToken.None);
+
+        catalog.ShouldNotBeNull();
+        catalog.Freshness.ShouldBe(ModDbFreshness.Cached);
+        catalog.Mods.Count.ShouldBe(3);
+        offline.Requests.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Le cache PÉRIMÉ est servi sans réserve, là où <c>GetCatalogAsync</c> tenterait un relevé
+    /// d'abord : un logo de fiche ne se démode pas à l'heure, et l'alternative n'est pas « un logo
+    /// plus frais » mais « pas de logo du tout ».
+    /// </summary>
+    [Fact]
+    public async Task TryGetCachedCatalogAsync_ExpiredCache_StillServesItAndSaysSo()
+    {
+        var fileSystem = new MockFileSystem();
+        var clock = new FakeClock(Noon);
+        using (var first = CreateClient(CatalogHandler(), fileSystem, clock, TimeSpan.FromHours(1)))
+        {
+            await first.GetCatalogAsync(cancellationToken: CancellationToken.None);
+        }
+
+        clock.UtcNow = Noon.AddDays(3);
+        using var handler = CatalogHandler();
+        using var second = CreateClient(handler, fileSystem, clock, TimeSpan.FromHours(1));
+
+        var catalog = await second.TryGetCachedCatalogAsync(CancellationToken.None);
+
+        catalog.ShouldNotBeNull();
+        catalog.Freshness.ShouldBe(ModDbFreshness.Stale);
+        catalog.RetrievedUtc.ShouldBe(Noon);
+        handler.Requests.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task TryGetCachedCatalogAsync_CorruptedDiskCache_ReturnsNullInsteadOfFailing()
+    {
+        var fileSystem = new MockFileSystem();
+        using var handler = CatalogHandler();
+        using var client = CreateClient(handler, fileSystem, new FakeClock(Noon));
+        fileSystem.AddFile(client.CacheFilePath, new MockFileData("{ pas du json"));
+
+        var catalog = await client.TryGetCachedCatalogAsync(CancellationToken.None);
+
+        catalog.ShouldBeNull();
+        handler.Requests.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Le catalogue relevé par le navigateur reste disponible pour les autres écrans sans qu'aucun
+    /// d'eux ne relise le disque : c'est le même client singleton et le même cache mémoire.
+    /// </summary>
+    [Fact]
+    public async Task TryGetCachedCatalogAsync_AfterALiveFetch_ServesTheMemoryCache()
+    {
+        using var handler = CatalogHandler();
+        using var client = CreateClient(handler, new MockFileSystem(), new FakeClock(Noon));
+        await client.GetCatalogAsync(cancellationToken: CancellationToken.None);
+
+        var catalog = await client.TryGetCachedCatalogAsync(CancellationToken.None);
+
+        catalog.ShouldNotBeNull();
+        catalog.Freshness.ShouldBe(ModDbFreshness.Cached);
+        handler.Requests.Count(request => request.Url.AbsolutePath == "/api/mods").ShouldBe(1);
+    }
+
     // ── Index de compatibilité ──────────────────────────────────────────────────────
 
     [Fact]

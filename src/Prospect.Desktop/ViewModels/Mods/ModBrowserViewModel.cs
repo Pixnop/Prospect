@@ -78,6 +78,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
     private readonly IOverlayService _overlay;
     private readonly IToastService _toasts;
     private readonly IModLogoCache _logoCache;
+    private readonly IModLogoDirectory _logoDirectory;
 
     private IReadOnlyList<ModDbModSummary> _catalog = [];
     private IReadOnlyList<ModDbModSummary> _matches = [];
@@ -92,7 +93,8 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         IExternalUrlOpener urlOpener,
         IOverlayService overlay,
         IToastService toasts,
-        IModLogoCache logoCache)
+        IModLogoCache logoCache,
+        IModLogoDirectory logoDirectory)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(installService);
@@ -102,6 +104,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(overlay);
         ArgumentNullException.ThrowIfNull(toasts);
         ArgumentNullException.ThrowIfNull(logoCache);
+        ArgumentNullException.ThrowIfNull(logoDirectory);
 
         _client = client;
         _installService = installService;
@@ -111,6 +114,7 @@ public sealed partial class ModBrowserViewModel : ObservableObject
         _overlay = overlay;
         _toasts = toasts;
         _logoCache = logoCache;
+        _logoDirectory = logoDirectory;
     }
 
     /// <summary>
@@ -488,7 +492,8 @@ public sealed partial class ModBrowserViewModel : ObservableObject
                 releaseId => PreparePlanAsync(slug, card.ModId, releaseId),
                 _overlay,
                 _urlOpener,
-                _logoCache));
+                _logoCache,
+                _logoDirectory));
         }
         catch (ModReleaseNotFoundException exception)
         {

@@ -46,6 +46,17 @@ internal static class TinyPng
         return png.ToArray();
     }
 
+    /// <summary>
+    /// La même vignette, déjà décodée. Réservé aux tests <c>[AvaloniaFact]</c> : un
+    /// <see cref="Avalonia.Media.Imaging.Bitmap"/> ne se construit pas sans plateforme.
+    /// </summary>
+    public static Avalonia.Media.Imaging.Bitmap Decode(int size = 2)
+    {
+        using var stream = new MemoryStream(Create(size));
+
+        return new Avalonia.Media.Imaging.Bitmap(stream);
+    }
+
     private static byte[] BuildIhdr(int size)
     {
         var ihdr = new byte[13];

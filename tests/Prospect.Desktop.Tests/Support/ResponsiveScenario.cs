@@ -1,4 +1,5 @@
 using System.IO.Abstractions.TestingHelpers;
+using System.Text.Json;
 
 using Avalonia;
 using Avalonia.Controls;
@@ -113,6 +114,60 @@ internal static class ResponsiveScenario
             mods.GetModsDirectory(slug),
             "configlib-1.11.1.zip",
             ModDbDoubles.ModInfo("configlib", "Config lib", "1.11.1"));
+    }
+
+    /// <summary>
+    /// Installe un mod AVEC sa provenance ModDB, c'est-à-dire un mod que Prospect aurait posé
+    /// lui-même : c'est la seule forme qui donne droit à une vignette dans l'onglet Mods, puisque
+    /// l'identifiant de fiche ne vient que de là. Le zip seul (voir <see cref="SeedInstalledMod"/>)
+    /// reste un dépôt manuel et garde le pictogramme générique.
+    /// </summary>
+    /// <param name="modDbModId">Identifiant de fiche, à faire correspondre au catalogue du faux serveur.</param>
+    /// <remarks>
+    /// Appelable plusieurs fois de suite sur la même instance : la provenance déjà écrite est RELUE
+    /// et complétée. Un simple réécriture aurait effacé les entrées précédentes, et un mod
+    /// fraîchement installé serait réapparu comme un dépôt manuel — un piège qui ne se voit qu'à
+    /// l'écran, une fois la vignette manquante.
+    /// </remarks>
+    public static void SeedModDbMod(
+        ServiceProvider provider,
+        MockFileSystem fileSystem,
+        string slug,
+        string modIdString,
+        string displayName,
+        int modDbModId,
+        string version = "1.0.0")
+    {
+        var mods = provider.GetRequiredService<IInstalledModRepository>();
+        var fileName = $"{modIdString}-{version}.zip";
+        ModDbDoubles.SeedMod(
+            fileSystem,
+            mods.GetModsDirectory(slug),
+            fileName,
+            ModDbDoubles.ModInfo(modIdString, displayName, version));
+
+        var path = mods.GetProvenanceFilePath(slug);
+        var entries = ReadProvenanceEntries(fileSystem, path);
+        entries.Add($$"""
+            { "fileName": "{{fileName}}", "modId": {{modDbModId}}, "modIdString": "{{modIdString}}",
+              "releaseId": 1, "fileId": 1, "version": "{{version}}", "installedUtc": "2026-08-01T09:00:00+00:00" }
+            """);
+
+        fileSystem.AddFile(path, new MockFileData($$"""
+        { "schemaVersion": 1, "mods": [ {{string.Join(',', entries)}} ] }
+        """));
+    }
+
+    private static List<string> ReadProvenanceEntries(MockFileSystem fileSystem, string path)
+    {
+        if (!fileSystem.File.Exists(path))
+        {
+            return [];
+        }
+
+        using var document = JsonDocument.Parse(fileSystem.File.ReadAllText(path));
+
+        return [.. document.RootElement.GetProperty("mods").EnumerateArray().Select(entry => entry.GetRawText())];
     }
 
     /// <summary>
