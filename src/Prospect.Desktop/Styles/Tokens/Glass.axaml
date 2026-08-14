@@ -91,10 +91,12 @@
 
       <!-- Dialogues modaux uniquement (voir l'en-tête pour la raison de la cinquième profondeur).
 
-           94,9 % : ce qui reste des 3,4 % transmis à 91 % descend à 1,9 %, soit un rapport fantôme
-           de 1,04 sur un titre de page. En sombre, c'était déjà la variante confortable — la valeur
-           est montée d'autant que la claire pour que les deux thèmes rendent la MÊME densité, sans
-           quoi le même dialogue paraîtrait plus fin dans l'un que dans l'autre. -->
+           94,9 % : les 3,4 % que le couple voile + vitre laissait passer à 91 % descendent à 1,9 %.
+           Mesuré sur capture, dans une zone VIDE du dialogue posée sur une rangée de cartes du
+           navigateur de mods : ce que la page y montre passe d'un rapport de contraste de 15,2 (du
+           texte parfaitement lisible) à 1,032 à travers le dialogue, sous le seuil où l'œil
+           distingue une forme. En sombre c'était déjà la variante confortable ; la valeur monte
+           quand même, pour que les deux thèmes rendent la même densité. -->
       <SolidColorBrush x:Key="GlassDialog" Color="#F2111010" />
 
       <SolidColorBrush x:Key="GlassEdge" Color="#1AD5A275" />
@@ -162,7 +164,11 @@
            comme une tache mais comme une modulation du blanc, exactement le registre où l'œil lit
            encore des formes. Le critère retenu est visuel et non numérique — AUCUN texte de la page
            ne doit se deviner à travers, sur le fond clair le plus chargé du catalogue — et il
-           demande ce cran de plus. Transmission finale : 1,5 %. -->
+           demande ce cran de plus.
+
+           Transmission finale 1,5 %, et rapport fantôme mesuré 1,029 là où la page, sans dialogue,
+           affiche 15,0. Le cas le plus dur du produit a servi de juge : le dialogue d'import posé
+           sur la grille du sélecteur de fond, onze photographies en thème clair. -->
       <SolidColorBrush x:Key="GlassDialog" Color="#F5FCF9F4" />
 
       <SolidColorBrush x:Key="GlassEdge" Color="#247E5230" />

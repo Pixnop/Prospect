@@ -829,7 +829,10 @@ internal sealed class FrenchMigrationText : MigrationText
             _ => $"{gameVersionCount} versions du jeu",
         };
 
-        return $"{installations} et {gameVersions} détectées";
+        // « Trouvé : … » plutôt qu'une phrase à participe accordé. Le tour précédent donnait
+        // « 1 installation et aucun moteur détectés », dont l'accord ne marche avec aucun des deux
+        // décomptes possibles ; la forme en deux-points s'en passe et met le verdict devant.
+        return $"Trouvé : {installations}, {gameVersions}";
     }
 
     internal override string AdoptingInstallationsPhase(int completedItems, int totalItems, string? currentItemLabel)

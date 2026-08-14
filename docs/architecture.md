@@ -811,6 +811,12 @@ devinables derrière le panneau d'installation. La valeur claire monte d'un cran
 sombre parce qu'en clair la vitre et le fond ont des luminances voisines, le registre exact où
 l'œil lit encore des formes.
 
+Vérifié sur captures headless, en mesurant une zone VIDE du dialogue posée sur une rangée de
+cartes : la page y affiche un rapport de contraste de 15,2 (sombre) et 15,0 (clair) sans dialogue,
+et 1,032 puis 1,029 à travers. La transmission tombe de 3,4 % à 1,9 % en sombre, de 2,5 % à 1,5 %
+en clair. Le juge le plus dur du produit est le dialogue d'import posé sur la grille du sélecteur
+de fond, onze photographies en thème clair.
+
 Ce qui ne se dédouble PAS : l'élévation. `GlassElevMenu` (ombre portée plus sheen intérieur) reste
 la valeur des deux familles, parce que l'épaisseur d'une surface flottante ne dépend pas de ce
 qu'elle recouvre. Seul l'alpha de la vitre distingue les deux profondeurs.

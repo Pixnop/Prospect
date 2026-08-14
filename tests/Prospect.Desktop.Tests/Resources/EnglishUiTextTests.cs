@@ -110,9 +110,9 @@ public sealed class EnglishUiTextTests
     }
 
     [Theory]
-    [InlineData(0, 0, "no installs and no game versions found")]
-    [InlineData(1, 1, "1 install and 1 game version found")]
-    [InlineData(2, 3, "2 installs and 3 game versions found")]
+    [InlineData(0, 0, "Found: no installs, no game versions")]
+    [InlineData(1, 1, "Found: 1 install, 1 game version")]
+    [InlineData(2, 3, "Found: 2 installs, 3 game versions")]
     public void Migration_DetectionSummary_AgreesInNumberOnBothHalves(int installations, int gameVersions, string expected)
     {
         English.Migration.DetectionSummary(installations, gameVersions).ShouldBe(expected);

@@ -849,7 +849,8 @@ internal sealed class EnglishMigrationText : MigrationText
             _ => $"{gameVersionCount} game versions",
         };
 
-        return $"{installations} and {gameVersions} found";
+        // Voir la remarque côté français : le verdict devant, et pas d'accord à faire.
+        return $"Found: {installations}, {gameVersions}";
     }
 
     internal override string AdoptingInstallationsPhase(int completedItems, int totalItems, string? currentItemLabel)

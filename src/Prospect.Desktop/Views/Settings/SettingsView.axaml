@@ -176,24 +176,28 @@
             </Border>
           </StackPanel>
 
-          <!-- ── VS Launcher (carte de la #31, inchangée) ───────────────────────── -->
+          <!-- ── VS Launcher ─────────────────────────────────────────────────────
+               La carte se lit de haut en bas : ce que c'est, ce que l'import FAIT, puis ce que la
+               détection a trouvé avec les actions en face. La phrase d'explication est pleine
+               largeur et non dans la colonne de gauche : les deux boutons prennent la moitié de la
+               carte, et ce qui restait à gauche la coupait en quatre lignes de dix mots. -->
           <StackPanel Spacing="12">
             <TextBlock Text="{StaticResource Settings_GeneralSectionTitle}" FontSize="{StaticResource FsCaption}"
                        FontWeight="{StaticResource FwMedium}" Foreground="{DynamicResource Text2}" />
 
             <Border Classes="card" Padding="20">
-              <StackPanel Spacing="14">
+              <StackPanel Spacing="10">
+                <TextBlock Text="{StaticResource Settings_VslCardTitle}"
+                           FontSize="{StaticResource FsBodySm}" FontWeight="{StaticResource FwMedium}"
+                           Foreground="{DynamicResource Text1}" />
+                <!-- Ce que « importer » veut dire, dit avant le clic : une copie, et le dossier
+                     d'origine ne bouge pas. Le dialogue le redit à l'étape de sélection ; ici,
+                     c'est pour qui hésite encore à l'ouvrir. -->
+                <TextBlock Text="{StaticResource Settings_VslCardDescription}" TextWrapping="Wrap"
+                           LineHeight="18" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
                 <Grid ColumnDefinitions="*,Auto">
-                  <StackPanel Grid.Column="0" Spacing="3">
-                    <TextBlock Text="{StaticResource Settings_VslCardTitle}"
-                               FontSize="{StaticResource FsBodySm}" FontWeight="{StaticResource FwMedium}"
-                               Foreground="{DynamicResource Text1}" />
-                    <!-- Ce que « importer » veut dire, dit avant le clic : une copie, et le dossier
-                         d'origine ne bouge pas. Le dialogue le redit à l'étape de sélection ; ici,
-                         c'est pour qui hésite encore à l'ouvrir. -->
-                    <TextBlock Text="{StaticResource Settings_VslCardDescription}" TextWrapping="Wrap" MaxWidth="420"
-                               LineHeight="18" FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource Text3}" />
-                    <TextBlock Text="{Binding VslStatusText}" TextWrapping="Wrap" MaxWidth="420"
+                  <StackPanel Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding VslStatusText}" TextWrapping="Wrap"
                                FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}"
                                Foreground="{DynamicResource Text3}"
                                IsVisible="{Binding IsDetecting, Converter={x:Static BoolConverters.Not}}" />
