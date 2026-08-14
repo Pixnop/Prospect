@@ -337,20 +337,20 @@ d'installation par OS :
 - Linux et macOS : extraction du `.tar.gz`, puis restauration explicite des bits
   d'exécution (`chmod 755` récursif) car l'extraction ne les préserve pas et le binaire
   natif `Vintagestory` ne se lance pas sans ça ;
-- Windows : il n'existe pas de build portable, uniquement un installeur Inno Setup. On
-  reprend le pattern éprouvé de VS Launcher : exécution silencieuse avec
-  `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CURRENTUSER /NOICONS /DIR=<versions/X.Y.Z>`.
+- Windows : il n'existe pas de build portable, uniquement un installeur Inno Setup. Il
+  n'est PAS exécuté : son contenu est extrait, et l'exécuter silencieusement n'est plus
+  qu'un repli (voir la section qui suit).
 
-#### La boîte « ancienne version détectée » : ce qu'on ne peut pas empêcher
+#### La boîte « ancienne version détectée » : pourquoi elle disparaît
 
-Une installation Windows silencieuse ouvre quand même une fenêtre, et il faut le dire une
-fois pour toutes : la question « une ancienne version a été détectée, la désinstaller
-d'abord ? » ne vient pas de Setup, elle vient du SCRIPT propre à l'installeur de Vintage
-Story. Cette section ne raisonne plus par déduction : le script a été lu.
+Une installation Windows silencieuse ouvrait quand même une fenêtre, et cette section a
+d'abord conclu qu'on ne pouvait rien y faire. La conclusion était juste tant qu'on
+exécutait l'installeur. Elle ne l'est plus, parce qu'on ne l'exécute plus.
 
-`vs_install_win-x64_1.22.6.exe` est un Inno Setup 6.4.3, dont le bloc d'en-tête contient le
-bytecode PascalScript compilé de la section `[Code]`. Décompressé et désassemblé, il donne
-un `InitializeSetup` dont voici la substance, sans rien d'autre entre les appels :
+Le rappel des faits, qui n'ont pas changé. `vs_install_win-x64_1.22.6.exe` est un Inno
+Setup dont le bloc d'en-tête contient le bytecode PascalScript compilé de la section
+`[Code]`. Décompressé et désassemblé, il donne un `InitializeSetup` dont voici la
+substance, sans rien d'autre entre les appels :
 
 ```pascal
 if RegValueExists(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{70364653-036D-49B3-8B80-AF39665F29C1}_is1', 'UninstallString')
@@ -359,78 +359,147 @@ if RegValueExists(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{70
     Exec(RemoveQuotes(GetUninstallString()), '/SILENT', ...);
 ```
 
-Trois constats en découlent, et ils ferment la question.
-
 L'appel est un `MsgBox` NU. Le script importe bien `SuppressibleMsgBox`, il s'en sert
-ailleurs, mais pas ici : entre la chaîne du message et l'appel, il n'y a qu'un
-`ExpandConstant`. Or `/SUPPRESSMSGBOXES` ne couvre que les messages de Setup lui-même et
-la fonction `SuppressibleMsgBox` du langage de script (documentation Inno Setup, « Setup
-Command Line Parameters » et « Pascal Scripting: SuppressibleMsgBox »). Le drapeau ne peut
-donc pas l'atteindre, et ce n'est pas un oubli de notre ligne de commande.
+ailleurs, mais pas ici. Or `/SUPPRESSMSGBOXES` ne couvre que les messages de Setup lui-même
+et cette fonction-là (documentation d'Inno Setup, « Setup Command Line Parameters » et
+« Pascal Scripting: SuppressibleMsgBox »). `InitializeSetup` ne lit par ailleurs AUCUN
+paramètre de ligne de commande : il n'existe pas de commutateur, documenté ou non, qui
+sauterait ce test. Et l'en-tête porte `CreateUninstallRegKey = yes` sans condition, donc la
+clé que le script teste, c'est l'installeur lui-même qui l'écrit, sous HKCU avec
+`/CURRENTUSER`. NOS PROPRES installations armaient le test : la première passait sans un
+mot, la deuxième ouvrait la boîte, sans qu'aucun Vintage Story classique n'ait jamais été
+installé.
 
-`InitializeSetup` ne lit AUCUN paramètre de ligne de commande : ni `ParamStr`, ni
-`ParamCount`, ni `WizardSilent`. Il n'existe donc pas de commutateur maison, documenté ou
-non, qui sauterait ce test. Le script lit bien `ParamStr` ailleurs, dans
-`CheckIfAppShouldStart`, où il cherche `/VERYSILENT` pour ne pas lancer le jeu après coup :
-la capacité de tester les arguments existe, elle n'est simplement pas employée ici.
+Trois constats, donc, et tous les trois disent la même chose : le problème n'est pas dans
+les arguments, il est dans le fait d'exécuter le script. Le désassemblage complet du
+bytecode a d'ailleurs sorti deux autres surprises du même tonneau, qui ne tiennent pas
+davantage aux arguments. Le script porte une tâche `installnet` sans le drapeau
+`unchecked`, donc SÉLECTIONNÉE par défaut, et `Dependency_PrepareToInstall` ne la garde que
+par `WizardIsTaskSelected`, sans jamais consulter la détection de runtime : chaque
+installation silencieuse téléchargeait donc soixante-dix mégaoctets depuis `aka.ms` et
+lançait l'installeur .NET de Microsoft avec sa propre fenêtre (`SW_SHOWNORMAL`, sans
+`/quiet`), y compris sur une machine qui avait déjà le runtime. Le seul appel à
+`Dependency_IsNetInstalled` est dans `CurPageChanged`, qui ne DÉCOCHE jamais que sur une
+page affichée, et une installation `/VERYSILENT` n'en affiche aucune. Et `CurStepChanged`
+écrit en fin de course une valeur sous
+`HKCU\Software\Microsoft\DirectX\UserGpuPreferences`.
 
-Et l'en-tête du setup porte `CreateUninstallRegKey = yes`, sans condition. C'est le point
-contre-intuitif : la clé que le script teste, c'est l'installeur lui-même qui l'écrit, et
-`/CURRENTUSER` la place précisément sous HKCU. Autrement dit NOS PROPRES installations
-arment le test. La première installation faite par Prospect sur une machine vierge passe
-sans un mot ; à partir de la deuxième, la boîte est là, sans qu'aucun Vintage Story
-classique n'ait jamais été installé. C'est la vraie raison du « à chaque fois », et ce
-n'est le signe ni d'une désinstallation ratée ni d'une installation restée à moitié.
+##### Ce que Prospect fait à la place
 
-Reste la question de savoir si quelqu'un d'autre avait trouvé mieux. VS Launcher passe
-exactement les mêmes options (`pathsHandlers.ts:155`), et la phrase du message n'apparaît
-nulle part dans ses tickets ni ses discussions. Le seul moyen structurel d'y échapper
-serait de ne plus exécuter l'installeur mais d'en extraire le contenu, ce qu'aucun outil
-publié ne sait faire pour un Inno Setup 6.4.3 (innoextract 1.9 s'arrête à 6.0.5). La
-conclusion tient donc en une ligne : on ne peut pas empêcher cette boîte, on peut
-seulement prévenir avant qu'elle s'ouvre.
+`InnoPayloadExtractor` (`Core/GameVersions/Inno/`) lit le format de l'installeur et pose les
+fichiers du jeu lui-même. Aucun script ne tourne : pas de `MsgBox`, pas de clé de
+désinstallation, pas de téléchargement .NET, pas de valeur GPU. La boîte ne disparaît pas
+parce qu'on a trouvé le bon drapeau, elle disparaît parce que le code qui l'ouvre n'est
+jamais exécuté.
 
-Son bouton par défaut est « Oui », c'est-à-dire DÉSINSTALLER. Et ce qui part n'est pas
-forcément le jeu classique : `GetUninstallString` rend la clé la plus récemment écrite,
-donc sur une machine où Prospect a déjà installé une version, c'est CETTE version-là que le
-« Oui » emporte. Une touche Entrée réflexe suffit. C'est pour ça que
-Prospect prévient AVANT plutôt que d'expliquer après : sous Windows uniquement, dès l'entrée
-dans la phase d'installation, l'écran Versions et le wizard affichent une notice qui dit quoi
-répondre (`UiText.Versions.InstallerPromptNotice`, la règle d'affichage étant dans
-`GameInstallProgressPresenter.ShowsInstallerPromptNotice`). Pas de case « ne plus afficher » :
-la question est dangereuse à chaque fois, donc l'avertissement l'accompagne à chaque fois.
+Le format se lit en trois temps. Un en-tête de chargeur, retrouvé par son marqueur puis
+VÉRIFIÉ (les décalages doivent rester dans le fichier et pointer sur une chaîne
+`Inno Setup Setup Data (x.y.z)`), donne le décalage de l'en-tête et celui des données. Deux
+blocs LZMA1, découpés en tronçons de 4 Kio précédés chacun de leur CRC32, portent le script :
+le premier tient l'en-tête et toutes les tables d'entrées, le second la table des
+emplacements. Enfin un unique bloc LZMA2 SOLIDE tient les fichiers, chacun repéré par un
+décalage et une taille dans le flux décompressé.
 
-Deux interdits en découlent, et ils ne se discutent pas. On ne touche PAS au registre de
-l'utilisateur pour faire disparaître le test : cette clé est ce qui rend son jeu
-désinstallable. Et on ne répond PAS à la boîte à sa place, dans aucun sens.
+Trois propriétés de cette lecture méritent d'être dites, parce que ce sont elles qui
+rendent une lecture de format écrite à la main défendable.
 
-Le garde-fou qui reste est celui du RÉSULTAT : `GameInstallService` vérifie qu'un exécutable
-attendu se trouve bien dans le dossier de la version avant d'écrire la sentinelle de
-complétude. Voir cette boîte n'est donc pas une preuve que les arguments ne sont pas arrivés,
-et une installation détournée ailleurs ne peut pas se faire passer pour réussie.
+Elle est vérifiée de bout en bout. Tous les CRC des blocs sont contrôlés, ce qui confirme
+surtout que le décalage de départ était le bon. Le premier bloc doit se terminer
+EXACTEMENT à l'octet près une fois toutes les tables traversées, ce qui ne peut arriver
+qu'avec la bonne grille de lecture. Et chaque fichier écrit est comparé à l'empreinte
+SHA-256 que l'installeur déclare pour lui. Une erreur de lecture ne produit donc pas un jeu
+discrètement abîmé : elle échoue franchement.
 
-#### Progression de l'installeur silencieux : une estimation assumée
+Elle est bornée à ce qu'on sait lire. Seule la famille 6.4 est acceptée, avec ses deux
+bascules de disposition (`CloseApplicationsFilterExcludes` ajouté en 6.4.2, enregistrement
+d'emplacement raccourci de 87 à 85 octets en 6.4.3). Le reste est REFUSÉ plutôt que deviné :
+un Inno Setup 6.5 réorganise franchement son en-tête, et le lire avec la grille de 6.4 ne
+donnerait pas une erreur mais des chemins et des tailles absurdes.
 
-`/VERYSILENT` ne publie aucun avancement et le processus ne rend la main qu'à la fin, donc
-il n'y a rien à lire. Ce qu'il fait en revanche, c'est écrire ses fichiers PROGRESSIVEMENT
-dans le dossier passé à `/DIR`, et cette taille cumulée est observable :
-`InstallDirectoryGrowthReporter` l'échantillonne à la seconde à travers `IFileSystem` et
-publie un ratio contre une taille attendue.
+Elle ne pose que le jeu. Seules les entrées destinées à `{app}` sont écrites. Les onze
+polices que le script installe dans le dossier système, ses neuf valeurs de registre (toutes
+HKCU : un chemin d'installation et deux gestionnaires de protocole `vintagestoryjoin` et
+`vintagestorymodinstall`), ses deux raccourcis et son lancement final sont traversés puis
+laissés de côté. Aucun n'est nécessaire pour que le jeu démarre, et la démonstration ne
+demande aucun pari : le build Linux du même jeu est un `.tar.gz` sans le moindre effet de
+bord, que Prospect installe déjà comme ça. Le runtime .NET 10, lui, est une vraie
+dépendance du jeu, mais elle n'est pas DANS l'installeur (le script la télécharge chez
+Microsoft), et Prospect la détecte déjà au lancement (`Core/Runtime/DotnetLocator`, qui lit
+le `Vintagestory.runtimeconfig.json` du build installé).
+
+##### Le repli, et ce qu'il implique
+
+Quand l'extraction ne peut pas aboutir, l'installeur est exécuté comme avant, avec la même
+ligne de commande éprouvée. Ce repli garde sa notice : `GameInstallProgress` porte un
+drapeau `RunsVendorInstaller`, publié AVANT le lancement, et c'est lui qui décide
+maintenant de l'affichage de `UiText.Versions.InstallerPromptNotice`. La notice ne suit plus
+la voie normale, où aucune fenêtre ne peut s'ouvrir : un avertissement qu'on voit à chaque
+installation sans qu'il ne se passe rien est un avertissement qu'on cesse de lire, et
+celui-ci porte une question dont le bouton par défaut, « Oui », DÉSINSTALLE.
+
+Le dossier de version est vidé avant de passer la main. Une extraction interrompue en cours
+de route y a laissé des milliers de fichiers, et l'installeur écrirait par-dessus sans rien
+nettoyer.
+
+Reste une nuance qu'il faut dire franchement. Les installations faites AVANT ce changement
+ont déjà écrit la clé de désinstallation sous HKCU, et cette clé ne s'efface pas toute
+seule. Elle ne dérange plus personne tant que l'extraction fonctionne, puisque plus rien ne
+la lit. Elle redeviendrait visible le jour où le repli servirait, et la boîte s'ouvrirait
+alors comme avant. Ça s'éteint de deux façons, sans qu'on ait à y toucher : désinstaller
+depuis Prospect une version installée à l'ancienne retire sa clé, et une machine neuve n'en
+a jamais eu. On ne touche PAS au registre de l'utilisateur pour faire disparaître le test :
+cette clé est ce qui rend son jeu désinstallable par les moyens habituels de Windows. Et on
+ne répond PAS à la boîte à sa place, dans aucun sens.
+
+Le garde-fou final ne bouge pas, pour les deux chemins : `GameInstallService` vérifie qu'un
+exécutable attendu se trouve bien dans le dossier de la version avant d'écrire la sentinelle
+de complétude.
+
+##### La dépendance LZMA, et pourquoi elle est acceptée
+
+L'extraction demande de décoder du LZMA1 (les blocs d'en-tête) et du LZMA2 (les données).
+La BCL n'en a ni l'un ni l'autre : `System.IO.Compression` s'arrête à Deflate, Brotli et
+ZLib. Deux options, donc, et l'arbitrage vaut d'être écrit.
+
+Un décodeur LZMA maison, c'est un décodeur entropique par intervalles complet, ses modèles
+de contexte, sa fenêtre de dictionnaire, plus l'enveloppe LZMA2 par-dessus : de l'ordre du
+millier de lignes parmi les plus denses qu'on puisse écrire, dont la correction ne se
+constate que sur des données réelles et dont un défaut subtil ne se voit que sur certaines
+entrées. Le tout au service d'un launcher dont la valeur est ailleurs.
+
+`SharpCompress` est donc pris : licence MIT, 100 % managé (aucun binaire natif n'entre dans
+la distribution, ce qui était la seule ligne rouge), largement éprouvé, et c'est exactement
+le composant qu'innoextract délègue de son côté à `liblzma`. Le CRC-32 est écrit à la main
+juste à côté, et le contraste n'est pas une incohérence : trente lignes d'un algorithme figé
+depuis quarante ans, vérifiables par un vecteur de test, ne justifient pas un paquet de
+plus, là où un décodeur entropique le justifie amplement.
+
+#### Progression : mesurée sous Windows aussi
+
+L'extraction connaît la taille de chacune de ses entrées avant d'écrire le premier octet :
+le dénominateur est exact, et l'avancement publié est une MESURE, au même titre que celui de
+l'extraction des `.tar.gz`. Le tilde de l'estimation disparaît donc de la voie normale.
+
+Il reste pour le repli, où il est toujours aussi nécessaire. `/VERYSILENT` ne publie aucun
+avancement et le processus ne rend la main qu'à la fin, donc il n'y a rien à lire. Ce qu'il
+fait en revanche, c'est écrire ses fichiers PROGRESSIVEMENT dans le dossier passé à `/DIR`,
+et cette taille cumulée est observable : `InstallDirectoryGrowthReporter` l'échantillonne à
+la seconde à travers `IFileSystem` et publie un ratio contre une taille attendue.
 
 La taille attendue est déduite du seul chiffre exact dont on dispose, la taille de l'exécutable
 téléchargé, multipliée par un facteur d'expansion de 1,8 (l'installeur est une archive LZMA,
 le contenu déposé pèse plus lourd). Le facteur est choisi du côté prudent : le surestimer fait
 terminer la barre un peu court avant qu'elle ne saute à 100 %, le sous-estimer la collerait au
-plafond pendant la moitié de l'installation. Il se recale d'une mesure réelle sous Windows, en
-comparant le dossier de version au `.exe` correspondant dans `cache/downloads/`.
+plafond pendant la moitié de l'installation. Une mesure réelle est maintenant disponible sur
+la 1.22.6, prise par l'extraction : 570,4 Mo d'installeur pour 862,6 Mio posés, soit un
+facteur de 1,5.
 
 Trois garde-fous rendent l'estimation honnête même avec un dénominateur faux : la progression
 est MONOTONE (un échantillon plus bas ne fait jamais reculer la barre), elle est PLAFONNÉE à
 99 % tant que le processus n'a pas rendu 0, et elle est ÉTIQUETÉE comme estimation dans le
-libellé (« installation · ~42 % » contre « extraction · 42 % » pour la mesure exacte de
-Linux et macOS, qui elle ne change pas). Faute de taille d'installeur lisible, il n'y a pas
-d'estimation du tout et la phase reste franchement indéterminée : inventer un dénominateur
-serait inventer un pourcentage.
+libellé (« installation · ~42 % » contre « extraction · 42 % » pour la mesure exacte). Faute
+de taille d'installeur lisible, il n'y a pas d'estimation du tout et la phase reste franchement
+indéterminée : inventer un dénominateur serait inventer un pourcentage.
 
 #### Désinstaller : hors du thread d'interface, et en comptant
 

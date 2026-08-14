@@ -14,15 +14,15 @@ namespace Prospect.Core.GameVersions.Inno;
 /// C'est la voie principale de l'installation Windows, et sa raison d'être n'est pas la vitesse :
 /// c'est que rien du SCRIPT de l'installeur n'est joué. Pas de script joué, donc pas de
 /// <c>MsgBox</c> « une ancienne version a été détectée » posée par <c>InitializeSetup</c>, et pas
-/// de clé de désinstallation écrite — donc pas de boîte non plus la fois suivante. Voir
+/// de clé de désinstallation écrite, donc pas de boîte non plus la fois suivante. Voir
 /// docs/architecture.md pour l'enchaînement complet.
 /// </para>
 /// <para>
 /// Ce qui est posé, ce sont les seules entrées destinées à <c>{app}</c>, c'est-à-dire le jeu. Les
 /// polices que le script installe dans le dossier système, ses clés de registre, ses raccourcis et
 /// son lancement final sont traversés puis laissés de côté : une version installée par Prospect vit
-/// entièrement dans son propre dossier, et le build Linux du jeu — un simple <c>.tar.gz</c> sans le
-/// moindre effet de bord — démontre que rien de tout cela ne conditionne le démarrage.
+/// entièrement dans son propre dossier, et le build Linux du jeu (un simple <c>.tar.gz</c> sans le
+/// moindre effet de bord) démontre que rien de tout cela ne conditionne le démarrage.
 /// </para>
 /// <para>
 /// Chaque fichier écrit est vérifié contre l'empreinte SHA-256 que l'installeur déclare pour lui.

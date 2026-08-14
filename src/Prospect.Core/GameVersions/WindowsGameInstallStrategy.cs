@@ -23,14 +23,14 @@ namespace Prospect.Core.GameVersions;
 /// <para>
 /// La voie normale est donc de ne PAS l'exécuter. <see cref="InnoPayloadExtractor"/> lit le format
 /// de l'installeur et pose les fichiers du jeu directement. Aucun script ne tourne, donc aucune
-/// boîte ne s'ouvre et aucune clé n'est écrite — ce dernier point compte autant que le premier,
+/// boîte ne s'ouvre et aucune clé n'est écrite, ce dernier point comptant autant que le premier
 /// puisque c'est lui qui empêche le problème de revenir.
 /// </para>
 /// <para>
 /// Le repli reste l'exécution silencieuse, avec le jeu d'options éprouvé par VS Launcher, où
 /// <c>/CURRENTUSER</c> évite l'élévation UAC et <c>/DIR</c> pose le jeu dans le dossier de la
 /// version. Il sert le jour où l'installeur change de format au point que le lecteur ne le
-/// reconnaît plus — un Inno Setup 6.5 réorganise franchement son en-tête — et ce jour-là mieux vaut
+/// reconnaît plus (un Inno Setup 6.5 réorganise franchement son en-tête), et ce jour-là mieux vaut
 /// une installation avec une notice qu'une installation impossible. La notice qui prévient de la
 /// boîte n'accompagne plus que ce chemin-là.
 /// </para>

@@ -371,8 +371,8 @@ internal sealed class SyntheticInnoInstaller
     /// où Inno Setup n'en met pas. L'encodeur de SharpCompress produit sinon un flux que son propre
     /// décodeur ne sait pas terminer sans qu'on lui annonce la taille décompressée, taille que le
     /// format ne stocke justement plus depuis Inno Setup 4.0.9. Le marqueur ne change rien à ce que
-    /// cette fixture met à l'épreuve — l'enveloppe à CRC, le découpage en tronçons, la disposition
-    /// des enregistrements — et le cas SANS marqueur, celui des vrais installeurs, est couvert par
+    /// cette fixture met à l'épreuve (l'enveloppe à CRC, le découpage en tronçons, la disposition
+    /// des enregistrements), et le cas SANS marqueur, celui des vrais installeurs, est couvert par
     /// l'étage live.
     /// </remarks>
     private static byte[] CompressLzma1(byte[] content)
@@ -404,7 +404,7 @@ internal sealed class SyntheticInnoInstaller
     /// un octet de contrôle, la taille sur deux octets en gros-boutien, les données, et un zéro pour
     /// finir. Les émettre produit un flux LZMA2 parfaitement légal, qui fait passer la fixture par le
     /// même décodeur et le même octet de propriété de dictionnaire que l'installeur réel. Ce que
-    /// cela ne couvre pas, c'est le décodage entropique lui-même — mais celui-là appartient à
+    /// cela ne couvre pas, c'est le décodage entropique lui-même, mais celui-là appartient à
     /// SharpCompress, et c'est l'étage live qui le met à l'épreuve sur les huit cent soixante
     /// mégaoctets du vrai installeur.
     /// </remarks>

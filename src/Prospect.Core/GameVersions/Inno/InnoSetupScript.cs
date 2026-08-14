@@ -78,7 +78,7 @@ internal readonly record struct InnoDataEntry(
 /// <para>
 /// Les sections <c>[Registry]</c>, <c>[Run]</c> et <c>[Icons]</c> sont traversées sans être
 /// conservées : Prospect ne les REJOUE pas. C'est un choix, pas un manque, et il est documenté dans
-/// docs/architecture.md — ne rien écrire hors du dossier de version est précisément ce qui fait
+/// docs/architecture.md : ne rien écrire hors du dossier de version est précisément ce qui fait
 /// disparaître la boîte de dialogue de l'installeur officiel.
 /// </para>
 /// </remarks>
