@@ -1006,6 +1006,14 @@ Enfin, un libellé ne peut pas être exactement un autre libellé qui dit autre 
 navigateur de mods s'appelait « Mise à jour », mot pour mot la pastille qui signale qu'une mise à
 jour EXISTE pour un mod : c'est « Dernière mise à jour ».
 
+Une seule dérive du tableau reste en place, et le dire vaut mieux que la laisser trouver : la
+rangée de mods d'une instance affiche encore « universel » là où le glossaire demande « client et
+serveur », que la carte du navigateur affiche déjà. Le libellé long ajoute une quarantaine de
+points à la colonne Auto de droite de cette rangée, ce qui écrase la colonne du milieu jusqu'à
+faire déborder l'auteur et les pastilles de journal — deux gardes d'invariants de boîtes
+l'attrapent à 960 points. Corriger le mot demande d'abord de donner un budget de largeur à la
+rangée. C'est écrit sur `SideLabel(ModSide?)` dans les deux tables.
+
 Les règles restent : aucun code-behind au-delà d'`InitializeComponent`, ViewModels
 constructibles sans UI (testables en headless), textes centralisés dans les dictionnaires
 de ressources par langue et dans `UiText`. La voix du produit est spécifiée dans le readme du design :
