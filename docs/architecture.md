@@ -346,27 +346,63 @@ d'installation par OS :
 Une installation Windows silencieuse ouvre quand même une fenêtre, et il faut le dire une
 fois pour toutes : la question « une ancienne version a été détectée, la désinstaller
 d'abord ? » ne vient pas de Setup, elle vient du SCRIPT propre à l'installeur de Vintage
-Story, qui lit le registre pour détecter une installation classique du jeu. Or
-`/SUPPRESSMSGBOXES` ne couvre que les messages de Setup lui-même et la fonction
-`SuppressibleMsgBox` du langage de script ; un `MsgBox` nu appelé depuis `InitializeSetup`
-s'affiche quel que soit le drapeau (documentation Inno Setup, « Setup Command Line
-Parameters » et « Pascal Scripting: SuppressibleMsgBox »). Aucun argument ne la couvre, et
-il n'y a rien à corriger de notre côté.
+Story. Cette section ne raisonne plus par déduction : le script a été lu.
 
-Deux conséquences, toutes deux contre-intuitives et toutes deux vérifiées.
+`vs_install_win-x64_1.22.6.exe` est un Inno Setup 6.4.3, dont le bloc d'en-tête contient le
+bytecode PascalScript compilé de la section `[Code]`. Décompressé et désassemblé, il donne
+un `InitializeSetup` dont voici la substance, sans rien d'autre entre les appels :
 
-Cette boîte apparaîtra à CHAQUE installation tant qu'un Vintage Story classique est
-enregistré sur la machine. Ce n'est pas le signe d'une désinstallation ratée ni d'une
-installation précédente restée à moitié : c'est une détection en registre qui refait son
-travail, et elle le refera à chaque fois.
+```pascal
+if RegValueExists(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{70364653-036D-49B3-8B80-AF39665F29C1}_is1', 'UninstallString')
+   or RegValueExists(HKLM, 'SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\{70364653-036D-49B3-8B80-AF39665F29C1}_is1', 'UninstallString') then
+  if MsgBox('An old version of Vintage Story was detected. Do you want to uninstall it first? ...', ...) = IDYES then
+    Exec(RemoveQuotes(GetUninstallString()), '/SILENT', ...);
+```
 
-Et son bouton par défaut est « Oui », c'est-à-dire DÉSINSTALLER le jeu de l'utilisateur.
-Une touche Entrée réflexe emporte une installation qui n'a rien demandé. C'est pour ça que
+Trois constats en découlent, et ils ferment la question.
+
+L'appel est un `MsgBox` NU. Le script importe bien `SuppressibleMsgBox`, il s'en sert
+ailleurs, mais pas ici : entre la chaîne du message et l'appel, il n'y a qu'un
+`ExpandConstant`. Or `/SUPPRESSMSGBOXES` ne couvre que les messages de Setup lui-même et
+la fonction `SuppressibleMsgBox` du langage de script (documentation Inno Setup, « Setup
+Command Line Parameters » et « Pascal Scripting: SuppressibleMsgBox »). Le drapeau ne peut
+donc pas l'atteindre, et ce n'est pas un oubli de notre ligne de commande.
+
+`InitializeSetup` ne lit AUCUN paramètre de ligne de commande : ni `ParamStr`, ni
+`ParamCount`, ni `WizardSilent`. Il n'existe donc pas de commutateur maison, documenté ou
+non, qui sauterait ce test. Le script lit bien `ParamStr` ailleurs, dans
+`CheckIfAppShouldStart`, où il cherche `/VERYSILENT` pour ne pas lancer le jeu après coup :
+la capacité de tester les arguments existe, elle n'est simplement pas employée ici.
+
+Et l'en-tête du setup porte `CreateUninstallRegKey = yes`, sans condition. C'est le point
+contre-intuitif : la clé que le script teste, c'est l'installeur lui-même qui l'écrit, et
+`/CURRENTUSER` la place précisément sous HKCU. Autrement dit NOS PROPRES installations
+arment le test. La première installation faite par Prospect sur une machine vierge passe
+sans un mot ; à partir de la deuxième, la boîte est là, sans qu'aucun Vintage Story
+classique n'ait jamais été installé. C'est la vraie raison du « à chaque fois », et ce
+n'est le signe ni d'une désinstallation ratée ni d'une installation restée à moitié.
+
+Reste la question de savoir si quelqu'un d'autre avait trouvé mieux. VS Launcher passe
+exactement les mêmes options (`pathsHandlers.ts:155`), et la phrase du message n'apparaît
+nulle part dans ses tickets ni ses discussions. Le seul moyen structurel d'y échapper
+serait de ne plus exécuter l'installeur mais d'en extraire le contenu, ce qu'aucun outil
+publié ne sait faire pour un Inno Setup 6.4.3 (innoextract 1.9 s'arrête à 6.0.5). La
+conclusion tient donc en une ligne : on ne peut pas empêcher cette boîte, on peut
+seulement prévenir avant qu'elle s'ouvre.
+
+Son bouton par défaut est « Oui », c'est-à-dire DÉSINSTALLER. Et ce qui part n'est pas
+forcément le jeu classique : `GetUninstallString` rend la clé la plus récemment écrite,
+donc sur une machine où Prospect a déjà installé une version, c'est CETTE version-là que le
+« Oui » emporte. Une touche Entrée réflexe suffit. C'est pour ça que
 Prospect prévient AVANT plutôt que d'expliquer après : sous Windows uniquement, dès l'entrée
 dans la phase d'installation, l'écran Versions et le wizard affichent une notice qui dit quoi
 répondre (`UiText.Versions.InstallerPromptNotice`, la règle d'affichage étant dans
 `GameInstallProgressPresenter.ShowsInstallerPromptNotice`). Pas de case « ne plus afficher » :
 la question est dangereuse à chaque fois, donc l'avertissement l'accompagne à chaque fois.
+
+Deux interdits en découlent, et ils ne se discutent pas. On ne touche PAS au registre de
+l'utilisateur pour faire disparaître le test : cette clé est ce qui rend son jeu
+désinstallable. Et on ne répond PAS à la boîte à sa place, dans aucun sens.
 
 Le garde-fou qui reste est celui du RÉSULTAT : `GameInstallService` vérifie qu'un exécutable
 attendu se trouve bien dans le dossier de la version avant d'écrire la sentinelle de
