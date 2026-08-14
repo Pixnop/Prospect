@@ -222,8 +222,7 @@ internal sealed class InnoPayloadExtractor
         IProgress<GameInstallProgress>? progress,
         CancellationToken cancellationToken)
     {
-        var written = 0L;
-        var lastPercent = -1;
+        var tracker = new ProgressTracker(progress, plan.TotalBytes);
         var index = 0;
 
         while (index < plan.Files.Count)
@@ -244,7 +243,7 @@ internal sealed class InnoPayloadExtractor
 
             try
             {
-                index = ExtractChunk(chunk, plan, index, last, root, progress, ref written, ref lastPercent, cancellationToken);
+                ExtractChunk(chunk, plan, index, last, root, tracker, cancellationToken);
             }
             finally
             {
@@ -253,22 +252,26 @@ internal sealed class InnoPayloadExtractor
                     chunk.Dispose();
                 }
             }
+
+            index = last + 1;
         }
     }
 
-    private int ExtractChunk(
+    /// <summary>
+    /// Déroule un bloc et écrit les fichiers qu'il porte, du rang <paramref name="first"/> au rang
+    /// <paramref name="last"/> du plan.
+    /// </summary>
+    private void ExtractChunk(
         Stream chunk,
         ExtractionPlan plan,
-        int index,
+        int first,
         int last,
         string root,
-        IProgress<GameInstallProgress>? progress,
-        ref long written,
-        ref int lastPercent,
+        ProgressTracker tracker,
         CancellationToken cancellationToken)
     {
         var position = 0UL;
-        for (; index <= last; index++)
+        for (var index = first; index <= last; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -308,25 +311,8 @@ internal sealed class InnoPayloadExtractor
                 ArrayPool<byte>.Shared.Return(buffer);
             }
 
-            written += size;
-
-            if (progress is null || plan.TotalBytes <= 0)
-            {
-                continue;
-            }
-
-            // Un rapport par point de pourcentage : vingt mille fichiers, et chaque rapport
-            // repasse par le dispatcher de l'interface.
-            var ratio = Math.Clamp((double)written / plan.TotalBytes, 0d, 1d);
-            var percent = (int)(ratio * 100d);
-            if (percent != lastPercent)
-            {
-                lastPercent = percent;
-                progress.Report(GameInstallProgress.ForInstalling(ratio));
-            }
+            tracker.Advance(size);
         }
-
-        return index;
     }
 
     private static Stream OpenChunk(
@@ -443,6 +429,40 @@ internal sealed class InnoPayloadExtractor
             }
 
             read += count;
+        }
+    }
+
+    /// <summary>
+    /// Compte les octets écrits et n'en publie un rapport qu'au changement de point de pourcentage.
+    /// </summary>
+    /// <remarks>
+    /// Une installation pose vingt mille fichiers, et chaque rapport traverse le dispatcher de
+    /// l'interface : en publier un par fichier reviendrait à noyer le fil d'affichage pour peindre
+    /// cent fois le même pixel.
+    /// </remarks>
+    private sealed class ProgressTracker(IProgress<GameInstallProgress>? progress, long total)
+    {
+        private long _written;
+        private int _lastPercent = -1;
+
+        public void Advance(long bytes)
+        {
+            _written += bytes;
+
+            if (progress is null || total <= 0)
+            {
+                return;
+            }
+
+            var ratio = Math.Clamp((double)_written / total, 0d, 1d);
+            var percent = (int)(ratio * 100d);
+            if (percent == _lastPercent)
+            {
+                return;
+            }
+
+            _lastPercent = percent;
+            progress.Report(GameInstallProgress.ForInstalling(ratio));
         }
     }
 
