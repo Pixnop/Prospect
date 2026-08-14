@@ -73,28 +73,54 @@ public sealed partial class InstanceDoctorDialogViewModel : ObservableObject
     /// C'est ici, et seulement ici, que le réseau entre en jeu : le rapport lui-même a été produit
     /// hors ligne par <see cref="InstanceDoctor"/>, qui n'a aucun moyen d'appeler quoi que ce soit.
     /// </param>
+    /// <param name="checkModUpdates">
+    /// Ferme ce dialogue et LANCE la vérification de mises à jour de l'onglet Mods. C'est la seule
+    /// action qui réponde vraiment au constat de compatibilité, dont le message demande justement
+    /// cette vérification : y répondre par « Voir les mods » envoyait l'utilisateur regarder une
+    /// liste qui n'en savait pas plus que le rapport qu'il venait de lire.
+    /// </param>
     /// <param name="overlay">Panneau modal, pour se refermer (bouton Fermer).</param>
     public InstanceDoctorDialogViewModel(
         InstanceDoctorReport report,
         Action navigateToVersions,
         Action openModsTab,
         Func<string, Task> installMod,
+        Func<Task> checkModUpdates,
         IOverlayService overlay)
     {
         ArgumentNullException.ThrowIfNull(report);
         ArgumentNullException.ThrowIfNull(navigateToVersions);
         ArgumentNullException.ThrowIfNull(openModsTab);
         ArgumentNullException.ThrowIfNull(installMod);
+        ArgumentNullException.ThrowIfNull(checkModUpdates);
         ArgumentNullException.ThrowIfNull(overlay);
 
         _overlay = overlay;
 
         IsAllClear = report.IsAllClear;
-        Groups = BuildGroups(report, new RelayCommand(navigateToVersions), new RelayCommand(openModsTab), installMod);
+        Groups = BuildGroups(
+            report,
+            new RelayCommand(navigateToVersions),
+            new RelayCommand(openModsTab),
+            installMod,
+            new AsyncRelayCommand(checkModUpdates));
     }
 
     /// <summary>Vrai si les cinq vérifications sont saines : l'état gratifiant (mais sobre) du dialogue.</summary>
     public bool IsAllClear { get; }
+
+    /// <summary>Titre de l'état sain.</summary>
+    /// <remarks>
+    /// Exposé par le ViewModel plutôt que lu dans le dictionnaire de chaînes, parce que la vue
+    /// pointait vers deux clés qui n'existaient dans AUCUN des deux dictionnaires : un
+    /// <c>{StaticResource}</c> introuvable ne casse ni la compilation ni le rendu, il laisse
+    /// simplement le texte vide, et l'écran « tout va bien » n'affichait donc rien du tout. Ici la
+    /// parité des deux langues est garantie par la compilation (voir <c>UiTextTable</c>).
+    /// </remarks>
+    public string AllClearTitle { get; } = UiText.Instance.Doctor.AllClearTitle;
+
+    /// <summary>Phrase de l'état sain, sous le titre.</summary>
+    public string AllClearDescription { get; } = UiText.Instance.Doctor.AllClearDescription;
 
     /// <summary>Erreurs puis avertissements, chacun son groupe ; vide quand <see cref="IsAllClear"/> est vrai.</summary>
     public IReadOnlyList<InstanceDoctorGroupViewModel> Groups { get; }
@@ -106,14 +132,15 @@ public sealed partial class InstanceDoctorDialogViewModel : ObservableObject
         InstanceDoctorReport report,
         IRelayCommand navigateToVersions,
         IRelayCommand openModsTab,
-        Func<string, Task> installMod)
+        Func<string, Task> installMod,
+        IRelayCommand checkModUpdates)
     {
         var rows = new List<InstanceDoctorRowViewModel>();
 
         AddGameVersionRow(rows, report.GameVersion, navigateToVersions);
         AddRuntimeRow(rows, report);
         AddModIssueRows(rows, report.ModIssues, openModsTab, installMod);
-        AddCompatibilityRow(rows, report.ModCompatibility, report.GameVersion.Version.ToString(), openModsTab);
+        AddCompatibilityRow(rows, report.ModCompatibility, report.GameVersion.Version.ToString(), checkModUpdates);
         AddDiskSpaceRow(rows, report.DiskSpace);
 
         // Un seul groupe par sévérité, omis s'il est vide : pas de section « Erreurs » qui
@@ -213,11 +240,21 @@ public sealed partial class InstanceDoctorDialogViewModel : ObservableObject
         };
     }
 
+    /// <summary>
+    /// La ligne de compatibilité, dont l'action LANCE la vérification que le message réclame.
+    /// </summary>
+    /// <remarks>
+    /// Elle portait « Voir les mods », ce qui était le même faux pas que celui déjà corrigé sur les
+    /// dépendances manquantes : le message dit « lance une vérification des mises à jour » et le
+    /// bouton renvoyait vers une liste qui, par construction, n'en sait pas plus que le rapport
+    /// qu'on vient de lire. Le seul geste qui lève l'incertitude est l'appel au ModDB, donc c'est
+    /// lui que la ligne propose.
+    /// </remarks>
     private static void AddCompatibilityRow(
         List<InstanceDoctorRowViewModel> rows,
         ModCompatibilityDoctorResult compatibility,
         string gameVersionText,
-        IRelayCommand openModsTab)
+        IRelayCommand checkModUpdates)
     {
         if (compatibility.Severity == InstanceDoctorSeverity.Ok)
         {
@@ -227,8 +264,8 @@ public sealed partial class InstanceDoctorDialogViewModel : ObservableObject
         rows.Add(new InstanceDoctorRowViewModel(
             compatibility.Severity,
             UiText.Instance.Doctor.CompatibilityMessage(compatibility, gameVersionText),
-            UiText.Instance.Doctor.OpenModsAction,
-            openModsTab));
+            UiText.Instance.Doctor.CheckUpdatesAction,
+            checkModUpdates));
     }
 
     private static void AddDiskSpaceRow(List<InstanceDoctorRowViewModel> rows, DiskSpaceDoctorResult diskSpace)

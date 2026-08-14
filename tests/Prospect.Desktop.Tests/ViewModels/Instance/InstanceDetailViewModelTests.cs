@@ -240,7 +240,7 @@ public sealed class InstanceDetailViewModelTests
         await fixture.Detail.PlayCommand.ExecuteAsync(null);
 
         fixture.Detail.ShowLaunchError.ShouldBeTrue();
-        fixture.Detail.LaunchErrorTitle.ShouldBe("Runtime .NET manquant");
+        fixture.Detail.LaunchErrorTitle.ShouldBe("Composant .NET manquant");
         fixture.Detail.ShowInstallAction.ShouldBeFalse();
     }
 

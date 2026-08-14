@@ -6,11 +6,23 @@ using Prospect.Core.Common;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Instances;
 using Prospect.Core.Migration;
+using Prospect.Core.Runtime;
 using Prospect.Core.Storage;
 using Prospect.Desktop.Services;
 using Prospect.Desktop.Tests.TestDoubles;
 
 namespace Prospect.Desktop.Tests;
+
+/// <summary>
+/// Les trois derniers ports que le conteneur de test substitue, rendus à l'appelant pour qu'un
+/// parcours puisse les piloter : démarrer et faire sortir un processus de jeu, décider du verdict
+/// du runtime, répondre à un sélecteur de fichiers. Ce sont les seuls effets de bord qu'un parcours
+/// de bout en bout doit encore tenir à la main une fois le disque et le réseau déjà feints.
+/// </summary>
+internal sealed record JourneySeams(
+    FakeProcessRunner ProcessRunner,
+    FakeDotnetLocator DotnetLocator,
+    FakeFilePickerService FilePicker);
 
 /// <summary>
 /// Construit le même graphe de dépendances que la composition root réelle
@@ -66,6 +78,55 @@ internal static class TestServiceProviderFactory
         // client, seul son abonnement compte. Sans cette ligne, les tests headless tourneraient sur
         // une application qui, contrairement à la vraie, laisserait survivre l'état d'une instance
         // supprimée — exactement le genre d'écart entre double et production qui ne garde rien.
+        provider.GetRequiredService<DeletedInstanceStateCleaner>();
+
+        return provider;
+    }
+
+    /// <summary>
+    /// Même graphe que <see cref="Create(out MockFileSystem, out FakeCatalogHandler, AppOperatingSystem?)"/>,
+    /// plus les trois derniers ports du monde réel remplacés par des doubles pilotables : le
+    /// lanceur de processus, la détection de runtime .NET et le sélecteur de fichiers.
+    /// </summary>
+    /// <remarks>
+    /// C'est ce qui manquait pour qu'un PARCOURS complet tienne sur le conteneur réel. Les tests
+    /// headless existants s'arrêtaient au bord du lancement : câbler un <c>GameLauncher</c> à la
+    /// main à côté du conteneur (ce que font les tests de ViewModel) sort du graphe qu'on veut
+    /// exercer, et laisser le vrai <c>SystemProcessRunner</c> ferait démarrer un processus sur la
+    /// machine de test. Les substitutions se font APRÈS la composition root, la dernière
+    /// inscription gagnant à la résolution : exactement le procédé déjà utilisé pour
+    /// <see cref="IUnixFilePermissions"/> ci-dessus, et pour la même raison.
+    /// </remarks>
+    public static ServiceProvider CreateForJourney(
+        out MockFileSystem fileSystem,
+        out FakeCatalogHandler catalogHandler,
+        out JourneySeams seams,
+        AppOperatingSystem? operatingSystem = null)
+    {
+        fileSystem = new MockFileSystem();
+        catalogHandler = new FakeCatalogHandler();
+        var services = new ServiceCollection();
+        CompositionRoot.ConfigureServices(services, fileSystem, catalogHandler);
+
+        var real = new SystemAppEnvironment();
+        services.AddSingleton<IAppEnvironment>(new FakeAppEnvironment
+        {
+            CurrentOperatingSystem = operatingSystem ?? AppOperatingSystem.Linux,
+            HomeDirectory = real.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        });
+
+        services.AddSingleton<IUnixFilePermissions, RecordingUnixFilePermissions>();
+
+        var processRunner = new FakeProcessRunner();
+        var dotnetLocator = new FakeDotnetLocator();
+        var filePicker = new FakeFilePickerService();
+        seams = new JourneySeams(processRunner, dotnetLocator, filePicker);
+
+        services.AddSingleton<IProcessRunner>(processRunner);
+        services.AddSingleton<IDotnetLocator>(dotnetLocator);
+        services.AddSingleton<IFilePickerService>(filePicker);
+
+        var provider = services.BuildServiceProvider();
         provider.GetRequiredService<DeletedInstanceStateCleaner>();
 
         return provider;

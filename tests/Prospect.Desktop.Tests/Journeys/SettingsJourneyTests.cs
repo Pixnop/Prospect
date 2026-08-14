@@ -1,0 +1,136 @@
+using Avalonia.Headless.XUnit;
+using Avalonia.Styling;
+using Avalonia.VisualTree;
+
+using Microsoft.Extensions.DependencyInjection;
+
+using Prospect.Core.Settings;
+using Prospect.Desktop.Services;
+using Prospect.Desktop.ViewModels.FirstRun;
+using Prospect.Desktop.ViewModels.Home;
+using Prospect.Desktop.ViewModels.Migration;
+using Prospect.Desktop.ViewModels.Settings;
+using Prospect.Desktop.ViewModels.Shell;
+using Prospect.Desktop.Views.Settings;
+
+using Shouldly;
+
+namespace Prospect.Desktop.Tests.Journeys;
+
+/// <summary>
+/// PARCOURS 5 — faire le tour des réglages. Thème et fond changent SOUS LES YEUX ; la langue, non,
+/// et l'écran doit le dire au lieu de laisser croire à un bouton mort ; le retour au premier
+/// lancement rouvre bien l'écran d'accueil ; et l'adoption VS Launcher part d'ici comme du premier
+/// lancement.
+/// </summary>
+/// <remarks>
+/// La persistance de la langue est vérifiée par RELECTURE (un second
+/// <see cref="SettingsService.LoadAsync"/> sur le même disque factice), parce que c'est la seule
+/// preuve qui vaille pour un réglage qui ne s'applique qu'au démarrage suivant : sans elle, un
+/// sélecteur qui n'écrirait rien serait indiscernable d'un sélecteur qui marche.
+/// </remarks>
+public sealed class SettingsJourneyTests
+{
+    [AvaloniaFact]
+    public async Task Journey_ThemeBackdropLanguageReplayAndAdoption_EachSaysWhatItDid()
+    {
+        using var provider = TestServiceProviderFactory.CreateForJourney(out var fileSystem, out _, out _);
+        provider.SeedVslInstallation(fileSystem, "/vsl/installations/survie", "1.20.4");
+        provider.SeedInstalledVersion(fileSystem, "1.20.4");
+
+        var settingsService = provider.GetRequiredService<SettingsService>();
+        await settingsService.LoadAsync();
+        provider.GetRequiredService<ThemeService>().ApplyStartupTheme();
+
+        var window = provider.GetRequiredService<MainWindow>();
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        var home = provider.GetRequiredService<HomeViewModel>();
+        window.Show();
+
+        // ── Étape 1 : atteindre les réglages par la barre latérale ──────────────────────
+        shell.SettingsNavItem.SelectCommand.Execute(null);
+        window.Pump();
+
+        var settings = shell.CurrentPage.ShouldBeOfType<SettingsViewModel>();
+        window.GetVisualDescendants().OfType<SettingsView>().ShouldNotBeEmpty();
+        settings.SelectedTab.ShouldBe(SettingsTab.General);
+
+        // ── Étape 2 : le thème s'applique à chaud ───────────────────────────────────────
+        var initialVariant = window.ActualThemeVariant;
+        settings.General.SelectThemeCommand.Execute(ThemePreference.Light);
+        window.Pump();
+
+        window.ActualThemeVariant.ShouldBe(ThemeVariant.Light);
+        window.ActualThemeVariant.ShouldNotBe(initialVariant);
+        settingsService.Current.Theme.ShouldBe(ThemePreference.Light);
+
+        settings.General.SelectThemeCommand.Execute(ThemePreference.Dark);
+        window.Pump();
+        window.ActualThemeVariant.ShouldBe(ThemeVariant.Dark);
+
+        // ── Étape 3 : le fond aussi ─────────────────────────────────────────────────────
+        var backdrop = provider.GetRequiredService<BackdropService>();
+        var firstKey = backdrop.Key;
+        var otherBackdrop = settings.General.BackdropChoices.First(choice => choice.Key != settings.General.SelectedBackdropKey);
+        otherBackdrop.SelectCommand.Execute(null);
+        window.Pump();
+
+        settings.General.SelectedBackdropKey.ShouldBe(otherBackdrop.Key);
+        otherBackdrop.IsSelected.ShouldBeTrue("la vignette choisie doit se marquer comme telle");
+        backdrop.Key.ShouldBe(otherBackdrop.Key);
+        backdrop.Key.ShouldNotBe(firstKey, "le fond doit changer sans redémarrer");
+        settingsService.Current.Backdrop.ShouldBe(otherBackdrop.Key);
+
+        // ── Étape 4 : la langue, elle, attend le prochain démarrage — et l'écran le dit ──
+        settings.General.SelectedLanguageIndex.ShouldBe(0);
+        settings.General.SelectedLanguageIndex = 1;
+        window.Pump();
+
+        settings.General.SelectedLanguage.ShouldBe(ProspectSettings.English);
+        window.ShowsText(JourneyHarness.ResourceText("Settings_LanguageRestartHint")).ShouldBeTrue(
+            "un réglage qui ne s'applique pas tout de suite doit le dire, sinon il passe pour cassé");
+
+        // Persistance vérifiée par relecture : un second service, le même disque.
+        var reloaded = new SettingsService(
+            fileSystem,
+            provider.GetRequiredService<Prospect.Core.Storage.AppPaths>(),
+            provider.GetRequiredService<Prospect.Core.Storage.JsonFileStore>(),
+            provider.GetRequiredService<Prospect.Core.Settings.Migrations.SettingsMigrationPipeline>(),
+            provider.GetRequiredService<Prospect.Core.Common.IUiCulture>());
+        await reloaded.LoadAsync();
+        reloaded.Current.Language.ShouldBe(ProspectSettings.English);
+        reloaded.Current.Theme.ShouldBe(ThemePreference.Dark);
+        reloaded.Current.Backdrop.ShouldBe(otherBackdrop.Key);
+
+        // ── Étape 5 : revoir le premier lancement ───────────────────────────────────────
+        await settings.ReplayFirstRunCommand.ExecuteAsync(null);
+        window.Pump();
+
+        var firstRun = shell.Overlay.Active.ShouldBeOfType<FirstRunScreenViewModel>();
+        firstRun.Steps.ShouldNotBeEmpty();
+        firstRun.SkipCommand.Execute(null);
+        window.Pump();
+        shell.Overlay.Active.ShouldBeNull();
+
+        // ── Étape 6 : l'adoption VS Launcher, depuis les réglages ───────────────────────
+        await settings.InitializeCommand.ExecuteAsync(null);
+        window.Pump();
+
+        settings.VslDetected.ShouldBeTrue("un dossier VS Launcher est posé : la détection doit le voir");
+        settings.VslStatusText.ShouldNotBeNullOrWhiteSpace("la détection doit RÉSUMER ce qu'elle a trouvé");
+        settings.OpenAdoptionCommand.CanExecute(null).ShouldBeTrue();
+
+        settings.OpenAdoptionCommand.Execute(null);
+        window.Pump();
+
+        var adopt = shell.Overlay.Active.ShouldBeOfType<AdoptVslViewModel>();
+        adopt.HasInstallations.ShouldBeTrue();
+        await adopt.ConfirmCommand.ExecuteAsync(null);
+        window.Pump();
+
+        adopt.ReportGroups.ShouldNotBeEmpty("une adoption doit rendre compte de ce qu'elle a fait, ligne par ligne");
+        home.Instances.Select(instance => instance.Name).ShouldContain("Survie médiévale");
+
+        window.Close();
+    }
+}

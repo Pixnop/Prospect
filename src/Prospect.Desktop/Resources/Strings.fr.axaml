@@ -27,16 +27,11 @@
 
   <!-- ── Sidebar ─────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Nav_Bibliotheque">Bibliothèque</x:String>
-  <x:String x:Key="Nav_Accueil">Accueil</x:String>
-  <x:String x:Key="Nav_Mods">Mods</x:String>
-  <x:String x:Key="Nav_Versions">Versions</x:String>
-  <x:String x:Key="Nav_Reglages">Réglages</x:String>
   <x:String x:Key="Nav_Telechargements">Téléchargements</x:String>
 
   <!-- ── Titlebar ────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Titlebar_Minimize">Réduire</x:String>
   <x:String x:Key="Titlebar_Maximize">Agrandir</x:String>
-  <x:String x:Key="Titlebar_Restore">Restaurer</x:String>
   <x:String x:Key="Titlebar_Close">Fermer</x:String>
 
   <!-- ── Popover téléchargements ─────────────────────────────────────────────────── -->
@@ -44,12 +39,12 @@
   <x:String x:Key="Downloads_EmptyTitle">Aucun téléchargement</x:String>
   <x:String x:Key="Downloads_EmptyDescription">Les téléchargements de versions du jeu et de mods apparaîtront ici.</x:String>
   <x:String x:Key="Downloads_Close">Fermer</x:String>
-  <x:String x:Key="Downloads_Cancel">Annuler</x:String>
+  <x:String x:Key="Downloads_Cancel">Annuler le téléchargement</x:String>
   <x:String x:Key="Downloads_ClearAll">Tout effacer</x:String>
 
   <!-- ── Journaux ────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Logs_Title">Journaux</x:String>
-  <x:String x:Key="Logs_Refresh">Rafraîchir</x:String>
+  <x:String x:Key="Logs_Refresh">Actualiser</x:String>
   <x:String x:Key="Logs_Export">Exporter les journaux…</x:String>
   <x:String x:Key="Logs_SnapshotNotice">Relu automatiquement tant que cette page est ouverte.</x:String>
   <x:String x:Key="Logs_PathLabel">Fichier</x:String>
@@ -72,7 +67,6 @@
   <x:String x:Key="Card_Play">Jouer</x:String>
   <x:String x:Key="Card_Stop">Arrêter</x:String>
   <x:String x:Key="Card_Launching">Lancement…</x:String>
-  <x:String x:Key="Card_Playing">En cours</x:String>
   <x:String x:Key="Card_Actions">Actions</x:String>
   <x:String x:Key="Card_Open">Ouvrir</x:String>
   <x:String x:Key="Card_Rename">Renommer</x:String>
@@ -94,10 +88,10 @@
   <x:String x:Key="Wizard_Step2_VersionLabel">Version du jeu</x:String>
   <x:String x:Key="Wizard_Step2_Loading">Lecture du catalogue…</x:String>
   <x:String x:Key="Wizard_Step2_Empty">Aucune version disponible. Vérifie ta connexion, ou installe une version depuis l'écran Versions.</x:String>
-  <x:String x:Key="Wizard_Step2_ChannelAll">Tous les canaux</x:String>
-  <x:String x:Key="Wizard_Step2_ChannelStable">Canal stable</x:String>
-  <x:String x:Key="Wizard_Step2_ChannelUnstable">Canal unstable</x:String>
-  <x:String x:Key="Wizard_Step2_ChannelPre">Canal pre</x:String>
+  <x:String x:Key="Wizard_Step2_ChannelAll">Toutes les versions</x:String>
+  <x:String x:Key="Wizard_Step2_ChannelStable">Versions stables</x:String>
+  <x:String x:Key="Wizard_Step2_ChannelUnstable">Versions de test</x:String>
+  <x:String x:Key="Wizard_Step2_ChannelPre">Préversions</x:String>
   <x:String x:Key="Wizard_CancelInstall">Annuler l'installation</x:String>
 
   <x:String x:Key="Wizard_Step3_Title">Icône de l'instance</x:String>
@@ -126,17 +120,19 @@
   <!-- ── Écran Versions ──────────────────────────────────────────────────────────── -->
   <x:String x:Key="Versions_Title">Versions du jeu</x:String>
   <x:String x:Key="Versions_CheckForUpdates">Vérifier les nouveautés</x:String>
+  <x:String x:Key="Versions_Retry">Réessayer</x:String>
+  <x:String x:Key="Versions_ClearFilter">Effacer le filtre</x:String>
   <x:String x:Key="Versions_SearchPlaceholder">Filtrer par version…</x:String>
   <x:String x:Key="Versions_FilterAll">Toutes</x:String>
   <x:String x:Key="Versions_FilterInstalled">Installées</x:String>
   <x:String x:Key="Versions_FilterAvailable">Disponibles</x:String>
-  <x:String x:Key="Versions_ShowUnstable">Afficher unstable et pre</x:String>
+  <x:String x:Key="Versions_ShowUnstable">Afficher les versions de test</x:String>
   <x:String x:Key="Versions_InstalledSection">Installées</x:String>
   <x:String x:Key="Versions_AvailableSection">Disponibles</x:String>
   <x:String x:Key="Versions_BrokenSection">Installations non exploitables</x:String>
   <x:String x:Key="Versions_Install">Installer</x:String>
   <x:String x:Key="Versions_Uninstall">Désinstaller</x:String>
-  <x:String x:Key="Versions_CancelInstall">Annuler</x:String>
+  <x:String x:Key="Versions_CancelInstall">Annuler l'installation</x:String>
   <x:String x:Key="Versions_InstalledBadge">installée</x:String>
   <x:String x:Key="Versions_EmptyTitle">Aucune version</x:String>
   <x:String x:Key="Versions_EmptyDescription">Aucune version ne correspond au filtre courant. Élargis le filtre, ou vérifie les nouveautés du catalogue.</x:String>
@@ -144,18 +140,11 @@
   <!-- ── Dialogue de désinstallation ─────────────────────────────────────────────── -->
   <x:String x:Key="Dialog_Uninstall_Confirm">Désinstaller</x:String>
 
-  <!-- ── Pages placeholder ───────────────────────────────────────────────────────── -->
-  <!-- Placeholder_Mods_* : orphelines depuis que le navigateur de mods réel existe (feature 4a),
-       laissées telles quelles ici (hors du périmètre de ce chantier). -->
-  <x:String x:Key="Placeholder_Mods_Title">Navigateur de mods</x:String>
-  <x:String x:Key="Placeholder_Mods_Description">Bientôt disponible : recherche et installation de mods depuis le ModDB officiel.</x:String>
-
   <!-- ── Page de détail d'instance ───────────────────────────────────────────────── -->
   <x:String x:Key="Instance_Back">Instances</x:String>
   <x:String x:Key="Instance_Play">Jouer</x:String>
   <x:String x:Key="Instance_Stop">Arrêter</x:String>
   <x:String x:Key="Instance_Launching">Lancement…</x:String>
-  <x:String x:Key="Instance_Playing">En cours</x:String>
   <x:String x:Key="Instance_MoreActions">Plus d'actions</x:String>
   <x:String x:Key="Instance_CheckInstance">Vérifier l'instance</x:String>
   <x:String x:Key="Instance_Rename">Renommer</x:String>
@@ -173,13 +162,11 @@
   <x:String x:Key="Tab_Journal">Journal</x:String>
   <x:String x:Key="Tab_Options">Options</x:String>
 
-  <x:String x:Key="Instance_Mods_Title">Mods</x:String>
-  <x:String x:Key="Instance_Mods_Description">Bientôt disponible : installation et gestion des mods de cette instance depuis le ModDB officiel.</x:String>
 
   <x:String x:Key="Instance_Worlds_EmptyTitle">Aucun monde</x:String>
   <x:String x:Key="Instance_Worlds_EmptyDescription">Les mondes créés dans cette instance apparaîtront ici après le premier lancement.</x:String>
 
-  <x:String x:Key="Instance_Journal_Refresh">Rafraîchir</x:String>
+  <x:String x:Key="Instance_Journal_Refresh">Actualiser</x:String>
   <x:String x:Key="Instance_Journal_EmptyTitle">Aucun journal</x:String>
   <x:String x:Key="Instance_Journal_EmptyDescription">Cette instance n'a jamais été lancée. Le journal du dernier lancement apparaîtra ici.</x:String>
   <x:String x:Key="Instance_Journal_RunningNotice">Le jeu tourne : rafraîchis pour voir les dernières lignes écrites.</x:String>
@@ -216,7 +203,7 @@
 
   <!-- ── Navigateur de mods ──────────────────────────────────────────────────────── -->
   <x:String x:Key="Mods_Title">Navigateur de mods</x:String>
-  <x:String x:Key="Mods_Refresh">Actualiser l'index</x:String>
+  <x:String x:Key="Mods_Refresh">Actualiser la liste</x:String>
   <x:String x:Key="Mods_Retry">Réessayer</x:String>
   <x:String x:Key="Mods_SearchPlaceholder">Rechercher un mod…</x:String>
   <x:String x:Key="Mods_ClearSearch">Effacer la recherche</x:String>
@@ -228,7 +215,7 @@
   <x:String x:Key="Mods_Sort_Trending">Tendance</x:String>
   <x:String x:Key="Mods_Sort_Name">Nom</x:String>
   <x:String x:Key="Mods_Offline_Title">ModDB injoignable</x:String>
-  <x:String x:Key="Mods_Offline_Description">La connexion au dépôt officiel a échoué. Les mods déjà installés restent utilisables hors ligne.</x:String>
+  <x:String x:Key="Mods_Offline_Description">La connexion au ModDB a échoué. Les mods déjà installés restent utilisables hors ligne.</x:String>
   <x:String x:Key="Mods_ShowMore">Afficher plus</x:String>
   <x:String x:Key="Mods_Tags_ScrollHint">Molette ou barre pour faire défiler la rangée et voir toutes les catégories.</x:String>
   <x:String x:Key="Mods_BadgesTruncated">La carte est trop étroite pour toutes les pastilles. Ouvre la fiche du mod pour les voir en entier.</x:String>
@@ -251,7 +238,7 @@
 
   <!-- ── Onglet Mods d'une instance ──────────────────────────────────────────────── -->
   <x:String x:Key="Mods_Tab_Browse">Parcourir le ModDB</x:String>
-  <x:String x:Key="Mods_Tab_Rescan">Rescanner</x:String>
+  <x:String x:Key="Mods_Tab_Rescan">Actualiser</x:String>
   <x:String x:Key="Mods_Tab_EmptyTitle">Aucun mod installé</x:String>
   <x:String x:Key="Mods_Tab_EmptyDescription">Installe des mods depuis le ModDB officiel, ou dépose leurs .zip directement dans le dossier Mods de l'instance.</x:String>
   <x:String x:Key="Mods_Row_Unidentified">non identifié</x:String>
@@ -262,7 +249,7 @@
   <!-- ── Détection et application des mises à jour (feature 4b) ─────────────────── -->
   <x:String x:Key="Mods_Tab_CheckUpdates">Vérifier les mises à jour</x:String>
   <x:String x:Key="Mods_Tab_UpdateAll">Tout mettre à jour</x:String>
-  <x:String x:Key="Mods_Tab_CancelUpdateAll">Annuler</x:String>
+  <x:String x:Key="Mods_Tab_CancelUpdateAll">Arrêter la mise à jour</x:String>
   <x:String x:Key="Mods_Row_UpdateAvailable">mise à jour</x:String>
   <x:String x:Key="Mods_Row_UnknownToModDb">inconnu du ModDB</x:String>
   <x:String x:Key="Mods_Row_UndeclaredUpdate">plus récente non déclarée</x:String>
@@ -274,10 +261,10 @@
   <x:String x:Key="Dialog_AdoptVsl_Cancel">Annuler</x:String>
   <x:String x:Key="Dialog_AdoptVsl_Confirm">Adopter</x:String>
   <x:String x:Key="Dialog_AdoptVsl_CancelAdoption">Annuler l'adoption</x:String>
-  <x:String x:Key="Dialog_AdoptVsl_Close">Fermer</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_Close">Terminer</x:String>
   <x:String x:Key="Dialog_AdoptVsl_InstallationsSectionTitle">Installations</x:String>
   <x:String x:Key="Dialog_AdoptVsl_EnginesSectionTitle">Moteurs</x:String>
-  <x:String x:Key="Dialog_AdoptVsl_EnginesNotice">Ces fichiers sont copiés tels quels depuis VS Launcher, sans nouvelle vérification (pas de contrôle d'empreinte comme au téléchargement). En cas de doute, désinstalle puis retélécharge depuis l'écran Versions.</x:String>
+  <x:String x:Key="Dialog_AdoptVsl_EnginesNotice">Ces fichiers sont recopiés tels quels depuis VS Launcher. Contrairement à un téléchargement, rien ne vérifie qu'ils sont intacts : en cas de doute, désinstalle la version puis retélécharge-la depuis l'écran Versions.</x:String>
 
   <!-- ── Réglages ────────────────────────────────────────────────────────────────── -->
   <x:String x:Key="Settings_Title">Réglages</x:String>
@@ -313,7 +300,7 @@
   <x:String x:Key="Settings_GameSectionTitle">Emplacement des données</x:String>
   <x:String x:Key="Settings_GameDataPathLabel">Dossier de données</x:String>
   <x:String x:Key="Settings_GameOpenFolder">Ouvrir le dossier</x:String>
-  <x:String x:Key="Settings_GameRelocateHint">Instances, versions du jeu et cache vivent tous sous ce dossier. Le déplacer n'est pas encore possible.</x:String>
+  <x:String x:Key="Settings_GameRelocateHint">Instances, versions du jeu et fichiers téléchargés vivent tous sous ce dossier. Le déplacer n'est pas encore possible.</x:String>
 
   <!-- Réseau -->
   <x:String x:Key="Settings_NetworkSectionTitle">Téléchargements</x:String>
@@ -332,9 +319,8 @@
   <x:String x:Key="Settings_AccountsTwoFactorTitle">Code de vérification</x:String>
   <x:String x:Key="Settings_AccountsTwoFactorLabel">Code à six chiffres</x:String>
   <x:String x:Key="Settings_AccountsTwoFactorHint">Ton compte demande une double authentification. Ouvre ton application de codes et recopie celui affiché.</x:String>
-  <x:String x:Key="Settings_AccountsTwoFactorSubmit">Valider le code</x:String>
+  <x:String x:Key="Settings_AccountsTwoFactorSubmit">Se connecter</x:String>
   <x:String x:Key="Settings_AccountsTwoFactorCancel">Annuler</x:String>
-  <x:String x:Key="Settings_AccountsSignedInTitle">Connecté</x:String>
   <x:String x:Key="Settings_AccountsSignedInHint">La session multijoueur est injectée dans chaque instance au moment où tu lances le jeu.</x:String>
   <x:String x:Key="Settings_AccountsSignOut">Se déconnecter</x:String>
 

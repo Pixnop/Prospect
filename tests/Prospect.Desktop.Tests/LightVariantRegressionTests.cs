@@ -276,7 +276,7 @@ public sealed class LightVariantRegressionTests
 
         var darkBadgeForeground = versionBadge.Foreground.ShouldBeAssignableTo<ISolidColorBrush>()!.Color;
         var darkDotForeground = separatorDot.Foreground.ShouldBeAssignableTo<ISolidColorBrush>()!.Color;
-        darkDotForeground.ShouldBe(Color.Parse("#5B5249")); // Text4 sombre (stone-500) — plus jamais Stone600 fixe (#443D36).
+        darkDotForeground.ShouldBe(Color.Parse("#8A8177")); // Text4 sombre (stone-375, remonté pour le contraste) — plus jamais Stone600 fixe (#443D36).
 
         SwitchToLightTheme(window);
 
@@ -284,7 +284,7 @@ public sealed class LightVariantRegressionTests
         var lightDotForeground = separatorDot.Foreground.ShouldBeAssignableTo<ISolidColorBrush>()!.Color;
 
         lightBadgeForeground.ShouldNotBe(darkBadgeForeground);
-        lightDotForeground.ShouldBe(Color.Parse("#A2988D")); // Text4 clair.
+        lightDotForeground.ShouldBe(Color.Parse("#6E655B")); // Text4 clair (stone-450, descendu pour le contraste).
         lightDotForeground.ShouldNotBe(darkDotForeground);
 
         window.Close();
@@ -353,12 +353,13 @@ public sealed class LightVariantRegressionTests
         var lightBgColor = lightBg.ShouldBeOfType<SolidColorBrush>().Color;
         var lightTextColor = lightText.ShouldBeOfType<SolidColorBrush>().Color;
 
-        // La bulle est passée à la profondeur MENU du verre (72 %) : l'aplat stone-750 historique
-        // a disparu, l'invariant non — le fond suit le thème et ne coïncide jamais avec l'encre.
-        darkBgColor.ShouldBe(Color.Parse("#B8111010"));
+        // La bulle est passée à la profondeur MENU du verre (91 % depuis la passe de lisibilité,
+        // voir Glass.axaml) : l'aplat stone-750 historique a disparu, l'invariant non — le fond
+        // suit le thème et ne coïncide jamais avec l'encre.
+        darkBgColor.ShouldBe(Color.Parse("#E8111010"));
         lightBgColor.ShouldNotBe(darkBgColor);
         lightBgColor.ShouldNotBe(lightTextColor); // fond et texte de la bulle ne doivent jamais coïncider.
-        // Une bulle translucide ne doit pas l'être au point de laisser lire à travers : à 72 %,
+        // Une bulle translucide ne doit pas l'être au point de laisser lire à travers : à 91 %,
         // le fond qui transparaît ne peut plus faire basculer le contraste de son texte.
         darkBgColor.A.ShouldBeGreaterThan((byte)180);
     }

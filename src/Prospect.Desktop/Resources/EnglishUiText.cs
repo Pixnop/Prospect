@@ -215,7 +215,7 @@ internal sealed class EnglishDownloadsText : DownloadsText
 {
     internal override string Queued => "queued";
 
-    internal override string Verifying => "checking the checksum";
+    internal override string Verifying => "checking the file";
 
     internal override string GenericFailure => "The download failed.";
 
@@ -320,7 +320,7 @@ internal sealed class EnglishBrokenInstancesText : BrokenInstancesText
     {
         InstanceBrokenReason.MissingMetadataFile => "instance.json missing",
         InstanceBrokenReason.CorruptedMetadataFile => "instance.json unreadable",
-        InstanceBrokenReason.UnsupportedSchemaVersion => "schema version not supported",
+        InstanceBrokenReason.UnsupportedSchemaVersion => "made by a newer version of Prospect",
         _ => "unknown reason",
     };
 }
@@ -329,7 +329,7 @@ internal sealed class EnglishInstanceText(InstanceBackupsText backups, DoctorTex
 {
     internal override string VersionNotInstalledTitle => "Version not installed";
 
-    internal override string RuntimeMissingTitle => ".NET runtime missing";
+    internal override string RuntimeMissingTitle => ".NET component missing";
 
     internal override string MacNotSupportedTitle => "macOS not supported";
 
@@ -367,6 +367,8 @@ internal sealed class EnglishDoctorText(ModsText mods) : DoctorText(mods)
 
     internal override string OpenModsAction => "See the mods";
 
+    internal override string CheckUpdatesAction => "Check for updates";
+
     internal override string InstallDependencyAction(string modIdString) => $"Install “{modIdString}”…";
 
     internal override string UpdateDependencyAction(string modIdString) => $"Update “{modIdString}”…";
@@ -379,7 +381,7 @@ internal sealed class EnglishDoctorText(ModsText mods) : DoctorText(mods)
         => "Game version compatibility unknown: check for mod updates to find out more.";
 
     internal override string RuntimeIndeterminate
-        => "The runtime this version needs could not be worked out. Launching will confirm it if need be.";
+        => "The .NET component this version needs could not be worked out. Launching will say so if need be.";
 
     internal override string ErrorsGroupTitle(int count) => count == 1 ? "1 issue to fix" : $"{count} issues to fix";
 
@@ -396,7 +398,7 @@ internal sealed class EnglishDoctorText(ModsText mods) : DoctorText(mods)
     internal override string RuntimeMessage(RuntimeCheckResult runtime) => runtime.Availability switch
     {
         RuntimeAvailability.Missing
-            => $"The .NET runtime {runtime.Requirement.FrameworkName} {runtime.Requirement.Version} is required but is not installed.",
+            => $"This game version needs .NET {runtime.Requirement.Version}, which is not installed on this computer.",
         RuntimeAvailability.Indeterminate => RuntimeIndeterminate,
         _ => string.Empty,
     };
@@ -485,7 +487,7 @@ internal sealed class EnglishModsText : ModsText
 
     internal override string PickInstanceTitle => "Choose an instance";
 
-    internal override string PickInstanceMessage => "Pick the instance to install into before you add a mod.";
+    internal override string PickInstanceMessage => "Choose the instance to install into before you install a mod.";
 
     internal override string InstallAction => "Install";
 
@@ -495,12 +497,12 @@ internal sealed class EnglishModsText : ModsText
         => string.IsNullOrWhiteSpace(version) ? "Installed" : $"Installed · {version}";
 
     internal override string StaleCatalog
-        => "The index could not be refreshed. The mods shown come from the last reading.";
+        => "The mod list could not be refreshed. The ones shown come from the last reading.";
 
     internal override string OfflineEmptyTitle => "No offline results";
 
     internal override string OfflineEmptyDescription
-        => "The mod index is cached locally, but that cache has expired. Reconnect to browse ModDB.";
+        => "ModDB cannot be reached and the list kept in memory is too old to use. Check your connection, then try again.";
 
     internal override string CheckUpdatesFailedTitle => "Cannot check";
 
@@ -544,8 +546,8 @@ internal sealed class EnglishModsText : ModsText
     internal override string Subtitle(int indexedCount) => indexedCount switch
     {
         0 => "Official ModDB",
-        1 => "Official ModDB · 1 mod indexed",
-        _ => $"Official ModDB · {FormatCount(indexedCount)} mods indexed",
+        1 => "Official ModDB · 1 mod available",
+        _ => $"Official ModDB · {FormatCount(indexedCount)} mods available",
     };
 
     internal override string ShownCount(int shown, int total)
@@ -622,7 +624,7 @@ internal sealed class EnglishModsText : ModsText
     internal override string PlanTitle(string modName) => $"Install “{modName}”?";
 
     internal override string PlanMessage(string version, string instanceName)
-        => $"Version {version} will be added to “{instanceName}”.";
+        => $"Version {version} will be installed into “{instanceName}”.";
 
     internal override string ReplacePlanTitle(string modName) => $"Replace “{modName}”?";
 
@@ -683,12 +685,12 @@ internal sealed class EnglishModsText : ModsText
     internal override string InstalledTitle(string modName) => $"{modName} installed";
 
     internal override string InstalledMessage(int count, string instanceName)
-        => count > 1 ? $"{count} mods added to “{instanceName}”" : $"Added to “{instanceName}”";
+        => count > 1 ? $"{count} mods installed into “{instanceName}”" : $"Installed into “{instanceName}”";
 
     internal override string UninstallTitle(string modName) => $"Remove “{modName}”?";
 
     internal override string UninstallMessage(string fileName)
-        => $"The file {fileName} will be deleted from the instance's Mods folder. You can install it again from ModDB.";
+        => $"The file {fileName} will be removed from the instance's Mods folder. You can install it again from ModDB.";
 
     internal override string UninstallDependents(IReadOnlyList<string> modNames)
     {

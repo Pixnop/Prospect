@@ -93,7 +93,7 @@
               <Border Classes="step-dot" Classes.current="{Binding IsCurrent}" Classes.done="{Binding IsDone}">
                 <Panel>
                   <TextBlock Text="{Binding Number}" HorizontalAlignment="Center" VerticalAlignment="Center"
-                             FontFamily="{DynamicResource FontMono}" FontSize="10" Foreground="{DynamicResource Text4}"
+                             FontFamily="{DynamicResource FontMono}" FontSize="{StaticResource FsMicro}" Foreground="{DynamicResource Text3}"
                              IsVisible="{Binding !IsDone}"
                              Classes.current="{Binding IsCurrent}">
                     <TextBlock.Styles>

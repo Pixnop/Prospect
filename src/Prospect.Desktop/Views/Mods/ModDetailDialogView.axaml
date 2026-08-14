@@ -24,7 +24,7 @@
       <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="22,20">
         <Grid ColumnDefinitions="Auto,*,Auto">
           <Border Grid.Column="0" Width="52" Height="52" CornerRadius="{StaticResource RadiusSm}"
-                  Background="{DynamicResource Stone800}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1"
+                  Background="{DynamicResource GlassItem}" BorderBrush="{DynamicResource GlassEdge}" BorderThickness="1"
                   ClipToBounds="True">
             <Panel>
               <!-- Même dispositif que la carte du navigateur : pictogramme générique dans l'arbre,
