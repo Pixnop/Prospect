@@ -17,6 +17,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Prospect.Core.Settings;
 using Prospect.Desktop.Layout;
 using Prospect.Desktop.Services;
+using Prospect.Desktop.Views.Dialogs;
+using Prospect.Desktop.Views.FirstRun;
+using Prospect.Desktop.Views.Migration;
+using Prospect.Desktop.Views.Mods;
+using Prospect.Desktop.Views.Wizard;
 
 using Shouldly;
 
@@ -25,7 +30,7 @@ namespace Prospect.Desktop.Tests;
 /// <summary>
 /// Contrat du système de verre (Styles/Tokens/Glass.axaml). Ce que ces tests protègent n'est pas
 /// une teinte précise mais la MÉCANIQUE : chaque profondeur existe dans les deux variantes, aucune
-/// n'est opaque (sans quoi il n'y aurait plus de verre du tout), la hiérarchie des quatre
+/// n'est opaque (sans quoi il n'y aurait plus de verre du tout), la hiérarchie des cinq
 /// profondeurs est respectée, et l'empilement du fond de fenêtre reste celui qu'on a déclaré.
 ///
 /// Ils existent parce que la panne typique de ce système est silencieuse : une entrée oubliée dans
@@ -36,11 +41,11 @@ namespace Prospect.Desktop.Tests;
 public sealed class GlassTokensTests
 {
     /// <summary>Les vitres, de la plus fine à la plus dense.</summary>
-    private static readonly string[] Depths = ["GlassPane", "GlassChrome", "GlassItem", "GlassMenu"];
+    private static readonly string[] Depths = ["GlassPane", "GlassChrome", "GlassItem", "GlassMenu", "GlassDialog"];
 
     private static readonly string[] Brushes =
     [
-        "GlassVeil", "GlassPane", "GlassChrome", "GlassItem", "GlassMenu",
+        "GlassVeil", "GlassPane", "GlassChrome", "GlassItem", "GlassMenu", "GlassDialog",
         "GlassEdge", "GlassEdgeStrong", "GlassEdgeHot", "GlassRowOdd", "GlassRowEven",
     ];
 
@@ -86,17 +91,85 @@ public sealed class GlassTokensTests
     }
 
     [AvaloniaFact]
-    public void LesQuatreProfondeurs_SontOrdonneesDeLaPlusFineALaPlusDense()
+    public void LesCinqProfondeurs_SontOrdonneesDeLaPlusFineALaPlusDense()
     {
         // pane (conteneur de page) < chrome (sidebar, titlebar) < item (carte, champ) <
-        // menu (dialogue, dropdown). C'est cet ordre qui fait la lecture en profondeur : un
-        // dialogue doit toujours masquer davantage le fond que la page qui le porte.
+        // menu (dropdown, popover, infobulle) < dialog (panneau modal). C'est cet ordre qui fait la
+        // lecture en profondeur : un dialogue doit toujours masquer davantage le fond que la page
+        // qui le porte, et davantage qu'un menu qui ne fait que se poser dessus.
         foreach (var variant in new[] { ThemeVariant.Dark, ThemeVariant.Light })
         {
             var alphas = Depths.Select(key => Resolve(key, variant).A).ToList();
             alphas.ShouldBe(alphas.OrderBy(a => a).ToList(), $"profondeurs désordonnées en {variant}");
             alphas.Distinct().Count().ShouldBe(alphas.Count, $"deux profondeurs confondues en {variant}");
         }
+    }
+
+    /// <summary>
+    /// La cinquième profondeur, celle qui n'existe pas dans le CSS de référence. Ce test épingle la
+    /// décision produit : un dialogue modal recouvre de la LECTURE, un menu ne fait que se poser
+    /// brièvement sur quelques lignes, donc les deux ne peuvent pas partager la même vitre. Le
+    /// plancher retenu vient du critère visuel — aucun texte de la page ne doit se deviner à
+    /// travers, même sur le fond clair le plus chargé — et il est plus haut en clair, où la vitre
+    /// et le fond ont des luminances voisines.
+    /// </summary>
+    [AvaloniaFact]
+    public void LaVitreDesDialogues_MasquePlusQueCelleDesMenus_DansLesDeuxVariantes()
+    {
+        foreach (var (variant, floor) in new[] { (ThemeVariant.Dark, 0.94), (ThemeVariant.Light, 0.96) })
+        {
+            var menu = Resolve("GlassMenu", variant).A;
+            var dialog = Resolve("GlassDialog", variant).A;
+
+            dialog.ShouldBeGreaterThan(menu, $"un dialogue doit masquer plus qu'un menu en {variant}");
+            (dialog / 255d).ShouldBeGreaterThanOrEqualTo(floor, $"la vitre de dialogue est trop fine en {variant}");
+            dialog.ShouldBeLessThan((byte)255, $"la vitre de dialogue est opaque en {variant} : ce n'est plus du verre");
+        }
+    }
+
+    /// <summary>
+    /// Et les dialogues la portent RÉELLEMENT. Le contrat précédent ne vérifie que les valeurs du
+    /// dictionnaire : une vue oubliée resterait sur GlassMenu sans que rien ne le signale, puisqu'un
+    /// panneau un peu trop transparent se rend parfaitement. Le sens de lecture importe : ce test
+    /// interroge la vue montée, pas l'AXAML.
+    /// </summary>
+    [AvaloniaTheory]
+    [InlineData(typeof(RenameDialogView))]
+    [InlineData(typeof(DeleteInstanceDialogView))]
+    [InlineData(typeof(DuplicateDialogView))]
+    [InlineData(typeof(StopInstanceDialogView))]
+    [InlineData(typeof(SignOutDialogView))]
+    [InlineData(typeof(UninstallVersionDialogView))]
+    [InlineData(typeof(RestoreInstanceBackupDialogView))]
+    [InlineData(typeof(DeleteInstanceBackupDialogView))]
+    [InlineData(typeof(InstanceDoctorDialogView))]
+    [InlineData(typeof(ModDetailDialogView))]
+    [InlineData(typeof(ModInstallPlanDialogView))]
+    [InlineData(typeof(ModUpdatePlanDialogView))]
+    [InlineData(typeof(UninstallModDialogView))]
+    [InlineData(typeof(AdoptVslView))]
+    [InlineData(typeof(FirstRunScreenView))]
+    [InlineData(typeof(WizardView))]
+    public void ChaquePanneauModal_EstPoseSurLaVitreDesDialogues(Type viewType)
+    {
+        var view = (UserControl)Activator.CreateInstance(viewType)!;
+        var window = new Window { Content = view };
+        window.Show();
+        window.Settle();
+
+        var panel = view.GetVisualDescendants().OfType<Border>()
+            .First(border => border.Background is SolidColorBrush);
+
+        foreach (var variant in new[] { ThemeVariant.Dark, ThemeVariant.Light })
+        {
+            window.RequestedThemeVariant = variant;
+            window.Settle();
+
+            panel.Background.ShouldBeOfType<SolidColorBrush>().Color
+                .ShouldBe(Resolve("GlassDialog", variant), $"{viewType.Name} n'est pas sur GlassDialog en {variant}");
+        }
+
+        window.Close();
     }
 
     [AvaloniaFact]

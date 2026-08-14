@@ -763,6 +763,44 @@ ouvertures répétées de fiches laissent la mémoire gérée et le nombre d'abo
 `ModCardViewModel`, `InstanceCardViewModel`, `InstanceDetailViewModel` et
 `DownloadItemViewModel`, et de `ShellViewModel.Navigate` qui dispose la page sortante.
 
+### Les profondeurs de verre, et qui a droit à laquelle
+
+Le système de surfaces (`Styles/Tokens/Glass.axaml`) n'a qu'un levier, l'alpha : la composition est
+interne, aucun panneau n'a de flou propre (voir l'en-tête du fichier). C'est donc l'alpha seul qui
+porte la hiérarchie, et cette hiérarchie est un vocabulaire fermé.
+
+| Profondeur | Sombre | Clair | Ce qu'elle habille |
+| --- | --- | --- | --- |
+| `GlassPane` | 15 % | 31 % | Conteneurs de page, enveloppes |
+| `GlassChrome` | 30 % | 44 % | Barre latérale, barre de titre |
+| `GlassItem` | 50 % | 48 % | Cartes, rangées, champs, boutons secondaires |
+| `GlassMenu` | 91 % | 93 % | Menus déroulants, popovers, toasts, infobulles |
+| `GlassDialog` | 95 % | 96 % | Dialogues modaux, wizard, écran de premier lancement |
+
+Les quatre premières sont le port littéral de `design/tokens/glass.css`. **La cinquième est un
+choix produit local, absente du handoff** : le CSS s'arrête à quatre profondeurs et fait servir la
+dernière indistinctement aux menus et aux dialogues. La séparation vient de ce que les deux
+familles ne rendent pas le même service. Un menu ou une infobulle se pose sur quelques lignes,
+brièvement, et laisser deviner la page dessous fait partie de l'effet du verre. Un dialogue modal
+recouvre de la LECTURE, parfois plusieurs minutes, et la page qui transparaît devient du bruit
+derrière le texte qu'on demande de lire. Le critère qui a fixé les deux valeurs est visuel et non
+numérique : aucun texte de la page ne doit se deviner à travers un dialogue, sur le fond clair le
+plus chargé du catalogue. À 91 % en clair, les titres de cartes du navigateur de mods restaient
+devinables derrière le panneau d'installation. La valeur claire monte d'un cran de plus que la
+sombre parce qu'en clair la vitre et le fond ont des luminances voisines, le registre exact où
+l'œil lit encore des formes.
+
+Ce qui ne se dédouble PAS : l'élévation. `GlassElevMenu` (ombre portée plus sheen intérieur) reste
+la valeur des deux familles, parce que l'épaisseur d'une surface flottante ne dépend pas de ce
+qu'elle recouvre. Seul l'alpha de la vitre distingue les deux profondeurs.
+
+Deux gardes tiennent la règle, et il en faut deux parce qu'elles attrapent des pannes différentes.
+`GlassTokensTests` vérifie les valeurs du dictionnaire : les cinq profondeurs existent dans les
+deux variantes, sont ordonnées, distinctes, et aucune n'est opaque. Et un test monté sur les seize
+panneaux modaux vérifie qu'ils la portent réellement — sans lui, une vue oubliée resterait sur
+`GlassMenu` sans que rien ne le signale, puisqu'un panneau un peu trop transparent se rend
+parfaitement.
+
 ### Fond de fenêtre
 
 Le thème verre se compose sur une image de fond pré-floutée hors ligne (voir la section précédente

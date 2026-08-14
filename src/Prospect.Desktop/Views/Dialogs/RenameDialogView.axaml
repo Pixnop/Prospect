@@ -8,7 +8,7 @@
              x:DataType="vm:RenameDialogViewModel">
 
   <Border Width="420" CornerRadius="{StaticResource RadiusLg}" ClipToBounds="True"
-          Background="{DynamicResource GlassMenu}" BorderBrush="{DynamicResource GlassEdge}"
+          Background="{DynamicResource GlassDialog}" BorderBrush="{DynamicResource GlassEdge}"
           BorderThickness="1" BoxShadow="{DynamicResource GlassElevMenu}">
     <StackPanel>
       <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource GlassEdge}" Padding="22,18">

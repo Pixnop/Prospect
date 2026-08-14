@@ -21,12 +21,28 @@
     hiérarchie, au-dessus d'un fond déjà flou. Les valeurs d'alpha, elles, sont celles du CSS
     au point près, dans les deux variantes.
 
-    ══ Les quatre profondeurs ════════════════════════════════════════════════════════
+    ══ Les cinq profondeurs ══════════════════════════════════════════════════════════
 
-      GlassChrome  30 %  sidebar, barre de titre
-      GlassPane    15 %  conteneurs de page, enveloppes
-      GlassItem    50 %  cartes, rangées, champs, boutons secondaires
-      GlassMenu    72 %  menus déroulants, popovers, dialogues, toasts, infobulles
+      GlassChrome  30 %       sidebar, barre de titre
+      GlassPane    15 %       conteneurs de page, enveloppes
+      GlassItem    50 %       cartes, rangées, champs, boutons secondaires
+      GlassMenu    91 / 93 %  menus déroulants, popovers, toasts, infobulles
+      GlassDialog  95 / 96 %  dialogues modaux, wizard, écran de premier lancement
+
+    ÉCART AU CSS DE RÉFÉRENCE, et c'est un choix produit local : glass.css n'a que quatre
+    profondeurs, la dernière servant indistinctement les menus et les dialogues. Le handoff
+    n'en propose pas de cinquième, elle n'y a donc aucun équivalent à porter. Elle existe ici
+    parce que les deux familles ne rendent pas le même service. Un menu déroulant ou une
+    infobulle se pose SUR quelques lignes, brièvement, et laisser deviner la page dessous fait
+    partie de l'effet. Un dialogue modal RECOUVRE de la lecture, plusieurs minutes parfois, et
+    la page qui transparaît devient du bruit derrière le texte qu'on demande de lire : à 91 %,
+    sur un fond clair chargé, les titres de cartes du navigateur de mods restaient devinables
+    derrière le panneau d'installation. Les deux valeurs se séparent donc, et seuls les
+    dialogues montent.
+
+    L'élévation, elle, ne se dédouble PAS : GlassElevMenu (ombre portée + sheen) reste la
+    valeur des deux familles, parce que l'épaisseur d'une surface flottante ne dépend pas de ce
+    qu'elle recouvre. Seul l'alpha de la vitre distingue les deux profondeurs.
 
     Le liseré n'est jamais sombre : GlassEdge est une arête CLAIRE (cuivre à 10 %) qui
     attrape la lumière sur le haut de la vitre. C'est le détail porteur : une bordure sombre
@@ -57,11 +73,11 @@
       <SolidColorBrush x:Key="GlassPane" Color="#26111010" />
       <SolidColorBrush x:Key="GlassItem" Color="#80111010" />
 
-      <!-- La vitre la plus dense : dialogues, popover, menus, infobulles.
+      <!-- Menus déroulants, popover, toasts, infobulles.
 
            Montée de 72 % à 91 %, et c'est une correction de LISIBILITÉ, pas un changement de goût.
            Le voile du modal laisse passer 38 % de ce qu'il couvre, la vitre en laissait passer 28 %
-           de plus : la page continuait donc de se lire à 10,6 % à travers le dialogue, soit un
+           de plus : la page continuait donc de se lire à 10,6 % à travers un panneau, soit un
            rapport de contraste fantôme de 1,26 pour un titre de page — largement au-dessus du seuil
            où l'œil voit une bande (mesuré sur captures avant/après, les cartes du navigateur de mods
            se lisaient à travers le panneau entier). À 91 %, la transmission tombe à 3,4 % et le
@@ -72,6 +88,14 @@
            Corollaire déjà vrai avant, rappelé ici : cette valeur est aussi celle des infobulles
            (TooltipBg dans Colors.axaml), qui doivent la suivre pour rester la même matière. -->
       <SolidColorBrush x:Key="GlassMenu" Color="#E8111010" />
+
+      <!-- Dialogues modaux uniquement (voir l'en-tête pour la raison de la cinquième profondeur).
+
+           94,9 % : ce qui reste des 3,4 % transmis à 91 % descend à 1,9 %, soit un rapport fantôme
+           de 1,04 sur un titre de page. En sombre, c'était déjà la variante confortable — la valeur
+           est montée d'autant que la claire pour que les deux thèmes rendent la MÊME densité, sans
+           quoi le même dialogue paraîtrait plus fin dans l'un que dans l'autre. -->
+      <SolidColorBrush x:Key="GlassDialog" Color="#F2111010" />
 
       <SolidColorBrush x:Key="GlassEdge" Color="#1AD5A275" />
       <SolidColorBrush x:Key="GlassEdgeStrong" Color="#38D5A275" />
@@ -129,9 +153,17 @@
 
       <!-- Même correction qu'en sombre, et elle était encore plus nécessaire ici : le voile du
            modal, en clair, ne masquait que 35 % (contre 62 % en sombre), ce qui portait la
-           transmission à travers un dialogue à 14,3 % et le fantôme à 1,33. Le voile clair est
+           transmission à travers un panneau à 14,3 % et le fantôme à 1,33. Le voile clair est
            remonté à parité du sombre (BgScrim, Colors.axaml) ET la vitre à 93 %. -->
       <SolidColorBrush x:Key="GlassMenu" Color="#EEFCF9F4" />
+
+      <!-- 96,1 %, un cran au-dessus du sombre, et l'écart est voulu. Le fond de fenêtre garde en
+           clair une luminance proche de celle de la vitre : ce qui transparaît ne se voit pas
+           comme une tache mais comme une modulation du blanc, exactement le registre où l'œil lit
+           encore des formes. Le critère retenu est visuel et non numérique — AUCUN texte de la page
+           ne doit se deviner à travers, sur le fond clair le plus chargé du catalogue — et il
+           demande ce cran de plus. Transmission finale : 1,5 %. -->
+      <SolidColorBrush x:Key="GlassDialog" Color="#F5FCF9F4" />
 
       <SolidColorBrush x:Key="GlassEdge" Color="#247E5230" />
       <SolidColorBrush x:Key="GlassEdgeStrong" Color="#477E5230" />
