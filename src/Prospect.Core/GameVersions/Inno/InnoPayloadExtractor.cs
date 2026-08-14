@@ -71,7 +71,7 @@ internal sealed class InnoPayloadExtractor
     /// Format inconnu, lecture incohérente, ou empreinte qui ne correspond pas. L'appelant retombe
     /// alors sur l'exécution de l'installeur.
     /// </exception>
-    public async Task ExtractAsync(
+    public Task ExtractAsync(
         string installerPath,
         string targetDirectory,
         IProgress<GameInstallProgress>? progress,
@@ -80,22 +80,35 @@ internal sealed class InnoPayloadExtractor
         ArgumentException.ThrowIfNullOrEmpty(installerPath);
         ArgumentException.ThrowIfNullOrEmpty(targetDirectory);
 
+        // Task.Run assumé, pour la même raison que la suppression de dossier (Storage) : décompresser
+        // huit cent soixante mégaoctets et écrire vingt mille fichiers prend une bonne demi-minute, et
+        // tout cela est SYNCHRONE de bout en bout puisque System.IO.Abstractions l'est. Un await sur du
+        // travail synchrone ne déporte rien, il rend la main sur du travail déjà fait : sans ce
+        // Task.Run, un appelant qui se trouverait sur le fil d'interface le garderait figé le temps de
+        // l'installation.
+        return Task.Run(() => Extract(installerPath, targetDirectory, progress, cancellationToken), cancellationToken);
+    }
+
+    private void Extract(
+        string installerPath,
+        string targetDirectory,
+        IProgress<GameInstallProgress>? progress,
+        CancellationToken cancellationToken)
+    {
         var root = _fileSystem.Path.GetFullPath(targetDirectory);
         _fileSystem.Directory.CreateDirectory(root);
 
-        var installer = _fileSystem.File.OpenRead(installerPath);
-        await using (installer.ConfigureAwait(false))
+        using var installer = _fileSystem.File.OpenRead(installerPath);
+
+        if (!InnoLoaderOffsets.TryFind(installer, out var offsets))
         {
-            if (!InnoLoaderOffsets.TryFind(installer, out var offsets))
-            {
-                throw InnoFormatException.Unsupported("aucun chargeur Inno Setup reconnu dans le fichier");
-            }
-
-            var script = InnoSetupScript.Read(installer, offsets.HeaderOffset);
-            var plan = BuildPlan(script);
-
-            ExtractPlan(installer, offsets, script, plan, root, progress, cancellationToken);
+            throw InnoFormatException.Unsupported("aucun chargeur Inno Setup reconnu dans le fichier");
         }
+
+        var script = InnoSetupScript.Read(installer, offsets.HeaderOffset);
+        var plan = BuildPlan(script);
+
+        ExtractPlan(installer, offsets, script, plan, root, progress, cancellationToken);
     }
 
     /// <summary>
