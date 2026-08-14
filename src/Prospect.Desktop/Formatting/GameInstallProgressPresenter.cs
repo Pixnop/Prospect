@@ -44,14 +44,22 @@ internal static class GameInstallProgressPresenter
 
     /// <summary>
     /// Vrai quand il faut prévenir l'utilisateur AVANT que l'installeur du jeu n'ouvre sa propre
-    /// fenêtre. Windows uniquement, et seulement pendant la phase d'installation : c'est le moment
-    /// exact où la boîte peut apparaître, et où le bouton par défaut « Oui » désinstallerait le jeu
-    /// installé par ailleurs sur la machine. Voir docs/architecture.md, section installation.
+    /// fenêtre, c'est-à-dire uniquement quand cet installeur va réellement tourner.
     /// </summary>
+    /// <remarks>
+    /// Sous Windows, la voie normale est désormais l'EXTRACTION du contenu de l'installeur, qui
+    /// n'exécute aucun script et n'ouvre donc aucune fenêtre : afficher la notice là serait annoncer
+    /// une boîte qui ne viendra pas. Elle n'accompagne plus que le repli, signalé par
+    /// <see cref="GameInstallProgress.RunsVendorInstaller"/>. Un avertissement que l'on voit à
+    /// chaque installation sans qu'il ne se passe rien est un avertissement que l'on cesse de lire,
+    /// et celui-ci porte une question dont la réponse par défaut désinstalle le jeu.
+    /// </remarks>
     public static bool ShowsInstallerPromptNotice(GameInstallProgress progress, AppOperatingSystem operatingSystem)
     {
         ArgumentNullException.ThrowIfNull(progress);
 
-        return operatingSystem == AppOperatingSystem.Windows && progress.Phase == GameInstallPhase.Installing;
+        return operatingSystem == AppOperatingSystem.Windows
+            && progress.Phase == GameInstallPhase.Installing
+            && progress.RunsVendorInstaller;
     }
 }

@@ -38,8 +38,19 @@ public sealed class GameInstallProgressPresenterTests
     [InlineData(AppOperatingSystem.MacOs, false)]
     public void TheInstallerPromptNotice_IsAWindowsOnlyAffair(AppOperatingSystem operatingSystem, bool expected)
         => GameInstallProgressPresenter
-            .ShowsInstallerPromptNotice(GameInstallProgress.ForPhase(GameInstallPhase.Installing), operatingSystem)
+            .ShowsInstallerPromptNotice(GameInstallProgress.ForVendorInstaller(), operatingSystem)
             .ShouldBe(expected);
+
+    /// <summary>
+    /// Et seulement quand l'installeur du jeu tourne vraiment. La voie normale sous Windows est
+    /// l'extraction, qui n'exécute rien : annoncer là une boîte qui ne viendra pas apprendrait à
+    /// ignorer un avertissement dont la réponse par défaut désinstalle le jeu.
+    /// </summary>
+    [Fact]
+    public void TheInstallerPromptNotice_StaysAwayFromAnExtraction()
+        => GameInstallProgressPresenter
+            .ShowsInstallerPromptNotice(GameInstallProgress.ForInstalling(0.42d), AppOperatingSystem.Windows)
+            .ShouldBeFalse();
 
     /// <summary>
     /// Et seulement pendant la phase où la boîte peut s'ouvrir : la prévenir pendant le
@@ -51,6 +62,8 @@ public sealed class GameInstallProgressPresenterTests
     [InlineData(GameInstallPhase.Completed)]
     public void TheInstallerPromptNotice_StaysAwayFromEveryOtherPhase(GameInstallPhase phase)
         => GameInstallProgressPresenter
-            .ShowsInstallerPromptNotice(GameInstallProgress.ForPhase(phase), AppOperatingSystem.Windows)
+            .ShowsInstallerPromptNotice(
+                GameInstallProgress.ForVendorInstaller() with { Phase = phase },
+                AppOperatingSystem.Windows)
             .ShouldBeFalse();
 }

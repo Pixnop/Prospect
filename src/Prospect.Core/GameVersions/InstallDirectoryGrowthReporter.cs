@@ -103,7 +103,7 @@ internal sealed class InstallDirectoryGrowthReporter
         }
 
         _lastRatio = ratio;
-        _progress?.Report(GameInstallProgress.ForInstalling(ratio, isEstimated: true));
+        _progress?.Report(GameInstallProgress.ForInstalling(ratio, isEstimated: true, runsVendorInstaller: true));
     }
 
     /// <summary>

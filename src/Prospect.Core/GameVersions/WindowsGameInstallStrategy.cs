@@ -1,29 +1,43 @@
 using System.IO.Abstractions;
 
 using Prospect.Core.Common;
+using Prospect.Core.GameVersions.Inno;
 
 namespace Prospect.Core.GameVersions;
 
 /// <summary>
-/// Installation Windows : exécution silencieuse de l'installeur Inno Setup officiel.
+/// Installation Windows : extraction du contenu de l'installeur officiel, et exécution de cet
+/// installeur seulement si l'extraction n'aboutit pas.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Il n'existe aucun build Windows portable, uniquement cet installeur
-/// (docs/research/vslauncher-et-distribution.md, section b), donc pas d'archive à extraire ici :
-/// on reprend le jeu d'options éprouvé par VS Launcher, où <c>/CURRENTUSER</c> évite l'élévation
-/// UAC et <c>/DIR</c> pose le jeu directement dans le dossier de la version.
+/// Il n'existe aucun build Windows portable, uniquement un installeur Inno Setup
+/// (docs/research/vslauncher-et-distribution.md, section b). Le lancer, c'est faire tourner son
+/// SCRIPT, et ce script ouvre une boîte de dialogue qu'aucun drapeau de ligne de commande
+/// n'atteint : <c>/SUPPRESSMSGBOXES</c> ne couvre que les messages de Setup lui-même et la fonction
+/// <c>SuppressibleMsgBox</c> du langage de script, alors que la question « une ancienne version a
+/// été détectée, la désinstaller d'abord ? » vient d'un <c>MsgBox</c> nu appelé depuis
+/// <c>InitializeSetup</c>. Pire, le script teste une clé de registre que l'installeur écrit
+/// lui-même : chaque installation armait la boîte pour la suivante.
 /// </para>
 /// <para>
-/// Ce que ces options ne peuvent PAS faire, et qui a été rapporté en test réel : empêcher une boîte
-/// de dialogue posée par le SCRIPT de l'installeur. <c>/SUPPRESSMSGBOXES</c> ne couvre que les
-/// messages de Setup lui-même et la fonction <c>SuppressibleMsgBox</c> du langage de script ; un
-/// <c>MsgBox</c> nu appelé depuis <c>InitializeSetup</c> — c'est le cas de la question « une
-/// ancienne version a été détectée, la désinstaller d'abord ? » — s'affiche quand même. Voir la
-/// documentation d'Inno Setup, « Setup Command Line Parameters » et « Pascal Scripting:
-/// SuppressibleMsgBox ». Voir cette boîte n'est donc pas la preuve que les arguments ne sont pas
-/// arrivés, et c'est pour ça que la vérification qui compte est celle du RÉSULTAT, faite par
-/// <see cref="GameInstallService"/> avant d'écrire la sentinelle de complétude.
+/// La voie normale est donc de ne PAS l'exécuter. <see cref="InnoPayloadExtractor"/> lit le format
+/// de l'installeur et pose les fichiers du jeu directement. Aucun script ne tourne, donc aucune
+/// boîte ne s'ouvre et aucune clé n'est écrite — ce dernier point compte autant que le premier,
+/// puisque c'est lui qui empêche le problème de revenir.
+/// </para>
+/// <para>
+/// Le repli reste l'exécution silencieuse, avec le jeu d'options éprouvé par VS Launcher, où
+/// <c>/CURRENTUSER</c> évite l'élévation UAC et <c>/DIR</c> pose le jeu dans le dossier de la
+/// version. Il sert le jour où l'installeur change de format au point que le lecteur ne le
+/// reconnaît plus — un Inno Setup 6.5 réorganise franchement son en-tête — et ce jour-là mieux vaut
+/// une installation avec une notice qu'une installation impossible. La notice qui prévient de la
+/// boîte n'accompagne plus que ce chemin-là.
+/// </para>
+/// <para>
+/// Dans les deux cas, la vérification qui tranche reste celle du RÉSULTAT, faite par
+/// <see cref="GameInstallService"/> avant d'écrire la sentinelle de complétude : une installation
+/// détournée ailleurs ne peut pas se faire passer pour réussie.
 /// </para>
 /// </remarks>
 public sealed class WindowsGameInstallStrategy : IGameInstallStrategy
@@ -127,6 +141,84 @@ public sealed class WindowsGameInstallStrategy : IGameInstallStrategy
         CancellationToken cancellationToken = default)
     {
         _fileSystem.Directory.CreateDirectory(targetDirectory);
+
+        if (await TryExtractAsync(archivePath, targetDirectory, progress, cancellationToken).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        await RunInstallerAsync(archivePath, targetDirectory, progress, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Tente l'extraction. Rend <see langword="false"/> quand l'installeur n'est pas lisible, sans
+    /// faire échouer l'installation : c'est au repli de prendre la suite.
+    /// </summary>
+    /// <remarks>
+    /// Le dossier cible est VIDÉ avant de passer la main. Une extraction interrompue en cours de
+    /// route y a laissé des milliers de fichiers, et l'installeur officiel écrirait par-dessus sans
+    /// rien nettoyer : le résultat serait un mélange de deux versions du jeu, exactement le genre
+    /// d'installation à moitié faite que la sentinelle de complétude cherche à empêcher.
+    /// </remarks>
+    private async Task<bool> TryExtractAsync(
+        string archivePath,
+        string targetDirectory,
+        IProgress<GameInstallProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await new InnoPayloadExtractor(_fileSystem)
+                .ExtractAsync(archivePath, targetDirectory, progress, cancellationToken)
+                .ConfigureAwait(false);
+
+            _log.Write(AppLogLevel.Info, "Installeur Vintage Story : contenu extrait sans exécuter l'installeur.");
+
+            return true;
+        }
+        // Les deux familles d'échec qui veulent dire « nous n'avons pas su le lire nous-mêmes » :
+        // un format que le lecteur ne reconnaît pas, et un fichier qui ne se laisse pas ouvrir.
+        // Toutes deux passent la main au chemin éprouvé plutôt que de faire échouer l'installation.
+        // L'annulation, elle, n'est pas un échec et doit continuer de remonter telle quelle.
+        catch (Exception exception) when (exception is InnoFormatException or IOException)
+        {
+            _log.Write(
+                AppLogLevel.Warning,
+                $"Extraction de l'installeur impossible ({exception.Message}) : repli sur l'exécution silencieuse.");
+
+            ClearTargetDirectory(targetDirectory);
+
+            return false;
+        }
+    }
+
+    private void ClearTargetDirectory(string targetDirectory)
+    {
+        if (!_fileSystem.Directory.Exists(targetDirectory))
+        {
+            return;
+        }
+
+        foreach (var directory in _fileSystem.Directory.GetDirectories(targetDirectory))
+        {
+            _fileSystem.Directory.Delete(directory, recursive: true);
+        }
+
+        foreach (var file in _fileSystem.Directory.GetFiles(targetDirectory))
+        {
+            _fileSystem.File.Delete(file);
+        }
+    }
+
+    private async Task RunInstallerAsync(
+        string archivePath,
+        string targetDirectory,
+        IProgress<GameInstallProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        // Publié AVANT le lancement : la boîte de dialogue de l'installeur peut s'ouvrir dès la
+        // première seconde, et une notice qui arriverait après elle ne servirait à rien.
+        progress?.Report(GameInstallProgress.ForVendorInstaller());
 
         var arguments = new List<string>(SilentArguments) { BuildDirectoryArgument(targetDirectory) };
         var request = new ProcessRunRequest(archivePath, arguments);

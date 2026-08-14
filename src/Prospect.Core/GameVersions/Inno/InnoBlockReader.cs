@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+
 using SharpCompress.Compressors.LZMA;
 
 namespace Prospect.Core.GameVersions.Inno;
