@@ -4,6 +4,7 @@ using Prospect.Core.Common;
 using Prospect.Core.GameVersions;
 using Prospect.Core.Storage;
 using Prospect.Core.Tests.Common;
+using Prospect.Tests.GameVersions.Inno;
 
 using Shouldly;
 
@@ -17,6 +18,7 @@ public sealed class GameInstallStrategyTests
         | UnixFileMode.OtherRead | UnixFileMode.OtherExecute;
 
     private const string ArchivePath = "/data/prospect/cache/downloads/vs_client_linux-x64_1.22.6.tar.gz";
+    private const string WindowsInstallerPath = "/data/prospect/cache/downloads/vs_install_win-x64_1.22.6.exe";
     private const string TargetDirectory = "/data/prospect/versions/1.22.6";
 
     private static MockFileSystem WithArchive(byte[] archive)
@@ -319,6 +321,93 @@ public sealed class GameInstallStrategyTests
         permissions.Modes.Values.ShouldAllBe(mode => mode == Mode755);
     }
 
+    /// <summary>
+    /// La voie normale sous Windows : le contenu de l'installeur est extrait, et l'installeur
+    /// lui-même n'est JAMAIS lancé. C'est ce qui fait disparaître sa boîte de dialogue, et c'est
+    /// aussi ce qui empêche l'écriture de la clé de désinstallation qui l'armait pour la fois
+    /// suivante.
+    /// </summary>
+    [Fact]
+    public async Task WindowsStrategy_ReadableInstaller_ExtractsItWithoutRunningAnything()
+    {
+        var installer = new SyntheticInnoInstaller()
+            .Add(@"{app}\Vintagestory.exe", "MZ"u8.ToArray())
+            .Add(@"{app}\assets\version-1.22.6.txt", [])
+            .Build();
+
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddFile(WindowsInstallerPath, new MockFileData(installer));
+        var runner = new FakeProcessRunner();
+        var reports = new List<GameInstallProgress>();
+
+        await new WindowsGameInstallStrategy(fileSystem, runner, NullAppLog.Instance)
+            .InstallAsync(WindowsInstallerPath, TargetDirectory, new CollectingProgress(reports.Add), CancellationToken.None);
+
+        runner.Requests.ShouldBeEmpty();
+        fileSystem.File.ReadAllText(fileSystem.Path.Combine(TargetDirectory, "Vintagestory.exe")).ShouldBe("MZ");
+        fileSystem.File.Exists(fileSystem.Path.Combine(TargetDirectory, "assets", "version-1.22.6.txt")).ShouldBeTrue();
+
+        // Rien à annoncer : aucune fenêtre ne peut s'ouvrir, et l'avancement est mesuré, pas estimé.
+        reports.ShouldNotBeEmpty();
+        reports.ShouldAllBe(report => !report.RunsVendorInstaller && !report.IsEstimated);
+    }
+
+    /// <summary>
+    /// Le repli : un installeur que le lecteur ne reconnaît pas est exécuté comme avant. Le jour où
+    /// l'éditeur passera à un Inno Setup dont le format a changé, mieux vaut une installation avec
+    /// une notice qu'une installation impossible.
+    /// </summary>
+    [Fact]
+    public async Task WindowsStrategy_UnreadableInstaller_FallsBackToRunningItAndSaysSo()
+    {
+        var installer = new SyntheticInnoInstaller
+        {
+            DataVersion = "6.5.0",
+        }
+            .Add(@"{app}\Vintagestory.exe", "MZ"u8.ToArray())
+            .Build();
+
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddFile(WindowsInstallerPath, new MockFileData(installer));
+        var runner = new FakeProcessRunner();
+        var reports = new List<GameInstallProgress>();
+
+        await new WindowsGameInstallStrategy(fileSystem, runner, NullAppLog.Instance)
+            .InstallAsync(WindowsInstallerPath, TargetDirectory, new CollectingProgress(reports.Add), CancellationToken.None);
+
+        runner.Requests.ShouldHaveSingleItem().FileName.ShouldBe(WindowsInstallerPath);
+
+        // La notice doit être à l'écran AVANT que l'installeur ne démarre, pas après que sa boîte
+        // se soit ouverte.
+        reports.ShouldNotBeEmpty();
+        reports[0].RunsVendorInstaller.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Une extraction qui échoue en cours de route a déjà posé des fichiers. Les laisser reviendrait
+    /// à faire écrire l'installeur par-dessus, donc à mélanger deux états du jeu dans un dossier que
+    /// la sentinelle de complétude déclarerait ensuite propre.
+    /// </summary>
+    [Fact]
+    public async Task WindowsStrategy_ExtractionThatFailsHalfway_EmptiesTheTargetBeforeFallingBack()
+    {
+        // La première entrée s'extrait, la seconde porte une empreinte fausse et fait tout échouer.
+        var installer = new SyntheticInnoInstaller()
+            .Add(@"{app}\assets\game\ok.json", "{}"u8.ToArray())
+            .Add(@"{app}\Vintagestory.exe", "MZ"u8.ToArray(), checksumOverride: new byte[32])
+            .Build();
+
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddFile(WindowsInstallerPath, new MockFileData(installer));
+        var runner = new FakeProcessRunner();
+
+        await new WindowsGameInstallStrategy(fileSystem, runner, NullAppLog.Instance)
+            .InstallAsync(WindowsInstallerPath, TargetDirectory, cancellationToken: CancellationToken.None);
+
+        runner.Requests.ShouldHaveSingleItem();
+        fileSystem.Directory.GetFileSystemEntries(TargetDirectory).ShouldBeEmpty();
+    }
+
     [Fact]
     public async Task WindowsStrategy_RunsTheInnoInstallerSilentlyIntoTheVersionFolder()
     {
@@ -520,5 +609,10 @@ public sealed class GameInstallStrategyTests
         Should.Throw<ArgumentNullException>(() => new GameInstallStrategySelector(null!, windows, mac));
         Should.Throw<ArgumentNullException>(() => new GameInstallStrategySelector(linux, null!, mac));
         Should.Throw<ArgumentNullException>(() => new GameInstallStrategySelector(linux, windows, null!));
+    }
+
+    private sealed class CollectingProgress(Action<GameInstallProgress> report) : IProgress<GameInstallProgress>
+    {
+        public void Report(GameInstallProgress value) => report(value);
     }
 }

@@ -337,6 +337,8 @@ Le seul endroit où l'authentification intervient dans tout le launcher, c'est *
 
 6. **Prévoir trois stratégies post-téléchargement différentes selon l'OS** : Windows = lancer l'installeur Inno Setup en silencieux (`/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CURRENTUSER /NOICONS /DIR=<cible>`, pas de build portable disponible côté officiel) ; Linux/macOS = extraire le `.tar.gz` puis forcer explicitement les permissions d'exécution (`chmod 755` récursif, ou au minimum sur le binaire principal) sinon rien ne se lance.
 
+   > **Dépassé côté Windows.** L'affirmation « no released tool can crack current Inno Setup » citée plus haut est celle des mainteneurs de VS Launcher, et elle valait pour les outils publiés. Prospect lit désormais le format lui-même et n'exécute plus l'installeur : voir docs/architecture.md, « La boîte "ancienne version détectée" : pourquoi elle disparaît ». L'exécution silencieuse décrite ici reste le repli.
+
 7. **Détecter le runtime .NET installé plutôt que de tout reporter sur l'utilisateur.** VS Launcher ne fait aucune détection ni installation, et ses propres mainteneurs documentent ça comme un point de friction connu et jamais résolu. Prospect, étant lui-même en C#/.NET, est bien placé pour faire mieux : détecter les runtimes présents (`dotnet --list-runtimes` ou inspection de `dotnet/shared/Microsoft.NETCore.App`) et proposer une installation guidée ou automatique du runtime manquant.
 
 8. **Ne pas supposer un seul major .NET.** La doc de VS Launcher demande d'installer .NET 7, 8 *et* 10 en parallèle selon la version du jeu utilisée. La détection de runtime doit être associée à la version de jeu installée, pas être une vérification globale unique au démarrage de l'app.

@@ -33,16 +33,32 @@ public enum GameInstallPhase
 /// avancement est déduit de la croissance du dossier cible. L'interface le dit alors au lieu de
 /// laisser croire à un décompte exact.
 /// </param>
+/// <param name="RunsVendorInstaller">
+/// Vrai quand c'est l'installeur du jeu qui travaille, et non Prospect. Sous Windows, la voie
+/// normale est l'EXTRACTION du contenu de l'installeur, qui n'exécute rien et n'ouvre donc aucune
+/// fenêtre ; l'exécution de l'installeur ne subsiste qu'en repli. Ce drapeau est ce qui décide de
+/// l'affichage de la notice qui prévient de la boîte de dialogue : la montrer quand personne ne va
+/// l'ouvrir apprendrait aux utilisateurs à ignorer un avertissement qui, le jour où il paraît,
+/// mérite d'être lu.
+/// </param>
 public sealed record GameInstallProgress(
     GameInstallPhase Phase,
     double? Ratio,
     long ReceivedBytes,
     long? TotalBytes,
     double BytesPerSecond,
-    bool IsEstimated = false)
+    bool IsEstimated = false,
+    bool RunsVendorInstaller = false)
 {
-    /// <summary>Passage à une étape dont l'avancement n'est pas chiffrable (installeur silencieux).</summary>
+    /// <summary>Passage à une étape dont l'avancement n'est pas chiffrable.</summary>
     public static GameInstallProgress ForPhase(GameInstallPhase phase) => new(phase, null, 0L, null, 0d);
+
+    /// <summary>
+    /// Passage la main à l'installeur du jeu, dont la fenêtre peut s'ouvrir à tout moment. Publié
+    /// AVANT de le lancer, pour que la notice soit déjà à l'écran quand la boîte apparaît.
+    /// </summary>
+    public static GameInstallProgress ForVendorInstaller()
+        => new(GameInstallPhase.Installing, null, 0L, null, 0d, false, true);
 
     /// <summary>
     /// Avancement CHIFFRÉ de la phase d'installation, mesuré (extraction d'un <c>.tar.gz</c>) ou
@@ -52,8 +68,9 @@ public sealed record GameInstallProgress(
     /// </summary>
     /// <param name="ratio">Avancement entre 0 et 1.</param>
     /// <param name="isEstimated">Vrai pour une estimation, qui sera étiquetée comme telle.</param>
-    public static GameInstallProgress ForInstalling(double ratio, bool isEstimated = false)
-        => new(GameInstallPhase.Installing, Math.Clamp(ratio, 0d, 1d), 0L, null, 0d, isEstimated);
+    /// <param name="runsVendorInstaller">Vrai quand l'installeur du jeu tourne, donc en repli seulement.</param>
+    public static GameInstallProgress ForInstalling(double ratio, bool isEstimated = false, bool runsVendorInstaller = false)
+        => new(GameInstallPhase.Installing, Math.Clamp(ratio, 0d, 1d), 0L, null, 0d, isEstimated, runsVendorInstaller);
 
     /// <summary>Traduit un avancement de téléchargement en avancement d'installation.</summary>
     public static GameInstallProgress FromDownload(DownloadProgress progress)

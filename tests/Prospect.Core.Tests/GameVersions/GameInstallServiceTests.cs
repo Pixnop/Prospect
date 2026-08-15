@@ -267,7 +267,12 @@ public sealed class GameInstallServiceTests
         // seul battement pour échantillonner, donc la phase reste franchement indéterminée. C'est
         // le repli, et il est intact.
         var installing = reports.Where(report => report.Phase == GameInstallPhase.Installing).ToArray();
-        installing.ShouldHaveSingleItem().Ratio.ShouldBeNull();
+        installing.ShouldNotBeEmpty();
+        installing.ShouldAllBe(report => report.Ratio == null);
+
+        // Et le repli s'annonce comme tel : c'est ce drapeau qui fait apparaître la notice
+        // prévenant de la boîte de dialogue de l'installeur.
+        installing.ShouldContain(report => report.RunsVendorInstaller);
     }
 
     /// <summary>

@@ -103,7 +103,7 @@ internal sealed class InstallDirectoryGrowthReporter
         }
 
         _lastRatio = ratio;
-        _progress?.Report(GameInstallProgress.ForInstalling(ratio, isEstimated: true));
+        _progress?.Report(GameInstallProgress.ForInstalling(ratio, isEstimated: true, runsVendorInstaller: true));
     }
 
     /// <summary>
@@ -129,6 +129,8 @@ internal sealed class InstallDirectoryGrowthReporter
         }
         catch (OperationCanceledException)
         {
+            // Fin normale : la boucle s'arrête quand le processus surveillé rend la main, et c'est
+            // l'appelant qui annule. Rien à signaler, rien à relayer.
         }
     }
 

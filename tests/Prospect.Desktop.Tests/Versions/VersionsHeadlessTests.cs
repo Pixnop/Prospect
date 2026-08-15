@@ -242,7 +242,13 @@ public class VersionsHeadlessTests
         row.IsWorking = true;
         row.ShowInstallerPromptNotice.ShouldBeFalse();
 
-        row.Report(GameInstallProgress.ForPhase(GameInstallPhase.Installing));
+        // La voie normale, l'extraction, n'ouvre aucune fenêtre : rien à annoncer.
+        row.Report(GameInstallProgress.ForInstalling(0.5d));
+        window.Settle();
+        row.ShowInstallerPromptNotice.ShouldBeFalse();
+
+        // Le repli, lui, va exécuter l'installeur du jeu.
+        row.Report(GameInstallProgress.ForVendorInstaller());
         window.Settle();
 
         row.ShowInstallerPromptNotice.ShouldBeTrue();
